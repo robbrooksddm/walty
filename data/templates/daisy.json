@@ -1,0 +1,89 @@
+{
+  "slug": "daisy",
+  "title": "Teddy with Daisies",
+  "cover": "/templates/daisy/daisy-front-cover.jpg",
+
+  "size": { "w": 525, "h": 740 },
+
+  "pages": [
+    {
+      "name": "front",
+      "layers": [
+        {
+          "type": "image",
+          "src": "/templates/daisy/daisy-front-cover.jpg",
+          "x": 0,
+          "y": 0,
+          "width": 525,
+          "height": 740,
+          "editable": false
+        },
+        {
+          "type": "text",
+          "id": "name",
+          "text": "Catherine",
+          "x": 140,
+          "y": 600,
+          "width": 300,      
+          "fontSize": 40,
+          "fill": "#9c8f62",
+          "editable": true
+        }
+      ]
+    },
+    {
+      "name": "inner-left",
+      "layers": [
+        {
+          "type": "image",
+          "src": "/templates/daisy/daisy-inner-left.jpg",
+          "x": 0,
+          "y": 0,
+          "width": 525,
+          "height": 740,
+          "editable": false
+        }
+      ]
+    },
+    {
+      "name": "inner-right",
+      "layers": [
+        {
+          "type": "image",
+          "src": "/templates/daisy/daisy-inner-right.jpg",
+          "x": 0,
+          "y": 0,
+          "width": 525,
+          "height": 740,
+          "editable": false
+        },
+        {
+          "type": "text",
+          "id": "message",
+          "text": "Add message",
+          "x": 60,
+          "y": 200,
+          "width": 405,
+          "height": 340,
+          "fontSize": 28,
+          "align": "center",
+          "editable": true
+        }
+      ]
+    },
+    {
+      "name": "back",
+      "layers": [
+        {
+          "type": "image",
+          "src": "/templates/daisy/daisy-back-cover.jpg",
+          "x": 0,
+          "y": 0,
+          "width": 525,
+          "height": 740,
+          "editable": false
+        }
+      ]
+    }
+  ]
+}
