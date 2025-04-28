@@ -1,5 +1,5 @@
 /**********************************************************************
- * components/CardStage.tsx
+ * CardStage.tsx – preview/editor canvas for a single page (Konva)
  *********************************************************************/
 'use client';
 
@@ -11,7 +11,7 @@ import {
   Image as KImage,
   Transformer,
 } from 'react-konva';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import type { Transformer as KonvaTransformer } from 'konva/lib/shapes/Transformer';
 
 /* ------------------------------------------------------------------ */
@@ -24,7 +24,18 @@ type Box = {
   rotation: number;
 };
 
-/* public layer spec ------------------------------------------------- */
+/* tiny hook – preload & memoise an image --------------------------- */
+const useImage = (src: string) => {
+  const [img, setImg] = useState<HTMLImageElement | null>(null);
+  useEffect(() => {
+    const i = new window.Image();
+    i.src = src;
+    i.onload = () => setImg(i);
+  }, [src]);
+  return img;
+};
+
+/* public layer spec ------------------------------------------------ */
 export type LayerSpec =
   | ({
       type: 'text';
@@ -53,7 +64,7 @@ export default function CardStage({
   onChange: (layers: LayerSpec[]) => void;
 }) {
   const textRef = useRef<any>(null);
-  const trRef   = useRef<KonvaTransformer | null>(null);        // 🆕 strict type
+  const trRef   = useRef<KonvaTransformer | null>(null);
 
   /* attach transformer when selection changes -------------------- */
   useEffect(() => {
@@ -63,7 +74,6 @@ export default function CardStage({
       textRef.current &&
       trRef.current
     ) {
-      // Konva’s d.ts has the method, VS Code complained because we used “property” syntax
       trRef.current.nodes([textRef.current]);
       trRef.current.getLayer()?.batchDraw();
     }
@@ -80,7 +90,7 @@ export default function CardStage({
           key={idx}
           ref={isSel ? textRef : undefined}
           {...layer}
-          draggable={layer.editable}
+          draggable={layer.editable ?? false}
           onClick={() => onSelect(idx)}
           onTap={() => onSelect(idx)}
           onDblClick={() => {
@@ -89,17 +99,17 @@ export default function CardStage({
             if (!t) return;
             onChange(
               page.layers.map((l, i) =>
-                i === idx ? { ...l, text: t } : l
-              )
+                i === idx ? { ...l, text: t } : l,
+              ),
             );
           }}
           /* ------ transform helpers ------------------------------- */
-          onTransformStart={e => {
+          onTransformStart={(e) => {
             const node = e.target as any;
-            node.setAttr('initW', layer.width     ?? node.width());
-            node.setAttr('initF', layer.fontSize  ?? 24);
+            node.setAttr('initW', layer.width ?? node.width());
+            node.setAttr('initF', layer.fontSize ?? 24);
           }}
-          onTransform={e => {
+          onTransform={(e) => {
             const node   = e.target as any;
             const anchor = trRef.current?.getActiveAnchor();
 
@@ -107,7 +117,7 @@ export default function CardStage({
             const initF = node.getAttr('initF') as number;
 
             const sx = node.scaleX();
-            node.scale({ x: 1, y: 1 });               // reset
+            node.scale({ x: 1, y: 1 }); // reset
 
             if (anchor === 'middle-left' || anchor === 'middle-right') {
               node.width(initW * sx);
@@ -116,27 +126,27 @@ export default function CardStage({
               node.fontSize(initF * sx);
             }
           }}
-          onTransformEnd={e => {
+          onTransformEnd={(e) => {
             const node   = e.target as any;
             const anchor = trRef.current?.getActiveAnchor();
             const newW   = node.width();
-            const newF   =
+            const newF =
               anchor === 'middle-left' || anchor === 'middle-right'
                 ? layer.fontSize ?? 24
                 : node.fontSize();
 
             onChange(
               page.layers.map((l, i) =>
-                i === idx ? { ...l, width: newW, fontSize: newF } : l
-              )
+                i === idx ? { ...l, width: newW, fontSize: newF } : l,
+              ),
             );
           }}
-          onDragEnd={e => {
+          onDragEnd={(e) => {
             const { x, y } = e.target.position();
             onChange(
               page.layers.map((l, i) =>
-                i === idx ? { ...l, x, y } : l
-              )
+                i === idx ? { ...l, x, y } : l,
+              ),
             );
           }}
         />
@@ -144,6 +154,8 @@ export default function CardStage({
     }
 
     /* IMAGE ------------------------------------------------------- */
+    const imgNode = useImage(layer.src);
+
     return (
       <KImage
         key={idx}
@@ -151,19 +163,15 @@ export default function CardStage({
         y={layer.y}
         width={layer.width}
         height={layer.height}
-        draggable={layer.editable}
+        draggable={layer.editable ?? false}
         onClick={() => onSelect(null)}
-        image={(() => {
-          const img = new window.Image();
-          img.src = layer.src;
-          return img;
-        })()}
-        onDragEnd={e => {
+        image={imgNode ?? undefined}
+        onDragEnd={(e) => {
           const { x, y } = e.target.position();
           onChange(
             page.layers.map((l, i) =>
-              i === idx ? { ...l, x, y } : l
-            )
+              i === idx ? { ...l, x, y } : l,
+            ),
           );
         }}
       />
@@ -171,7 +179,7 @@ export default function CardStage({
   };
 
   /* canvas dims --------------------------------------------------- */
-  const W = page.width  ?? 600;
+  const W = page.width ?? 600;
   const H = page.height ?? 800;
 
   return (
@@ -179,7 +187,7 @@ export default function CardStage({
       width={W}
       height={H}
       className="flex-grow border bg-white"
-      onClick={e => {
+      onClick={(e) => {
         if (e.target === e.target.getStage()) onSelect(null);
       }}
     >
@@ -191,7 +199,7 @@ export default function CardStage({
           <Rect
             {...{
               ...(page.layers[selectedIdx] as any),
-              width : undefined,
+              width:  undefined,
               height: undefined,
             }}
             stroke="deepskyblue"
@@ -201,8 +209,8 @@ export default function CardStage({
           <Transformer
             ref={trRef}
             enabledAnchors={[
-              'top-left','top-right','bottom-left','bottom-right',
-              'middle-left','middle-right',
+              'top-left', 'top-right', 'bottom-left', 'bottom-right',
+              'middle-left', 'middle-right',
             ]}
             boundBoxFunc={(oldBox: Box, newBox: Box) => {
               const anchor = trRef.current?.getActiveAnchor();

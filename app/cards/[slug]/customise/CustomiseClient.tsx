@@ -3,7 +3,7 @@
 
    "use client";
 
-   import CardEditor from "@/components/CardEditor";
+   import CardEditor from "@/app/components/CardEditor";
    
    export default function CustomiseClient({ tpl }: { tpl: any }) {
      // 1️⃣ keep the old log
