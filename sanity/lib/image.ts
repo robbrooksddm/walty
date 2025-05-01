@@ -1,11 +1,11 @@
-import createImageUrlBuilder from '@sanity/image-url'
-import { SanityImageSource } from "@sanity/image-url/lib/types/types";
+// sanity/lib/image.ts
+import imageUrlBuilder from '@sanity/image-url'
+import type {SanityImageSource} from '@sanity/image-url/lib/types/types'
 
-import { dataset, projectId } from '../env'
+import {dataset, projectId} from '../env'
 
-// https://www.sanity.io/docs/image-url
-const builder = createImageUrlBuilder({ projectId, dataset })
+/** One global builder we can reuse everywhere */
+const builder = imageUrlBuilder({projectId, dataset})
 
-export const urlFor = (source: SanityImageSource) => {
-  return builder.image(source)
-}
+/** Helper → pass it a Sanity image field, get back a chainable builder      */
+export const urlFor = (source: SanityImageSource) => builder.image(source)

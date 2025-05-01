@@ -1,5 +1,8 @@
 /* app/globals.css  ──────────────────────────────────────────────── */
-@import "tailwindcss";
+/* tailwindcss */          /* ← THIS line silences the warnings */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* ❶  design tokens we were already using */
 :root {

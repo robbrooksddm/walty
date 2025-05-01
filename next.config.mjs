@@ -1,6 +1,17 @@
+import path from 'path'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    // no experimental section needed
-  };
-  
-  export default nextConfig;
+  // Force every import of “styled-components” to use the ONE copy
+  // that lives at  node_modules/styled-components  (v 6.1.17)
+  webpack: (config) => {
+    config.resolve.alias['styled-components'] = path.resolve(
+      process.cwd(),        // project root
+      'node_modules',
+      'styled-components'
+    )
+    return config
+  },
+}
+
+export default nextConfig

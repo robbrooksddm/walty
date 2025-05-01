@@ -1,73 +1,93 @@
-// app/components/EditorStore.ts
-import { create } from 'zustand';
-import type { TemplatePage } from './FabricCanvas';   // ← correct path
+/**********************************************************************
+ * EditorStore.ts – single source-of-truth (Zustand)
+ *********************************************************************/
+import { create } from 'zustand'
+import type { Layer, TemplatePage } from './FabricCanvas'
 
 interface EditorState {
-  pages      : TemplatePage[];
-  activePage : number;
-  setPages   : (p: TemplatePage[]) => void;
-  setActive  : (idx: number) => void;
-  addText    : () => void;
-  addImage   : (f: File) => void;
-  reorder    : (from: number, to: number) => void;
-  delete     : (idx: number) => void;
+  /* data */
+  pages      : TemplatePage[]
+  activePage : number
+
+  /* simple setters */
+  setPages      : (p: TemplatePage[]) => void
+  setActive     : (idx: number) => void
+  setPageLayers : (pageIdx: number, layers: Layer[]) => void
+
+  /* actions */
+  addText     : () => void
+  addImage    : (file: File) => void
+  reorder     : (from: number, to: number) => void
+  deleteLayer : (idx: number) => void            // ← 🔑 this name is required
 }
 
 export const useEditor = create<EditorState>((set, get) => ({
-  /* data ------------------------------------------------------- */
-  pages: [], activePage: 0,
-  setPages : (p)   => set({ pages: p }),
-  setActive: (idx) => set({ activePage: idx }),
+  /* ---------- data -------------------------------------------- */
+  pages: [],
+  activePage: 0,
 
-  /* add text --------------------------------------------------- */
-  addText: () => set(s => {
-    const p = [...s.pages];
-    const a = s.activePage;
-    p[a] = { ...p[a],
-      layers: [...p[a].layers, { type:'text', text:'New text', x:100, y:100, width:200 }],
-    };
-    return { pages: p };
-  }),
+  /* ---------- setters ----------------------------------------- */
+  setPages : pages          => set({ pages }),
+  setActive: activePage     => set({ activePage }),
 
- /* add image -------------------------------------------------- */
-addImage: (file) => {
-  const reader = new FileReader();
+  /* replace all layers on one page (called by FabricCanvas) */
+  setPageLayers: (pageIdx, layers) =>
+    set(state => {
+      const pages = [...state.pages]
+      if (!pages[pageIdx]) return { pages }      // guard
+      pages[pageIdx] = { ...pages[pageIdx], layers }
+      return { pages }
+    }),
 
-  reader.onload = () => {
-    const src = reader.result as string;          // <- data:image/…
+  /* ---------- actions ----------------------------------------- */
+  addText: () =>
+    set(state => {
+      const i     = state.activePage
+      const pages = [...state.pages]
+      pages[i] = {
+        ...pages[i],
+        layers: [
+          ...pages[i].layers,
+          { type:'text', text:'New text', x:100, y:100, width:200 },
+        ],
+      }
+      return { pages }
+    }),
 
-    set((s) => {
-      const p = [...s.pages];
-      const a = s.activePage;
-      p[a] = {
-        ...p[a],
-        layers: [{ type:'image', src, x:100, y:100, width:300 }, ...p[a].layers],
-      };
-      return { pages: p };
-    });
-  };
+  addImage: file => {
+    const src = URL.createObjectURL(file)
+    set(state => {
+      const i     = state.activePage
+      const pages = [...state.pages]
+      pages[i] = {
+        ...pages[i],
+        layers: [
+          { type:'image', src, x:100, y:100, width:300 },
+          ...pages[i].layers,                 // put new image on top
+        ],
+      }
+      return { pages }
+    })
+  },
 
-  reader.readAsDataURL(file);                     // <- kicks off load
-},
+  reorder: (from, to) =>
+    set(state => {
+      const i     = state.activePage
+      const pages = [...state.pages]
+      const layers = [...pages[i].layers]
+      const [moved] = layers.splice(from, 1)
+      layers.splice(to, 0, moved)
+      pages[i] = { ...pages[i], layers }
+      return { pages }
+    }),
 
-  /* drag-reorder (0 = top layer) ------------------------------- */
-  reorder: (from, to) => set(s => {
-    const p = [...s.pages];
-    const a = s.activePage;
-    const l = [...p[a].layers];
-    const [m] = l.splice(from, 1);
-    l.splice(to, 0, m);
-    p[a] = { ...p[a], layers: l };
-    return { pages: p };
-  }),
-
-  /* delete layer ---------------------------------------------- */
-  delete: (idx) => set(s => {
-    const p = [...s.pages];
-    const a = s.activePage;
-    const l = [...p[a].layers];
-    l.splice(idx, 1);
-    p[a] = { ...p[a], layers: l };
-    return { pages: p };
-  }),
-}));
+  deleteLayer: idx =>
+    set(state => {
+      const i     = state.activePage
+      const pages = [...state.pages]
+      const layers = [...pages[i].layers]
+      layers.splice(idx, 1)
+      pages[i] = { ...pages[i], layers }
+      return { pages }
+    }),
+}))
