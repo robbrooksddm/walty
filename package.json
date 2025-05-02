@@ -4,11 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:studio": "npm --prefix sanity run dev",
     "studio": "cd sanity && sanity dev",
-    "dev:all": "concurrently \"npm run dev\" \"npm run studio\"",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:studio\"",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "purge:assets": "tsx ./scripts/purge-assets.ts",
+    "purge:once": "tsx scripts/purgeTempAssets.ts"
   },
   "dependencies": {
     "@sanity/client": "5.4.2",
@@ -38,10 +41,13 @@
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.21",
     "concurrently": "^8.2.2",
+    "dotenv": "^16.5.0",
     "eslint": "^9.25.1",
     "eslint-config-next": "^15.3.1",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.4",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.4",
     "typescript": "^5"
   }
 }

@@ -10,5 +10,6 @@ export const sanity = createClient({
   projectId,
   dataset,
   token,
+  perspective: 'previewDrafts',
   useCdn     : false,
 })

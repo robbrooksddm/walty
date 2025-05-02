@@ -1,8 +1,10 @@
 /**********************************************************************
  * EditorStore.ts – single source-of-truth (Zustand)
+ * 2025-05-03  • NEW: updateLayer(action) + layerIndex tracking
  *********************************************************************/
-import { create } from 'zustand'
-import type { Layer, TemplatePage } from './FabricCanvas'
+
+import {create} from 'zustand'
+import type {Layer, TemplatePage} from './FabricCanvas'
 
 interface EditorState {
   /* data */
@@ -16,78 +18,125 @@ interface EditorState {
 
   /* actions */
   addText     : () => void
-  addImage    : (file: File) => void
+  addImage    : (file: File) => Promise<void>
   reorder     : (from: number, to: number) => void
-  deleteLayer : (idx: number) => void            // ← 🔑 this name is required
+  deleteLayer : (idx: number) => void
+
+  /* NEW – merge live edits from Fabric */
+  updateLayer : (pageIdx: number, layerIdx: number, data: Partial<Layer>) => void
 }
 
 export const useEditor = create<EditorState>((set, get) => ({
   /* ---------- data -------------------------------------------- */
-  pages: [],
-  activePage: 0,
+  pages      : [],
+  activePage : 0,
 
   /* ---------- setters ----------------------------------------- */
-  setPages : pages          => set({ pages }),
-  setActive: activePage     => set({ activePage }),
+  setPages : pages      => set({pages}),
+  setActive: activePage => set({activePage}),
 
-  /* replace all layers on one page (called by FabricCanvas) */
   setPageLayers: (pageIdx, layers) =>
     set(state => {
       const pages = [...state.pages]
-      if (!pages[pageIdx]) return { pages }      // guard
-      pages[pageIdx] = { ...pages[pageIdx], layers }
-      return { pages }
+      if (!pages[pageIdx]) return {pages}
+      pages[pageIdx] = {...pages[pageIdx], layers}
+      return {pages}
     }),
 
   /* ---------- actions ----------------------------------------- */
   addText: () =>
     set(state => {
-      const i     = state.activePage
-      const pages = [...state.pages]
-      pages[i] = {
-        ...pages[i],
-        layers: [
-          ...pages[i].layers,
-          { type:'text', text:'New text', x:100, y:100, width:200 },
-        ],
+      const i       = state.activePage
+      const pages   = [...state.pages]
+      const layer   : Layer = {
+        type : 'text',
+        text : 'New text',
+        x    : 100,
+        y    : 100,
+        width: 200,
       }
-      return { pages }
+      layer.layerIndex = pages[i].layers.length     // ★ track index
+      pages[i] = {...pages[i], layers: [...pages[i].layers, layer]}
+      return {pages}
     }),
 
-  addImage: file => {
-    const src = URL.createObjectURL(file)
+  addImage: async file => {
+    /* 1 ▸ optimistic placeholder */
+    const tempUrl = URL.createObjectURL(file)
+    const i       = get().activePage
+    const idx     = get().pages[i]?.layers.length ?? 0
     set(state => {
-      const i     = state.activePage
       const pages = [...state.pages]
-      pages[i] = {
-        ...pages[i],
-        layers: [
-          { type:'image', src, x:100, y:100, width:300 },
-          ...pages[i].layers,                 // put new image on top
-        ],
+      const layer: any = {
+        type :'image',
+        src  : tempUrl,
+        x    : 100,
+        y    : 100,
+        width: 300,
+        layerIndex: idx,                    // ★ track index
       }
-      return { pages }
+      pages[i] = {...pages[i], layers: [layer, ...pages[i].layers]}
+      return {pages}
     })
+
+    /* 2 ▸ upload */
+    const fd = new FormData()
+    fd.append('file', file)
+    try {
+      const res = await fetch('/api/upload', {method:'POST', body:fd})
+      if (!res.ok) {
+        console.error('Upload failed', await res.text())
+        return
+      }
+      const {url, assetId} = await res.json()
+
+      /* 3 ▸ replace placeholder with CDN URL */
+      set(state => {
+        const pages  = [...state.pages]
+        const layers = [...pages[i].layers]
+        const j      = layers.findIndex(
+          l => l.type === 'image' && l.src === tempUrl,
+        )
+        if (j !== -1) {
+          layers[j] = {...layers[j], src: url, assetId}
+          pages[i]  = {...pages[i], layers}
+        }
+        return {pages}
+      })
+    } catch (err) {
+      console.error('Upload error', err)
+    }
   },
+
+  updateLayer: (pageIdx, layerIdx, data) =>
+    set(state => {
+      const pages = [...state.pages]
+      const page  = pages[pageIdx]
+      if (!page?.layers[layerIdx]) return {pages}
+      const layers = [...page.layers]
+      layers[layerIdx] = {...layers[layerIdx], ...data}
+      pages[pageIdx] = {...page, layers}
+      return {pages}
+    }),
 
   reorder: (from, to) =>
     set(state => {
-      const i     = state.activePage
-      const pages = [...state.pages]
+      const i      = state.activePage
+      const pages  = [...state.pages]
       const layers = [...pages[i].layers]
       const [moved] = layers.splice(from, 1)
       layers.splice(to, 0, moved)
-      pages[i] = { ...pages[i], layers }
-      return { pages }
+      pages[i] = {...pages[i], layers}
+      return {pages}
     }),
 
   deleteLayer: idx =>
     set(state => {
-      const i     = state.activePage
-      const pages = [...state.pages]
+      const i      = state.activePage
+      const pages  = [...state.pages]
       const layers = [...pages[i].layers]
       layers.splice(idx, 1)
-      pages[i] = { ...pages[i], layers }
-      return { pages }
+      pages[i] = {...pages[i], layers}
+      return {pages}
     }),
 }))

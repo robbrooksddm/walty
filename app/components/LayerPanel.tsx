@@ -16,7 +16,7 @@ import { CSS } from '@dnd-kit/utilities'
 /* single row (draggable) ------------------------------------------ */
 function Row ({ id, idx }: { id: string; idx: number }) {
   const layer   = useEditor(s => s.pages[s.activePage]?.layers[idx])
-  const remove  = useEditor(s => s.deleteLayer)
+  const remove  = useEditor(s => s.deleteLayer) // not .removeLayer
 
   const {
     attributes, listeners, setNodeRef, transform, transition,

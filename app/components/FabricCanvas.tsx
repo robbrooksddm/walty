@@ -1,63 +1,80 @@
 /**********************************************************************
  * FabricCanvas.tsx — renders one printable page with Fabric.js
- * (stable, no-flicker version)
+ * (stable • correct z-order • live-save • TS-clean)
+ * --------------------------------------------------------------------
+ * 2025-05-03  patch-live-2
  *********************************************************************/
 'use client'
 
-import { useEffect, useRef } from 'react'
-import { fabric }            from 'fabric'
-import { useEditor }         from './EditorStore'
+import {useEffect, useRef} from 'react'
+import {fabric}            from 'fabric'
+import {useEditor}         from './EditorStore'
 
-/* ------------------------------------------------------------------ */
-/* geometry & scale                                                  */
-const PAGE_W = 1240, PAGE_H = 1748
+/* ---------- size helpers (unchanged) ---------------------------- */
+const DPI = 300
+const mm  = (n:number)=>(n/25.4)*DPI
+const TRIM_W_MM = 150
+const TRIM_H_MM = 214
+const BLEED_MM  = 3
+const PAGE_W = Math.round(mm(TRIM_W_MM + BLEED_MM*2))
+const PAGE_H = Math.round(mm(TRIM_H_MM + BLEED_MM*2))
 const PREVIEW_W = 420
 const PREVIEW_H = Math.round(PAGE_H * PREVIEW_W / PAGE_W)
-const SCALE      = PREVIEW_W / PAGE_W
+const SCALE     = PREVIEW_W / PAGE_W
 
 fabric.Object.prototype.cornerSize      = Math.round(4 / SCALE)
-// @ts-ignore runtime-only prop
+// @ts-ignore runtime only
 fabric.Object.prototype.touchCornerSize = Math.round(4 / SCALE)
 
-/* ------------------------------------------------------------------ */
-/* shared types                                                       */
-export interface Layer {
-  type : 'image' | 'text'
-  /* image */ src?:string;width?:number;height?:number
-  /* text  */ text?:string;fontSize?:number;fontFamily?:string
-              fontWeight?:any;fontStyle?:any;underline?:boolean;fill?:string
-  /* geom  */ x:number;y:number;scaleX?:number;scaleY?:number
-  selectable?:boolean;editable?:boolean;[k:string]:any
+/* ---------- types ------------------------------------------------ */
+export interface Layer{
+  type :'image'|'text'
+  src?:string; assetId?:string; width?:number; height?:number
+  text?:string; fontSize?:number; fontFamily?:string
+  fontWeight?:any; fontStyle?:any; underline?:boolean
+  fill?:string; textAlign?:string; lineHeight?:number
+  opacity?:number
+  x:number; y:number; scaleX?:number; scaleY?:number
+  selectable?:boolean; editable?:boolean
+  layerIndex?:number
+  [k:string]:any
 }
-export interface TemplatePage { name:string; layers:Layer[] }
+export interface TemplatePage{ name:string; layers:Layer[] }
 
-/* helper ----------------------------------------------------------- */
-export const getActiveTextbox = (fc:fabric.Canvas|null)=>
+export const getActiveTextbox=(fc:fabric.Canvas|null)=>
   fc && (fc.getActiveObject() as any)?.type==='textbox'
     ? (fc.getActiveObject() as fabric.Textbox)
     : null
 
-const hex = (c='#000')=>c.length===4
-  ?`#${c[1]}${c[1]}${c[2]}${c[2]}${c[3]}${c[3]}`:c.toLowerCase()
+const hex=(c='#000')=>
+  c.length===4 ? `#${c[1]}${c[1]}${c[2]}${c[2]}${c[3]}${c[3]}` : c.toLowerCase()
 
-/* very small history impl – good enough for dev-server use ---------- */
+/* ---------- tiny undo / redo ------------------------------------ */
 const _hist:fabric.Object[][]=[]; let _ptr=-1
-const snap=(fc:fabric.Canvas)=>{
-  _hist.splice(_ptr+1); _hist.push(fc.getObjects().map(o=>o.toObject()))
-  _ptr=_hist.length-1
-}
-export const undo=(fc:fabric.Canvas)=>{
-  if(_ptr<=0)return
-  _ptr--; fc.loadFromJSON({objects:_hist[_ptr]},()=>fc.renderAll())
-}
-export const redo=(fc:fabric.Canvas)=>{
-  if(_ptr>=_hist.length-1)return
-  _ptr++; fc.loadFromJSON({objects:_hist[_ptr]},()=>fc.renderAll())
+const snap=(fc:fabric.Canvas)=>{_hist.splice(_ptr+1);_hist.push(fc.getObjects().map(o=>o.toObject()));_ptr=_hist.length-1}
+export const undo=(fc:fabric.Canvas)=>{if(_ptr<=0)return;_ptr--;fc.loadFromJSON({objects:_hist[_ptr]},()=>fc.renderAll())}
+export const redo=(fc:fabric.Canvas)=>{if(_ptr>=_hist.length-1)return;_ptr++;fc.loadFromJSON({objects:_hist[_ptr]},()=>fc.renderAll())}
+
+/* ---------- green safe-area guides ------------------------------ */
+const addGuides=(fc:fabric.Canvas)=>{
+  fc.getObjects().filter(o=>(o as any)._guide).forEach(o=>fc.remove(o))
+  const inset   = mm(8 + BLEED_MM)
+  const strokeW = mm(0.5)
+  const dash    = [mm(3)]
+  const make=(xy:[number,number,number,number])=>
+    Object.assign(new fabric.Line(xy,{
+      stroke:'#34d399',strokeWidth:strokeW,strokeDashArray:dash,
+      selectable:false,evented:false,excludeFromExport:true,
+    }),{_guide:true})
+  ;[
+    make([inset,                inset,                 PAGE_W-inset, inset]),
+    make([PAGE_W-inset,         inset,                 PAGE_W-inset, PAGE_H-inset]),
+    make([PAGE_W-inset,         PAGE_H-inset,          inset,        PAGE_H-inset]),
+    make([inset,                PAGE_H-inset,          inset,        inset]),
+  ].forEach(l=>fc.add(l))
 }
 
-/* ------------------------------------------------------------------ */
-/*              React component                                      */
-/* ------------------------------------------------------------------ */
+/* ---------- component ------------------------------------------- */
 interface Props{
   pageIdx:number
   page?:TemplatePage
@@ -65,147 +82,137 @@ interface Props{
 }
 
 export default function FabricCanvas({pageIdx,page,onReady}:Props){
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const fcRef     = useRef<fabric.Canvas|null>(null)
+  const hoverRef  = useRef<fabric.Rect|null>(null)
+  const hydrating = useRef(false)
+  const isEditing = useRef(false)        // ★ NEW
 
-  /* refs --------------------------------------------------------- */
-  const canvasRef=useRef<HTMLCanvasElement>(null)
-  const fcRef    =useRef<fabric.Canvas|null>(null)
-  const hoverRef =useRef<fabric.Rect|null>(null)
-  const hydrating=useRef(false)
+  /* Zustand actions */
+  const setPageLayers = useEditor(s=>s.setPageLayers)
+  const updateLayer   = useEditor(s=>s.updateLayer)
 
-  /* Zustand setter ---------------------------------------------- */
-  const setPageLayers=useEditor(s=>s.setPageLayers)
-
-  /* ①  mount Fabric once ---------------------------------------- */
+  /* ---------- mount once --------------------------------------- */
   useEffect(()=>{
     if(!canvasRef.current) return
-
     const fc=new fabric.Canvas(canvasRef.current,{
       backgroundColor:'#fff',
       width:PAGE_W,height:PAGE_H,
+      preserveObjectStacking:true,
     })
     fc.setViewportTransform([SCALE,0,0,SCALE,0,0])
-    fc.setWidth (PREVIEW_W)
-    fc.setHeight(PREVIEW_H)
+    fc.setWidth(PREVIEW_W); fc.setHeight(PREVIEW_H)
+    if(typeof window!=='undefined')(window as any).fc=fc
 
-    /* expose for debug, remove in prod */
-    ;(window as any).__fabric=fc
+    /* purple hover outline */
+    const hl=new fabric.Rect({left:0,top:0,width:10,height:10,fill:'transparent',
+      stroke:'#8b5cf6',strokeWidth:2/SCALE,strokeDashArray:[6/SCALE,4/SCALE],
+      selectable:false,evented:false,visible:false,excludeFromExport:true})
+    hoverRef.current=hl; fc.add(hl)
 
-    /* purple hover rectangle ------------------------------------ */
-    const hl=new fabric.Rect({
-      left:0,top:0,width:10,height:10,
-      fill:'transparent',stroke:'#8b5cf6',
-      strokeWidth:2/SCALE,strokeDashArray:[6/SCALE,4/SCALE],
-      selectable:false,evented:false,visible:false,
-      excludeFromExport:true,
-    })
-    hoverRef.current=hl
-    fc.add(hl)
+    addGuides(fc)
+
+    /* selection / hover */
+    fc.on('selection:created',()=>hl.visible=false)
+      .on('selection:updated',()=>hl.visible=false)
+      .on('selection:cleared',()=>hl.visible=false)
 
     fc.on('mouse:over',e=>{
-      if((e.target as any)?.type!=='textbox')return
-      const {left,top,width,height}=(e.target as fabric.Object)
-        .getBoundingRect(true,true)
-      hl.set({left,top,width,height,visible:true})
-      hl.bringToFront(); fc.renderAll()
-    }).on('mouse:out',e=>{
-      if((e.target as any)?.type!=='textbox')return
-      hl.set('visible',false); fc.renderAll()
+      const t=e.target as any
+      if(!t||t._guide) return
+      hl.set({width:t.width*t.scaleX,height:t.height*t.scaleY,left:t.left,top:t.top,visible:true})
+      fc.requestRenderAll()
+    })
+    fc.on('mouse:out',()=>{hl.visible=false;fc.requestRenderAll()})
+
+    /* snapshots */
+    fc.on('object:added',   () => snap(fc))
+    fc.on('object:removed', () => snap(fc))
+
+    /* live-update sync */
+    fc.on('object:modified',e=>{
+      isEditing.current=true
+      snap(fc)
+      const t=e.target as any
+      if(!t||t.layerIdx===undefined) return
+      const data:Partial<Layer>={x:t.left,y:t.top,scaleX:t.scaleX,scaleY:t.scaleY}
+      if(t.type==='textbox') Object.assign(data,{text:t.text,fontSize:t.fontSize,fill:t.fill})
+      if(t.type==='image')   Object.assign(data,{width:t.width*t.scaleX,height:t.height*t.scaleY})
+      updateLayer(pageIdx,t.layerIdx,data)
+      setTimeout(()=>{isEditing.current=false},0)
     })
 
-    /* ---------- sync → Zustand (debounced) --------------------- */
-    const objToLayer=(o:fabric.Object):Layer=>{
-      const b=o.toObject() as any
-      if(o.type==='image') b.src=(o as fabric.Image).getSrc()
-      return {...b,
-        type:o.type==='textbox'?'text':'image',
-        x:b.left??0,y:b.top??0,
-        scaleX:b.scaleX,scaleY:b.scaleY,
-      }
-    }
-    let timer:ReturnType<typeof setTimeout>|null=null
-    const sync=()=>{
-      if(hydrating.current) return
-      if(timer) clearTimeout(timer)
-      timer=setTimeout(()=>{
-        setPageLayers(pageIdx,fc.getObjects().map(objToLayer))
-        timer=null
-      },100)
-    }
+    /* real-time text typing */
+    fc.on('text:changed',e=>{
+      const t=e.target as any
+      if(!t||t.layerIdx===undefined) return
+      updateLayer(pageIdx,t.layerIdx,{
+        text:t.text,fontSize:t.fontSize,fill:t.fill,
+        width:t.width*t.scaleX,height:t.height*t.scaleY,
+      })
+    })
 
-    /* history + sync on real edits ------------------------------ */
-    fc.on('object:modified', ()=>{snap(fc);sync()})
-      .on('text:changed',          sync)
-      .on('text:editing:exited',   sync)
-
-    snap(fc)                       // initial snapshot
-
-    fcRef.current=fc; onReady(fc)
-    return()=>{ onReady(null); fc.dispose() }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    fcRef.current=fc
+    onReady(fc)
+    return()=>{onReady(null);fc.dispose()}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   },[])
 
-  /* ②  redraw whenever page prop changes ------------------------ */
+  /* ---------- redraw when page changes ------------------------- */
   useEffect(()=>{
     const fc=fcRef.current
     if(!fc||!page) return
 
+    /* skip redraw when change came from local edit */
+    if(isEditing.current) return         // ★ NEW guard
+
     hydrating.current=true
-    fc.clear(); if(hoverRef.current) fc.add(hoverRef.current)
+    fc.clear(); hoverRef.current&&fc.add(hoverRef.current)
 
-    page.layers.forEach(ly=>{
+    for(let idx=page.layers.length-1;idx>=0;idx--){
+      const ly=page.layers[idx]
 
-      /* ------ IMAGE ------------------------------------------- */
+      /* ----- IMAGE ----- */
       if(ly.type==='image'&&ly.src){
-        const opts=ly.src.startsWith('data:')||ly.src.startsWith('blob:')
-          ? undefined : {crossOrigin:'anonymous'}
-
-        const add=(img:fabric.Image|HTMLImageElement)=>{
+        const opts=ly.src.startsWith('data:')||ly.src.startsWith('blob:')?undefined:{crossOrigin:'anonymous'}
+        fabric.Image.fromURL(ly.src,img=>{
           const i=img instanceof fabric.Image?img:new fabric.Image(img)
           if(ly.scaleX==null||ly.scaleY==null){
-            const s=Math.min(1,PAGE_W/i.width!,PAGE_H/i.height!)
-            i.scale(s)
+            const s=Math.min(1,PAGE_W/i.width!,PAGE_H/i.height!);i.scale(s)
           }else i.set({scaleX:ly.scaleX,scaleY:ly.scaleY})
-
-          i.set({
-            left:ly.x,top:ly.y,originX:'left',originY:'top',
-            selectable:ly.selectable??true,evented:ly.editable??true,
-          })
-          fc.add(i); i.setCoords(); i.sendToBack()   // always under text
-        }
-
-        fabric.Image.fromURL(ly.src,add,opts)
-        return                                          // next layer
+          i.set({left:ly.x,top:ly.y,originX:'left',originY:'top',
+            selectable:ly.selectable??true,evented:ly.editable??true,opacity:ly.opacity??1})
+          ;(i as any).layerIdx=idx
+          const pos=fc.getObjects().findIndex(o=>(o as any).layerIdx!==undefined&&(o as any).layerIdx<idx)
+          fc.insertAt(i,pos===-1?fc.getObjects().length:pos,false)
+          i.setCoords()
+        },opts)
+        continue
       }
 
-      /* ------ TEXT -------------------------------------------- */
+      /* ----- TEXT ----- */
       if(ly.type==='text'&&ly.text){
-        const tb=new fabric.Textbox(ly.text,{
-          left:ly.x,top:ly.y,originX:'left',originY:'top',
-          width:ly.width??200,
-          fontSize  :ly.fontSize   ??Math.round(32/SCALE),
-          fontFamily:ly.fontFamily ??'Arial',
-          fontWeight:ly.fontWeight ??'normal',
-          fontStyle :ly.fontStyle  ??'normal',
-          underline :!!ly.underline,
-          fill      :hex(ly.fill??'#000'),
-          selectable:ly.selectable ??true,
-          editable  :ly.editable   ??true,
-          scaleX:ly.scaleX??1,scaleY:ly.scaleY??1,
-          lockScalingFlip:true,
-        })
-        fc.add(tb); tb.bringToFront()
-        hoverRef.current?.bringToFront()
+        const tb=new fabric.Textbox(ly.text,{left:ly.x,top:ly.y,originX:'left',originY:'top',
+          width:ly.width??200,fontSize:ly.fontSize??Math.round(32/SCALE),
+          fontFamily:ly.fontFamily??'Arial',fontWeight:ly.fontWeight??'normal',
+          fontStyle:ly.fontStyle??'normal',underline:!!ly.underline,
+          fill:hex(ly.fill??'#000'),textAlign:ly.textAlign??'left',
+          lineHeight:ly.lineHeight??1.16,opacity:ly.opacity??1,
+          selectable:ly.selectable??true,editable:ly.editable??true,
+          scaleX:ly.scaleX??1,scaleY:ly.scaleY??1,lockScalingFlip:true})
+        ;(tb as any).layerIdx=idx
+        fc.add(tb)
       }
-    })
+    }
 
+    addGuides(fc); hoverRef.current?.bringToFront()
     fc.requestRenderAll()
     hydrating.current=false
   },[page])
 
-  /* ③ render ---------------------------------------------------- */
+  /* ---------- render ------------------------------------------- */
   return(
-    <canvas ref={canvasRef}
-            width={PREVIEW_W} height={PREVIEW_H}
+    <canvas ref={canvasRef} width={PREVIEW_W} height={PREVIEW_H}
             className="border w-full h-auto max-w-[420px]"/>
   )
 }

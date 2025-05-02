@@ -22,6 +22,7 @@ export default async function StaffTemplatePage ({ params }: Props) {
     groq`*[_type == "cardTemplate" && _id == $id][0]`,
     { id: params.id },
   )
+  console.log('DEBUG tpl', tpl)
 
   if (!tpl) {
     return (
@@ -31,30 +32,30 @@ export default async function StaffTemplatePage ({ params }: Props) {
     )
   }
 
-  /* 2 ▸ server action – save edited layers ----------------------- */
-  async function saveLayers (payload: string) {
-    'use server'
+  /* 2 ▸ server action – save edited layers --------------------------- */
+async function saveLayers (payload: string) {
+  'use server'                         // ← must be first line
 
-    const layers = JSON.parse(payload) as unknown[][]         // 4 × layers[]
+  const layers = JSON.parse(payload) as unknown[][]   // 4 × layers[]
 
-    await sanity
-      /* make sure pages[0-3] exist */
-      .patch(tpl._id)
-      .setIfMissing({ pages: [{}, {}, {}, {}] })
-      /* write layers into each page */
-      .set({
-        'pages[0].layers': layers[0],
-        'pages[1].layers': layers[1],
-        'pages[2].layers': layers[2],
-        'pages[3].layers': layers[3],
-      })
-      /* optional clean-up of legacy top-level “layers” */
-      .unset(['layers'])
-      .commit({ autoGenerateArrayKeys: true })
+  /* always target the draft copy */
+  const draftId = `drafts.${params.id}`
 
-    /* revalidate this route so everyone sees new data */
-    revalidatePath(`/admin/templates/${params.id}`)
-  }
+  await sanity
+    .patch(draftId)
+    .setIfMissing({ pages: [{}, {}, {}, {}] })
+    .set({
+      'pages[0].layers': layers[0],
+      'pages[1].layers': layers[1],
+      'pages[2].layers': layers[2],
+      'pages[3].layers': layers[3],
+    })
+    .unset(['layers'])
+    .commit({ autoGenerateArrayKeys: true })
+
+  /* revalidate so everyone sees new data */
+  revalidatePath(`/admin/templates/${params.id}`)
+}
 
   /* 3 ▸ render the editor (Client component) --------------------- */
   return (

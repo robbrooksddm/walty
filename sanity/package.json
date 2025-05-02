@@ -1,19 +1,17 @@
 {
   "name": "sanity",
+  "private": true,
   "version": "1.0.0",
-  "main": "index.js",
-  "directories": {
-    "lib": "lib"
-  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "sanity dev",
+    "build": "sanity build",
+    "start": "sanity start",
+    "test": "echo \"No tests specified\" && exit 0"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
-    "sanity": "^3.87.0",
+    "@sanity/vision": "^3.87.0",
+    "sanity": "^3.37.0",
+    "sanity-plugin-media": "^3.0.2",
     "styled-components": "^6.1.17"
   }
 }
