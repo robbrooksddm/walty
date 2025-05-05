@@ -1,9 +1,12 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
-    
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
@@ -15,17 +18,39 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    /* ——— plugin for Next ——— */
     "plugins": [
       {
         "name": "next"
       }
     ],
-    "baseUrl": ".",          //  ← add this
+    /* ——— new bits start here ——— */
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "@/sanity/*": ["sanity/*"]
-    }
+      "@/*": [
+        "./*"
+      ],
+      "@/sanity/*": [
+        "sanity/*"
+      ],
+      "*": [
+        "*",
+        "types/*"
+      ]
+    },
+    "typeRoots": [
+      "./types",
+      "./node_modules/@types"
+    ]
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "types"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

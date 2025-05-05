@@ -1,27 +1,18 @@
-/* app/globals.css  ──────────────────────────────────────────────── */
-/* tailwindcss */          /* ← THIS line silences the warnings */
+/* app/globals.css — project‑wide styles
+   --------------------------------------------------------------- */
+
+/* Tailwind setup */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ❶  design tokens we were already using */
+/* ❶  Design tokens (light‑mode only) */
 :root {
-  --background: #ffffff;   /* ← light */
+  --background: #ffffff;
   --foreground: #171717;
 }
 
-/* (TEMP)  🌙  REMOVE dark-mode tokens – leave everything in light-mode
-   If you later want dark-mode, add this block back.            */
-/*
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a; 
-    --foreground: #ededed;
-  }
-}
-*/
-
-/* ❷  Geist font helpers you already had */
+/* ❷  Font tokens */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -29,7 +20,7 @@
   --font-mono : var(--font-geist-mono);
 }
 
-/* ❸  base element styles */
+/* ❸  Base element styles */
 body {
   background : var(--background);
   color      : var(--foreground);
@@ -37,26 +28,52 @@ body {
 }
 
 /* ────────────────────────────────────────────────────────────────
-   Tailwind utility tweaks
-   (keep everything in light-mode for now)
-────────────────────────────────────────────────────────────────── */
+   Tailwind utility tweaks (light‑mode only)
+──────────────────────────────────────────────────────────────── */
 
-/* light-mode defaults */
 html { @apply bg-white text-gray-900; }
 
-/*  👇  DELETE the whole dark-mode override block for now  */
-/*
-@media (prefers-color-scheme: dark) {
-  html          { @apply bg-gray-900 text-gray-50; }
-
-  .toolbar      { @apply bg-gray-800/90 text-gray-100 shadow-gray-950; }
-  .thumb        { @apply border-gray-700; }
-  .thumb-active { @apply ring-blue-400; }
-}
-*/
-
-/* thumbnail + toolbar classes (light-mode) */
+/* Thumbnail + toolbar */
 .thumb        { @apply border-gray-300 bg-white text-xs w-24 h-32 p-1; }
 .thumb-active { @apply ring-2 ring-blue-600; }
-
 .toolbar      { @apply bg-white/90 backdrop-blur shadow text-gray-900; }
+
+/* === AI placeholder ghost ===================================== */
+@layer utilities {
+  .ai-ghost {
+    /* positioning */
+    @apply absolute pointer-events-none box-border rounded;
+    position: absolute;
+    pointer-events: none;
+
+    /* thin dashed outline */
+    outline: 1px dashed #7c3aed;
+    outline-offset: -1px;
+
+    border: 0;
+    background: transparent !important;
+  }
+}
+
+/* Fabric preview wrapper — clips the ghost */
+.canvas-wrap { @apply relative overflow-hidden; }
+
+/* Center icon + helper text */
+.ai-ghost__center {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  height:100%;
+  font-size:0.75rem;  /* 12 px */
+  line-height:1.1;
+  color:#ffffff;
+  text-shadow:0 0 2px #000;
+  pointer-events:none;  /* clicks fall through to canvas */
+}
+.ai-ghost__center svg {
+  width:44px;
+  height:36px;
+  margin-bottom:4px;
+}

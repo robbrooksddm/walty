@@ -90,6 +90,11 @@ export function fromSanity(raw: any): Layer | null {
 
 /* ────────────── Editor ➜ Sanity (toSanity) ───────────────────── */
 export function toSanity(layer: Layer | any): any {
+  /* ---------- AI placeholder stays untouched ---------- */
+  if (layer?._type === 'aiPlaceholder') {
+    const { _isAI, selectable, editable, ...keep } = layer as any
+    return keep
+  }
   /* Already a Sanity object (AI placeholder etc.) */
   if (layer?._type) {
     const {
