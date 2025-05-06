@@ -90,15 +90,22 @@ export default function SelfieDrawer ({ open, onClose, onUseSelected }: Props) {
       <Dialog as="div" className="fixed inset-0 z-50 flex"
               onClose={() => { resetToIdle(); onClose() }}>
 
-        {/* backdrop */}
-        <Transition.Child as={Fragment}
-          enter={`transition-opacity ease-out duration-${SLIDE_MS} delay-${SLIDE_MS}`}
-          enterFrom="opacity-0" enterTo="opacity-100"
-          leave={`transition-opacity ease-in duration-${SLIDE_MS}`}
-          leaveFrom="opacity-100" leaveTo="opacity-0">
-          <div className={`fixed inset-y-0 left-0 right-[${DRAWER_PX}px]
-                           bg-black/40 backdrop-blur-sm`}/>
-        </Transition.Child>
+{/* backdrop (stops at drawer edge) */}
+<Transition.Child
+  as={Fragment}
+  enter={`transition-opacity ease-out duration-${SLIDE_MS} delay-${SLIDE_MS}`}
+  enterFrom="opacity-0"
+  enterTo="opacity-100"
+  leave={`transition-opacity ease-in duration-${SLIDE_MS}`}
+  leaveFrom="opacity-100"
+  leaveTo="opacity-0"
+>
+  <div
+    data-selfie-overlay
+    className="fixed inset-y-0 left-0 right-[340px]   /*  <-- hard-coded  */
+           bg-black/20 backdrop-blur-sm backdrop-saturate-150"
+  />
+</Transition.Child>
 
         {/* drawer */}
         <Transition.Child as={Fragment}
