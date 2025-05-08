@@ -1,9 +1,12 @@
 /**********************************************************************
- * cardTemplate.ts  –  design master for printable greeting-cards
+ * cardTemplate.ts – master schema for printable greeting-cards
  * --------------------------------------------------------------------
- * 2025-05-03  pages[4] ➜ layers[]
- * 2025-05-04  AI-placeholder layer (prompt / ref image / lock)
- * 2025-05-05  pages initialValue + clean validation types
+ * 2025-06-05  Studio clean-up:
+ * • 4 category facets  (occasion / audience / theme / relation)
+ * • product “description” copy
+ * • publish guard: needs products & visibleInStore ON
+ * • pages array shows thumbnails + friendly page names
+ * • removed obsolete “aiPrompt” field
  *********************************************************************/
 
 import {
@@ -13,22 +16,27 @@ import {
 } from 'sanity'
 import {ComposeIcon} from '@sanity/icons'
 
-/* ───────── reusable layer members ───────── */
+/*──────────────── fieldsets (plain object) ──────────────────────────*/
+const fieldsets = [
+  { name:'pageset', title:'Pages', options:{columns:1} },
+]
+
+/*──────────────── reusable layer members ───────────────────────────*/
 const layerMembers = [
-  /* background image – locked for customers */
+  /* locked background image */
   defineArrayMember({
-    type  : 'image',
-    name  : 'bgImage',
-    title : 'Background image (locked)',
-    options: {hotspot: true},
+    type :'image',
+    name :'bgImage',
+    title:'Background (locked)',
+    options:{ hotspot:true },
   }),
 
   /* customer-editable text */
   defineArrayMember({
-    type  : 'object',
-    name  : 'editableText',
-    title : 'Editable text',
-    fields: [
+    type :'object',
+    name :'editableText',
+    title:'Editable text',
+    fields:[
       {name:'text'     , type:'string', title:'Default text'},
       {name:'x'        , type:'number', title:'X (px)'},
       {name:'y'        , type:'number', title:'Y (px)'},
@@ -40,168 +48,201 @@ const layerMembers = [
 
   /* customer-editable image */
   defineArrayMember({
-    type  : 'object',
-    name  : 'editableImage',
-    title : 'Editable image',
-    fields: [
-      {name:'src', type:'image' , title:'Default image', options:{hotspot:true}},
-      {name:'x'  , type:'number', title:'X (px)'},
-      {name:'y'  , type:'number', title:'Y (px)'},
-      {name:'w'  , type:'number', title:'Width (px)'},
-      {name:'h'  , type:'number', title:'Height (px)'},
+    type :'object',
+    name :'editableImage',
+    title:'Editable image',
+    fields:[
+      {name:'src', type:'image', title:'Default image', options:{hotspot:true}},
+      {name:'x' , type:'number', title:'X (px)'},
+      {name:'y' , type:'number', title:'Y (px)'},
+      {name:'w' , type:'number', title:'Width (px)'},
+      {name:'h' , type:'number', title:'Height (px)'},
       {name:'scaleX', type:'number', hidden:true},
       {name:'scaleY', type:'number', hidden:true},
     ],
   }),
 
-  /* AI face-swap placeholder */
+  /* AI face-swap layer */
   defineArrayMember({
-    type : 'object',
-    name : 'aiPlaceholder',
-    title: 'AI face-swap placeholder',
-    icon : ComposeIcon,
-
-    fields: [
+    type :'object',
+    name :'aiLayer',
+    title:'AI face-swap layer',
+    icon :ComposeIcon,
+    fields:[
       {
-        name :'prompt',
-        type :'text',
-        rows : 3,
-        title:'Prompt sent to OpenAI',
-        validation: rule => rule.required().error('Prompt is required'),
+        name:'source',
+        type:'reference',
+        to  :[{type:'aiPlaceholder'}],
+        title:'Placeholder spec',
+        validation:r=>r.required(),
       },
-      {
-        name :'refImage',
-        type :'image',
-        title:'Reference style image (optional)',
-        options:{hotspot:true},
-      },
-      {
-        name :'locked',
-        type :'boolean',
-        title:'Lock position & size?',
-        initialValue:false,
-      },
-
-      /* geometry written by CardEditor – hidden in Studio */
       {name:'x', type:'number', hidden:true},
       {name:'y', type:'number', hidden:true},
       {name:'w', type:'number', hidden:true},
       {name:'h', type:'number', hidden:true},
+      {
+        name:'locked',
+        type:'boolean',
+        title:'Lock position & size?',
+        initialValue:false,
+      },
     ],
-
     preview:{
-      select : {title:'prompt'},
-      prepare: ({title}) => ({
+      select:{title:'source.prompt', media:'source.refImage'},
+      prepare:({title, media})=>({
         title: title ? `${title.slice(0,40)}…` : 'AI placeholder',
-        media: ComposeIcon,
+        media,
       }),
     },
   }),
 ]
 
-/* ───────── schema definition ───────── */
+/*──────────────── schema definition ───────────────────────────────*/
 export default defineType({
-  name : 'cardTemplate',
-  type : 'document',
-  title: 'Card template',
+  name :'cardTemplate',
+  type :'document',
+  title:'Card template',
 
-  fields: [
-    /* identity ---------------------------------------------------- */
+  /* tab groups (Desk views are configured in structure.ts) */
+  groups:[
+    {name:'basic'     , title:'Basics',      default:true},
+    {name:'store'     , title:'Store data'},
+    {name:'pageLayout', title:'Pages'},
+  ],
+
+  fieldsets,
+
+  fields:[
+
+    /* —— Basics ——————————————————————————————— */
     defineField({
-      name :'title',
-      type :'string',
+      name:'title',
+      type:'string',
       title:'Template name',
-      validation: rule => rule.required(),
+      group:'basic',
+      validation:r=>r.required(),
     }),
     defineField({
-      name :'slug',
-      type :'slug',
+      name:'slug',
+      type:'slug',
       title:'Slug',
-      options:{source:'title',maxLength:96},
-      validation: rule => rule.required(),
+      group:'basic',
+      options:{source:'title', maxLength:96},
+      validation:r=>r.required(),
     }),
 
-    /* live toggle ------------------------------------------------- */
+    /* —— Store data ——————————————————————————— */
     defineField({
-      name :'isLive',
-      type :'boolean',
+      name:'isLive',
+      type:'boolean',
       title:'Visible in store?',
-      description:'Keep OFF while laying out artwork. Turn ON when ready.',
+      group:'store',
       initialValue:false,
       options:{layout:'switch'},
-      validation: rule => rule.required(),
+      validation:r=>r.required(),
     }),
-
-    /* product SKUs ----------------------------------------------- */
     defineField({
-      name :'products',
-      type :'array',
+      name:'products',
+      type:'array',
+      group:'store',
       title:'Available as…',
-      of   :[{type:'reference',to:[{type:'cardProduct'}]}],
-      validation: rule => rule.min(1).error('Choose at least one product SKU'),
+      of:[{type:'reference', to:[{type:'cardProduct'}]}],
+      validation:r=>r.min(1).error('Choose at least one product SKU'),
     }),
-
-    /* default AI prompt (optional) ------------------------------- */
     defineField({
-      name :'aiPrompt',
-      type :'text',
-      title:'Default DALL-E prompt',
-      rows :3,
+      name:'description',
+      type:'text',
+      group:'store',
+      title:'Product description',
+      rows:3,
+      validation:r=>r.max(300),
     }),
 
-    /* pages[4] ➜ layers[] ---------------------------------------- */
+    /* —— Category facets ———————————————————— */
+    defineField({
+      name:'occasion',
+      type:'array',
+      group:'store',
+      title:'Occasion',
+      options:{layout:'tags'},
+      of:[{type:'reference', to:[{type:'occasion'}]}],
+    }),
+    defineField({
+      name:'audience',
+      type:'array',
+      group:'store',
+      title:'Who’s it for?',
+      options:{layout:'tags'},
+      of:[{type:'reference', to:[{type:'audience'}]}],
+    }),
+    defineField({
+      name:'theme',
+      type:'array',
+      group:'store',
+      title:'Theme',
+      options:{layout:'tags'},
+      of:[{type:'reference', to:[{type:'theme'}]}],
+    }),
+    defineField({
+      name:'relation',
+      type:'array',
+      group:'store',
+      title:'Relation to buyer (optional)',
+      options:{layout:'tags'},
+      of:[{type:'reference', to:[{type:'relation'}]}],
+    }),
+
+    /* —— Pages (4) ——————————————————————————— */
     defineField({
       name :'pages',
-      title:'Pages (must be four)',
-      description:'Front • inner-left • inner-right • back',
+      group:'pageLayout',
+      fieldset:'pageset',
+      title:'Pages (Front · Inner-L · Inner-R · Back)',
       type :'array',
       initialValue:[
-        {layers:[]},  // front
-        {layers:[]},  // inner-L
-        {layers:[]},  // inner-R
-        {layers:[]},  // back
+        {name:'front',       layers:[]},
+        {name:'inner-left',  layers:[]},
+        {name:'inner-right', layers:[]},
+        {name:'back',        layers:[]},
       ],
-      validation: rule => rule.length(4),
+      validation:r=>r.length(4),
       of:[ defineArrayMember({
         type :'object',
         name :'page',
-        title:'Page',
-        fields:[ defineField({
-          name :'layers',
-          title:'Layers (top → bottom)',
-          type :'array',
-          of   : layerMembers,
-          /* must have ≥1 layer across ANY of the 4 pages */
-          validation: rule =>
-            rule.custom((layers, ctx) => {
+        preview:{
+          select:{title:'name', media:'layers.0.src'},
+          prepare:({title})=>({
+            title:(
+              title==='front'       ? 'Front cover' :
+              title==='inner-left'  ? 'Inner left'  :
+              title==='inner-right' ? 'Inner right' :
+              'Back cover'
+            ),
+          }),
+        },
+        fields:[
+          defineField({name:'name', type:'string', hidden:true}),
+          defineField({
+            name :'layers',
+            title:'Layers (top → bottom)',
+            type :'array',
+            of   :layerMembers,
+            validation:r=>r.custom((layers, ctx)=>{
               const pages = (ctx.document as any)?.pages ?? []
-              const hasAny =
-                (layers as any[])?.length > 0 ||
-                pages.some((p:any)=>p?.layers?.length)
-              return hasAny
-                ? true
-                : 'Add at least one layer before publishing'
+              const any   = (layers as any[])?.length>0 ||
+                            pages.some((p:any)=>p?.layers?.length)
+              return any || 'Add at least one layer before publishing'
             }),
-        }) ],
+          }),
+        ],
       }) ],
     }),
-
-    /* legacy root-level layers (hidden) -------------------------- */
-    defineField({
-      name  :'layers',
-      type  :'array',
-      title :'Layers (legacy)',
-      of    : layerMembers,
-      hidden:true,
-    }),
-
-    /* raw JSON debug / export ------------------------------------ */
-    defineField({
-      name  :'json',
-      type  :'text',
-      title :'Template JSON (debug / export)',
-      rows  :8,
-      hidden: ({document}) => Boolean((document as any)?.pages?.length),
-    }),
   ],
+
+  /* —— final “can-publish?” guard ————————— */
+  validation:(Rule)=>Rule.custom((doc:any)=>{
+    if (doc.isLive && (!doc.products || doc.products.length===0))
+      return 'Cannot publish: add at least one product & keep “Visible” ON'
+    return true
+  }),
 })

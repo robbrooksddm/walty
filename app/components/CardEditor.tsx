@@ -1,23 +1,23 @@
 /**********************************************************************
- * CardEditor.tsx ⟩ WYSIWYG editor for a 4‑page greeting card
+ * CardEditor.tsx  –  WYSIWYG editor for a 4-page greeting card
  * --------------------------------------------------------------------
  * ▸ Staff mode     – toolbar shows upload / font tools
- * ▸ Customer mode  – stripped‑down toolbar
- * 2025‑05‑11       – wires SelfieDrawer → swaps chosen variant into canvas
+ * ▸ Customer mode  – stripped-down toolbar
+ * 2025-05-11       – wires SelfieDrawer → swaps chosen variant into canvas
  *********************************************************************/
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { fabric }                      from 'fabric'
+import { fabric }                       from 'fabric'
 
-import { useEditor }                   from './EditorStore'
+import { useEditor }                    from './EditorStore'
 if (typeof window !== 'undefined') (window as any).useEditor = useEditor // debug helper
 
-import LayerPanel                      from './LayerPanel'
-import FabricCanvas, { undo, redo }    from './FabricCanvas'
-import TextToolbar                     from './TextToolbar'
-import SelfieDrawer                    from './SelfieDrawer'
-import type { TemplatePage }           from './FabricCanvas'
+import LayerPanel                       from './LayerPanel'
+import FabricCanvas, { undo, redo }     from './FabricCanvas'
+import TextToolbar                      from './TextToolbar'
+import SelfieDrawer                     from './SelfieDrawer'
+import type { TemplatePage }            from './FabricCanvas'
 
 /* ---------- helpers ------------------------------------------------ */
 type Section = 'front' | 'inside' | 'back'
@@ -27,21 +27,29 @@ export type SaveFn = (pages: TemplatePage[]) => void | Promise<void>
 
 const EMPTY: TemplatePage[] = [
   { name: 'front'  , layers: [] },
-  { name: 'inner‑L', layers: [] },
-  { name: 'inner‑R', layers: [] },
+  { name: 'inner-L', layers: [] },
+  { name: 'inner-R', layers: [] },
   { name: 'back'   , layers: [] },
 ]
 
-/* ---------- tiny coach‑mark component ------------------------------ */
+/* ---------- tiny coach-mark component ------------------------------ */
 function CoachMark({ anchor, onClose }: { anchor: DOMRect | null; onClose: () => void }) {
   if (!anchor) return null
   return (
-    <div className="fixed z‑40 animate‑fade‑in" style={{ top: anchor.top - 10, left: anchor.right + 12 }}>
+    <div
+      className="fixed z-40 animate-fade-in"
+      style={{ top: anchor.top - 10, left: anchor.right + 12 }}
+    >
       <div className="relative bg-gray-800 text-white rounded-lg shadow-lg px-4 py-3 max-w-[220px] text-sm leading-snug">
         Want to star in this poster?
-        <br/>Upload your photo!
-        <button onClick={onClose} className="absolute top-1.5 right-2 opacity-70 hover:opacity-100">✕</button>
-        <div className="absolute -left-2 top-6 w-0 h-0 border-y-8 border-y-transparent border-r-[12px] border-r-gray-800"/>
+        <br />Upload your photo!
+        <button
+          onClick={onClose}
+          className="absolute top-1.5 right-2 opacity-70 hover:opacity-100"
+        >
+          ✕
+        </button>
+        <div className="absolute -left-2 top-6 w-0 h-0 border-y-8 border-y-transparent border-r-[12px] border-r-gray-800" />
       </div>
     </div>
   )
@@ -66,20 +74,25 @@ export default function CardEditor({
   }, [])
 
   /* 2 ─ store selectors ------------------------------------------ */
-  const pages     = useEditor(s => s.pages)
-  const setActive = useEditor(s => s.setActive)
-  const addText   = useEditor(s => s.addText)
-  const addImage  = useEditor(s => s.addImage)
+  const pages       = useEditor(s => s.pages)
+  const setActive   = useEditor(s => s.setActive)
+  const addText     = useEditor(s => s.addText)
+  const addImage    = useEditor(s => s.addImage)
   const updateLayer = useEditor(s => s.updateLayer)
 
   /* 3 ─ visible section ------------------------------------------ */
   const [section, setSection] = useState<Section>('front')
-  const activeIdx: PageIdx = section === 'front' ? 0 : section === 'inside' ? 1 : 3
+  const activeIdx: PageIdx =
+    section === 'front'  ? 0 :
+    section === 'inside' ? 1 :
+    3                                                        // back
   useEffect(() => { setActive(activeIdx) }, [activeIdx, setActive])
 
   /* 4 ─ Fabric canvases ------------------------------------------ */
-  const [canvasMap, setCanvasMap] = useState<(fabric.Canvas | null)[]>([null, null, null, null])
-  const onReady = (idx: number, fc: fabric.Canvas | null) => setCanvasMap(list => { const next = [...list]; next[idx] = fc; return next })
+  const [canvasMap, setCanvasMap] =
+    useState<(fabric.Canvas | null)[]>([null, null, null, null])
+  const onReady = (idx: number, fc: fabric.Canvas | null) =>
+    setCanvasMap(list => { const next = [...list]; next[idx] = fc; return next })
   const activeFc = canvasMap[activeIdx]
 
   /* 5 ─ save ------------------------------------------------------ */
@@ -92,33 +105,56 @@ export default function CardEditor({
   }
 
   /* 6 ─ selfie drawer -------------------------------------------- */
-  const [drawerOpen, setDrawerOpen] = useState(false)
+const [drawerOpen, setDrawerOpen]       = useState(false)
+const [aiPlaceholderId, setAiPlaceholderId] = useState<string | null>(null)
 
-  // open from Fabric ghost overlay
-  useEffect(() => {
-    const open = () => setDrawerOpen(true)
-    document.addEventListener('open-selfie-drawer', open)
-    return () => document.removeEventListener('open-selfie-drawer', open)
-  }, [])
+/** open drawer when Fabric fires its custom event */
+useEffect(() => {
+  const open = () => {
+    // 1️⃣ find the placeholder layer the user just clicked
+    const page  = pages[activeIdx]
+    const layer = page.layers.find(l => l._type === 'aiLayer')
 
-/* 6b — when user picks a variant ------------------------------ */
-const handleSwap = (url: string) => {
-  // use the section-based activeIdx we computed earlier
-  const pageIdx = activeIdx;                       // ← change
-  const page    = pages[pageIdx];                  // ← change
-  const lyIdx   = page.layers.findIndex(l => (l as any)._isAI)
-  if (lyIdx === -1) return
+    // 2️⃣ store its placeholderId so <SelfieDrawer> gets it
+    setAiPlaceholderId((layer as any)?.placeholderId ?? null)
 
-    updateLayer(pageIdx, lyIdx, { src: url, _isAI: false })
-    setDrawerOpen(false)
+    // 3️⃣ show the drawer
+    setDrawerOpen(true)
   }
 
-  /* 7 ─ coach‑mark ----------------------------------------------- */
+  document.addEventListener('open-selfie-drawer', open)
+  return () => document.removeEventListener('open-selfie-drawer', open)
+}, [pages, activeIdx])
+
+  /** 6b — when the user confirms a variant ----------------------- */
+const handleSwap = (url: string) => {
+  const pageIdx = activeIdx
+  const page    = pages[pageIdx]
+
+  /* 1️⃣  find the aiLayer              ↓↓↓ */
+  const lyIdx = page.layers.findIndex(l => l._type === 'aiLayer')
+  if (lyIdx === -1) return
+
+  /* 2️⃣  copy its geometry so the new image
+          sits in the same spot/size      */
+  const { x, y, w, h } = page.layers[lyIdx] as any
+
+  /* 3️⃣  replace the layer with a normal editableImage */
+  updateLayer(pageIdx, lyIdx, {
+    _type : 'editableImage',   // becomes a regular image layer
+    src   : url,               // CDN URL we just chose
+    x, y, w, h,                // keep geometry
+  })
+
+  setDrawerOpen(false)
+}
+
+  /* 7 ─ coach-mark ----------------------------------------------- */
   const [anchor, setAnchor] = useState<DOMRect | null>(null)
   const ran = useRef(false)
   useEffect(() => {
     if (ran.current || typeof window === 'undefined') return
-    if (localStorage.getItem('ai_coachmark_shown')) return
+    if (localStorage.getItem('ai_coachmark_shown'))      return
 
     let tries = 0
     const tick = () => {
@@ -126,7 +162,7 @@ const handleSwap = (url: string) => {
       if (el) {
         const update = () => setAnchor(el.getBoundingClientRect())
         update()
-        window.addEventListener('scroll', update, { passive: true })
+        window.addEventListener('scroll',  update, { passive:true })
         window.addEventListener('resize', update)
         return
       }
@@ -138,7 +174,11 @@ const handleSwap = (url: string) => {
 
   /* 8 ─ loader guard --------------------------------------------- */
   if (pages.length !== 4) {
-    return <div className="h-screen flex items-center justify-center text-gray-500">loading template…</div>
+    return (
+      <div className="h-screen flex items-center justify-center text-gray-500">
+        loading template…
+      </div>
+    )
   }
 
   const box = 'flex-shrink-0 w-[420px]'
@@ -148,11 +188,18 @@ const handleSwap = (url: string) => {
     <div className="flex h-screen relative">
 
       {/* global overlays */}
-      <CoachMark anchor={anchor} onClose={() => { setAnchor(null); localStorage.setItem('ai_coachmark_shown', '1') }} />
+      <CoachMark
+        anchor={anchor}
+        onClose={() => {
+          setAnchor(null)
+          localStorage.setItem('ai_coachmark_shown', '1')
+        }}
+      />
       <SelfieDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onUseSelected={handleSwap}
+        placeholderId={aiPlaceholderId}   /* ← NEW prop */
       />
 
       {/* sidebar */}
@@ -161,22 +208,28 @@ const handleSwap = (url: string) => {
       {/* main */}
       <div className="flex-1 flex flex-col">
         <TextToolbar
-          canvas   ={activeFc}
-          addText  ={addText}
-          addImage ={addImage}
-          onUndo   ={() => activeFc && undo(activeFc)}
-          onRedo   ={() => activeFc && redo(activeFc)}
-          onSave   ={handleSave}
-          mode     ={mode}
-          saving   ={saving}
+          canvas    ={activeFc}
+          addText   ={addText}
+          addImage  ={addImage}
+          onUndo    ={() => activeFc && undo(activeFc)}
+          onRedo    ={() => activeFc && redo(activeFc)}
+          onSave    ={handleSave}
+          mode      ={mode}
+          saving    ={saving}
         />
 
         {/* tabs */}
         <nav className="flex justify-center gap-8 py-3 text-sm font-medium">
-          {(['front', 'inside', 'back'] as Section[]).map(lbl => (
-            <button key={lbl}
+          {(['front','inside','back'] as Section[]).map(lbl => (
+            <button
+              key={lbl}
               onClick={() => setSection(lbl)}
-              className={section === lbl ? 'text-blue-600 border-b-2 border-blue-600 pb-1' : 'text-gray-500 hover:text-gray-800'}>
+              className={
+                section === lbl
+                  ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                  : 'text-gray-500 hover:text-gray-800'
+              }
+            >
               {lbl.replace(/^./, c => c.toUpperCase())}
             </button>
           ))}
@@ -190,8 +243,12 @@ const handleSwap = (url: string) => {
           </div>
           {/* inside */}
           <div className={section === 'inside' ? 'flex gap-6' : 'hidden'}>
-            <div className={box}><FabricCanvas pageIdx={1} page={pages[1]} onReady={fc => onReady(1, fc)} /></div>
-            <div className={box}><FabricCanvas pageIdx={2} page={pages[2]} onReady={fc => onReady(2, fc)} /></div>
+            <div className={box}>
+              <FabricCanvas pageIdx={1} page={pages[1]} onReady={fc => onReady(1, fc)} />
+            </div>
+            <div className={box}>
+              <FabricCanvas pageIdx={2} page={pages[2]} onReady={fc => onReady(2, fc)} />
+            </div>
           </div>
           {/* back */}
           <div className={section === 'back' ? box : 'hidden'}>
@@ -202,12 +259,19 @@ const handleSwap = (url: string) => {
         {/* thumbnails */}
         <div className="flex justify-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 text-xs">
           {(['FRONT', 'INNER-L', 'INNER-R', 'BACK'] as const).map((lbl, i) => (
-            <button key={lbl}
+            <button
+              key={lbl}
               className={`thumb ${
-                (section === 'front' && i === 0) ||
+                (section === 'front'  && i === 0) ||
                 (section === 'inside' && (i === 1 || i === 2)) ||
-                (section === 'back' && i === 3) ? 'thumb-active' : ''}`}
-              onClick={() => setSection(i === 0 ? 'front' : i === 3 ? 'back' : 'inside')}>
+                (section === 'back'   && i === 3)
+                  ? 'thumb-active'
+                  : ''
+              }`}
+              onClick={() =>
+                setSection(i === 0 ? 'front' : i === 3 ? 'back' : 'inside')
+              }
+            >
               {lbl}
             </button>
           ))}
