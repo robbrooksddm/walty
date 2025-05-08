@@ -19,6 +19,7 @@ import {schemaTypes} from './schemaTypes'
 import cardEditorAction from './plugins/cardEditorAction'
 import SaveDraftAction  from './plugins/saveDraftAction'
 
+
 /* ------------------------------------------------ document actions - */
 const cardTemplateActions = (
   prev: DocumentActionComponent[],

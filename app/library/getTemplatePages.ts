@@ -26,17 +26,27 @@ export async function getTemplatePages(
 ): Promise<TemplatePage[]> {
   /* 1 ─ pick the first match by _id or slug */
   const query = /* groq */ `
-    *[
-      _type == "cardTemplate" &&
-      (
-        _id == $key ||                // real id
-        _id == $draftKey ||           // drafts.<id>
-        slug.current == $key          // slug
-      )
-    ][0]{
-      pages
+  *[
+    _type == "cardTemplate" &&
+    (
+      _id == $key      ||
+      _id == $draftKey ||
+      slug.current == $key
+    )
+  ][0]{
+    pages[]{
+      layers[]{
+        ...,                       // keep every native field
+        // if this layer has a reference called “source”, pull it in-line:
+        "source": source->{
+          _id,
+          prompt,
+          refImage                // we only need these three
+        }
+      }
     }
-  `
+  }
+`
 
   const params = {
     key:       idOrSlug,

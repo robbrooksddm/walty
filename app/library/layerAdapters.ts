@@ -1,72 +1,74 @@
 /**********************************************************************
- * layerAdapters.ts – Sanity ⇆ Editor conversions
+ * layerAdapters.ts – Sanity ⇄ Fabric-editor conversions
  * --------------------------------------------------------------------
- * 2025-05-07
- *  ✓ no more `srcUrl` in data sent back to Sanity
- *  ✓ keeps prompt / refImage / locked on AI placeholders
- *  ✓ adds hidden scaleX / scaleY only when ≠ 1 (so Studio never warns)
+ * 2025-05-30
+ *  • supports `aiLayer` (face-swap placeholder)
+ *  • keeps round-trip metadata so nothing is lost on save
  *********************************************************************/
 
-import {urlFor}   from '@/sanity/lib/image'
-import type {Layer} from '@/app/components/FabricCanvas'
+import { urlFor }     from '@/sanity/lib/image'
+import type { Layer } from '@/app/components/FabricCanvas'
 
-/* ───────────────────────── helpers ────────────────────────────── */
-function imageUrl(src: any): string | undefined {
-  if (src?._ref)                 return urlFor(src).url()   // GROQ asset
-  if (typeof src === 'string')   return src                 // plain URL
-  return undefined
-}
+/* ---------- helpers ------------------------------------------------ */
+const imgUrl = (src: any): string | undefined =>
+       src?._ref            ? urlFor(src).url()   // GROQ asset ref
+     : typeof src === 'string' ? src              // plain URL
+     : undefined
 
-/* ────────────── Sanity ➜ Editor (fromSanity) ─────────────────── */
+/* =================================================================== */
+/* 1 ▸ Sanity ➜ Fabric (fromSanity)                                    */
+/* =================================================================== */
 export function fromSanity(raw: any): Layer | null {
   if (!raw?._type) return null
 
-  /* ── AI placeholder ─────────────────────────────────────────── */
-  if (raw._type === 'aiPlaceholder') {
-    const locked = Boolean(raw.locked)
+  /* ①  AI face-swap placeholder -------------------------------- */
+  if (raw._type === 'aiLayer') {
+    const locked   = !!raw.locked
+    const spec     = raw.source               // ↖ reference to aiPlaceholder
+    const refImage = spec?.refImage
 
     return {
-      /* rendering */
-      type :'image',
-      src  : raw.refImage ? urlFor(raw.refImage).url()
-                          : '/ai-placeholder.png',
-      x     : raw.x ?? 100,
-      y     : raw.y ?? 100,
-      width : raw.w ?? 300,
+      /* what Fabric needs to render */
+      type : 'image',
+      src  : refImage ? urlFor(refImage).url() : '/ai-placeholder.png',
+      x    : raw.x ?? 100,
+      y    : raw.y ?? 100,
+      width : raw.w,
       height: raw.h,
       scaleX: raw.scaleX,
       scaleY: raw.scaleY,
       selectable: !locked,
       editable  : !locked,
 
-      /* round-trip metadata */
-      prompt   : raw.prompt ?? '',
-      refImage : raw.refImage,
+      /* bookkeeping for round-trip */
+      _type : 'aiLayer',
+      _key  : raw._key,
+      _isAI : true,
       locked,
-      _type    : 'aiPlaceholder',
-      _key     : raw._key,
-      _isAI    : true,
-    } as Layer
+      /** SelfieDrawer reads this when calling /api/variants */
+      placeholderId: spec?._id ?? spec?._ref ?? null,
+    } as Layer & { _isAI: true }
   }
 
-  /* ── editable / background image ────────────────────────────── */
+  /* ②  editable / background image ----------------------------- */
   if (raw._type === 'editableImage' || raw._type === 'bgImage') {
     return {
-      type :'image',
-      src  : imageUrl(raw.src)          // new docs: field = asset ref
-          ?? imageUrl(raw)              // legacy: whole object is ref
-          ?? raw.srcUrl,                // very old docs
-      x     : raw.x ?? 0,
-      y     : raw.y ?? 0,
-      width : raw.w,
-      height: raw.h,
-      scaleX: raw.scaleX,
-      scaleY: raw.scaleY,
+      type : 'image',
+      src  : imgUrl(raw.src)        // modern docs
+          ?? imgUrl(raw)            // very old docs
+          ?? raw.srcUrl,            // ancient docs
+      x      : raw.x ?? 0,
+      y      : raw.y ?? 0,
+      width  : raw.w,
+      height : raw.h,
+      scaleX : raw.scaleX,
+      scaleY : raw.scaleY,
       selectable: raw._type !== 'bgImage',
+      editable  : raw._type !== 'bgImage',
     }
   }
 
-  /* ── editable text ──────────────────────────────────────────── */
+  /* ③  editable text ------------------------------------------- */
   if (raw._type === 'editableText') {
     return {
       type :'text',
@@ -85,40 +87,39 @@ export function fromSanity(raw: any): Layer | null {
     }
   }
 
+  /* unknown layer type – skip it */
   return null
 }
 
-/* ────────────── Editor ➜ Sanity (toSanity) ───────────────────── */
+/* =================================================================== */
+/* 2 ▸ Fabric ➜ Sanity (toSanity)                                      */
+/* =================================================================== */
 export function toSanity(layer: Layer | any): any {
-  /* ---------- AI placeholder stays untouched ---------- */
-  if (layer?._type === 'aiPlaceholder') {
-    const { _isAI, selectable, editable, ...keep } = layer as any
+  /* keep AI placeholder as-is (strip editor-only flags) */
+  if (layer?._type === 'aiLayer') {
+    const { _isAI, selectable, editable, ...keep } = layer
     return keep
   }
-  /* Already a Sanity object (AI placeholder etc.) */
+
+  /* other native Sanity objects – strip editor-only fields */
   if (layer?._type) {
-    const {
-      _isAI, type, selectable, editable, src, assetId,   // editor-only
-      ...rest
-    } = layer
+    const { _isAI, type, selectable, editable, src, assetId, ...rest } = layer
     return rest
   }
 
-  /* image -------------------------------------------------------- */
+  /* images back to editableImage -------------------------------- */
   if (layer.type === 'image') {
     const obj: any = {
       _type : 'editableImage',
-      x: layer.x, y: layer.y, w: layer.width, h: layer.height,
+      x : layer.x, y : layer.y, w : layer.width, h : layer.height,
     }
     if (layer.scaleX && layer.scaleX !== 1) obj.scaleX = layer.scaleX
     if (layer.scaleY && layer.scaleY !== 1) obj.scaleY = layer.scaleY
-    if (layer.assetId) {
-      obj.src = { _type: 'reference', _ref: layer.assetId }
-    }
+    if (layer.assetId) obj.src = { _type: 'reference', _ref: layer.assetId }
     return obj
   }
 
-  /* text --------------------------------------------------------- */
+  /* text back to editableText ----------------------------------- */
   if (layer.type === 'text') {
     return {
       _type :'editableText',
@@ -135,5 +136,6 @@ export function toSanity(layer: Layer | any): any {
     }
   }
 
-  return {}          // safeguard – shouldn’t be hit
+  /* safeguard – should never be reached */
+  return {}
 }

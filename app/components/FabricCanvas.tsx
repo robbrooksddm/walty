@@ -104,6 +104,63 @@ const addGuides = (fc: fabric.Canvas) => {
   ].forEach(l => fc.add(l))
 }
 
+/* ---------- checkerboard ----------------------------------------
+const addCheckerboard = (fc: fabric.Canvas) => {
+  if (fc.getObjects().some(o => (o as any)._checker)) return   // already there
+
+  const SIZE = mm(5)               // 5 mm squares
+  const cols = Math.ceil(PAGE_W / SIZE)
+  const rows = Math.ceil(PAGE_H / SIZE)
+
+  const group = new fabric.Group([], {
+    selectable: false,
+    evented: false,
+    excludeFromExport: true,
+  })
+  ;(group as any)._checker = true   // ← flag so we never add twice
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if ((r + c) % 2) continue     // chess pattern
+      group.add(new fabric.Rect({
+        left:  c * SIZE,
+        top:   r * SIZE,
+        width: SIZE,
+        height: SIZE,
+        fill: '#ececec',
+        originX: 'left',
+        originY: 'top',
+      }))
+    }
+  }
+
+  group.sendToBack()
+  fc.add(group)
+}
+---------------------------------------- */
+
+/* ---------- white backdrop -------------------------------------- */
+const addBackdrop = (fc: fabric.Canvas) => {
+  // only add it once
+  if (fc.getObjects().some(o => (o as any)._backdrop)) return
+
+  const bg = new fabric.Rect({
+    left   : 0,
+    top    : 0,
+    width  : PAGE_W,
+    height : PAGE_H,
+    fill   : '#ffffff',         // ← solid white
+    selectable       : false,
+    evented          : false,
+    excludeFromExport: true,
+  })
+  ;(bg as any)._backdrop = true   // flag so we don’t add twice
+
+  bg.sendToBack()
+  fc.add(bg)
+}
+
+
 /* ---------- component ------------------------------------------- */
 interface Props {
   pageIdx : number
@@ -129,6 +186,8 @@ export default function FabricCanvas ({ pageIdx, page, onReady }: Props) {
       backgroundColor: '#fff', width: PAGE_W, height: PAGE_H,
       preserveObjectStacking: true,
     })
+    /*addCheckerboard(fc)*/
+    addBackdrop(fc)
     fc.setViewportTransform([SCALE, 0, 0, SCALE, 0, 0])
     fc.setWidth(PREVIEW_W); fc.setHeight(PREVIEW_H)
     ;(window as any).fc = fc  // dev helper
@@ -238,7 +297,8 @@ export default function FabricCanvas ({ pageIdx, page, onReady }: Props) {
           })
 
           /* AI placeholder = ghost overlay + outline ------------- */
-          if (ly._isAI) {
+           // ly comes from fromSanity(raw) but we need to look at the original node
+ if (raw._type === 'aiLayer') {
             const locked = !!ly.locked
             img.set({ selectable: !locked, evented: !locked, hasControls: !locked })
 

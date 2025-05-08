@@ -1,48 +1,46 @@
 {
   "compilerOptions": {
+    /* ————————————————— core settings ————————————————— */
     "target": "ES2017",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
     "module": "esnext",
+    "lib": ["dom", "dom.iterable", "esnext"],
     "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    /* ——— plugin for Next ——— */
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    /* ——— new bits start here ——— */
+    "noEmit": true,
+
+    /* ————————————————— ergonomics ———————————————— */
+    "strict": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+
+    /* ————————————————— Next.js plugin ———————————— */
+    "plugins": [{ "name": "next" }],
+
+    /* ————————————————— path aliases ———————————— */
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ],
-      "@/sanity/*": [
-        "sanity/*"
-      ],
-      "*": [
-        "*",
-        "types/*"
-      ]
+      /* app-relative imports */
+      "@/*": ["./*"],
+
+      /* Sanity helper imports (already in use) */
+      "@/sanity/*": ["sanity/*"],
+
+      /* NEW – root-level helpers in /lib */
+      "@/lib/*": ["lib/*"],
+
+      /* fallback so *.d.ts in /types are global */
+      "*": ["*", "types/*"]
     },
-    "typeRoots": [
-      "./types",
-      "./node_modules/@types"
-    ]
+
+    /* ————————————————— custom type roots ———————— */
+    "typeRoots": ["./types", "./node_modules/@types"]
   },
+
   "include": [
     "next-env.d.ts",
     "**/*.ts",
@@ -50,7 +48,6 @@
     ".next/types/**/*.ts",
     "types"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+
+  "exclude": ["node_modules"]
 }
