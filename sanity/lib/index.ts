@@ -1,5 +1,9 @@
-export { sanity } from './client';
-export { urlFor } from './image';
-export type { PlaceholderPrompt } from './getPromptForPlaceholder';
-export { getPromptForPlaceholder } from './getPromptForPlaceholder';
-export { sanityWriteClient } from './client';   // only if you chose Option B
+/**********************************************************************
+ * sanity/lib/index.ts  –  barrel exports
+ *********************************************************************/
+
+export { sanity, sanityWriteClient } from './client'
+export { urlFor }                    from './image'
+
+export { getPromptForPlaceholder }   from './getPromptForPlaceholder'
+export type { PlaceholderPrompt }    from './getPromptForPlaceholder'
