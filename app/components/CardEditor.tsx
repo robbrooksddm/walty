@@ -104,46 +104,37 @@ export default function CardEditor({
     finally { setSaving(false) }
   }
 
-  /* 6 ─ selfie drawer -------------------------------------------- */
-const [drawerOpen, setDrawerOpen]       = useState(false)
+/* 6 ─ selfie drawer ------------------------------------------------- */
+const [drawerOpen, setDrawerOpen]           = useState(false)
 const [aiPlaceholderId, setAiPlaceholderId] = useState<string | null>(null)
 
-/** open drawer when Fabric fires its custom event */
+/* listen for the event FabricCanvas now emits */
 useEffect(() => {
-  const open = () => {
-    // 1️⃣ find the placeholder layer the user just clicked
-    const page  = pages[activeIdx]
-    const layer = page.layers.find(l => l._type === 'aiLayer')
-
-    // 2️⃣ store its placeholderId so <SelfieDrawer> gets it
-    setAiPlaceholderId((layer as any)?.placeholderId ?? null)
-
-    // 3️⃣ show the drawer
+  const open = (e: Event) => {
+    const id =
+      (e as CustomEvent<{ placeholderId: string | null }>).detail
+        ?.placeholderId ?? null
+    setAiPlaceholderId(id)
     setDrawerOpen(true)
   }
-
   document.addEventListener('open-selfie-drawer', open)
   return () => document.removeEventListener('open-selfie-drawer', open)
-}, [pages, activeIdx])
+}, [])
 
-  /** 6b — when the user confirms a variant ----------------------- */
+/* 6 b – when the user picks one of the generated variants ----------- */
 const handleSwap = (url: string) => {
-  const pageIdx = activeIdx
-  const page    = pages[pageIdx]
+  const pageIdx = activeIdx                         // current page
+  const lyIdx   = pages[pageIdx].layers.findIndex(  // its aiLayer
+                    l => l._type === 'aiLayer')
+  if (lyIdx === -1) return                          // nothing to swap
 
-  /* 1️⃣  find the aiLayer              ↓↓↓ */
-  const lyIdx = page.layers.findIndex(l => l._type === 'aiLayer')
-  if (lyIdx === -1) return
+  const { x, y, w, h } =
+        pages[pageIdx].layers[lyIdx] as any         // keep geometry
 
-  /* 2️⃣  copy its geometry so the new image
-          sits in the same spot/size      */
-  const { x, y, w, h } = page.layers[lyIdx] as any
-
-  /* 3️⃣  replace the layer with a normal editableImage */
   updateLayer(pageIdx, lyIdx, {
-    _type : 'editableImage',   // becomes a regular image layer
-    src   : url,               // CDN URL we just chose
-    x, y, w, h,                // keep geometry
+    _type : 'editableImage',                        // ← now a normal image
+    src   : url,                                    // variant’s CDN URL
+    x, y, w, h,
   })
 
   setDrawerOpen(false)

@@ -1,27 +1,35 @@
 /* sanity/schemaTypes/index.ts
-   – central export for all document types
-   ------------------------------------------------------------------ */
+   – central export for all document / object types
+   -------------------------------------------------------------- */
 
    import cardTemplate  from './cardTemplate'
    import cardProduct   from './cardProduct'
+   
+   /* AI-related ---------------------------------------------------- */
    import aiPlaceholder from './aiPlaceholder'
+   import aiLayer       from './aiLayer'
    
-   /* facet look-ups (new) */
-   import occasion from './occasion'
-   import audience from './audience'
-   import theme    from './theme'
-   import relation from './relation'
+   /* core editable objects ---------------------------------------- */
+   import editableImage from './editableImage'
+   import editableText  from './editableText'
    
-   /* ---------- shim for older Studio versions ---------- */
-   import {defineField as _df} from 'sanity'
-   export const defineFieldset = (x: any) => x as ReturnType<typeof _df>
-   /* ---------------------------------------------------- */
+   /* facet look-ups ----------------------------------------------- */
+   import occasion from './occasion'   // ← RE-ADDED ✔
+   import audience from './audience'   // ← RE-ADDED ✔
+   import theme    from './theme'      // ← RE-ADDED ✔
+   import relation from './relation'   // ← RE-ADDED ✔
    
-   /* one flat array that Studio expects */
+   /* one flat array that Studio expects --------------------------- */
    export const schemaTypes = [
+     /* documents */
      cardTemplate,
      cardProduct,
      aiPlaceholder,
+   
+     /* objects */
+     aiLayer,
+     editableImage,
+     editableText,
    
      /* facets */
      occasion,

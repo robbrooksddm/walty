@@ -1,5 +1,5 @@
 /**********************************************************************
- * getPromptForPlaceholder.ts
+ * sanity/lib/getPromptForPlaceholder.ts
  * Returns { prompt, version, refUrl } from an aiPlaceholder doc
  *********************************************************************/
 import { sanity } from './client'      // ← ADD THIS LINE

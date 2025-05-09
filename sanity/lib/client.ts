@@ -1,24 +1,53 @@
-import { createClient } from '@sanity/client';
+/*────────────────────────────────────────────────────────────
+  sanity/lib/client.ts
+  ────────────────────────────────────────────────────────────*/
 
-const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!;
-const dataset   = process.env.NEXT_PUBLIC_SANITY_DATASET!;
-const token     = process.env.SANITY_WRITE_TOKEN || undefined;
+import {createClient} from '@sanity/client'
 
-/* Read-only (fast CDN) */
+/*────────────────────────────────────────────────────────────
+  Environment variables
+  ────────────────────────────────────────────────────────────*/
+const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!
+const dataset   = process.env.NEXT_PUBLIC_SANITY_DATASET!
+
+/* Read‑only token (Viewer) used **only** in the card‑editor to
+   fetch drafts + published docs. Leave undefined on the public site. */
+const readToken  = process.env.SANITY_READ_TOKEN  || undefined
+
+/* Contributor token used for writes (create / patch / publish). */
+const writeToken = process.env.SANITY_WRITE_TOKEN || undefined
+
+/*────────────────────────────────────────────────────────────
+  1. Public, CDN‑cached, *published‑only* client  (store‑front)
+  ────────────────────────────────────────────────────────────*/
 export const sanity = createClient({
   projectId,
   dataset,
   apiVersion : '2023-10-01',
-  perspective: 'published',
-  useCdn     : true,
-});
+  perspective: 'published',   // ⇠ only published docs
+  useCdn     : true,          // ⇠ fastest / cached
+})
 
-/* Write-enabled (no CDN) */
+/*────────────────────────────────────────────────────────────
+  2. Read‑only *draft + published* client  (card‑editor / admin)
+  ────────────────────────────────────────────────────────────*/
+export const sanityPreview = createClient({
+  projectId,
+  dataset,
+  apiVersion : '2023-10-01',
+  token      : readToken,     // Viewer token
+  perspective: 'previewDrafts',
+  useCdn     : false,         // drafts never reach the CDN
+})
+
+/*────────────────────────────────────────────────────────────
+  3. Write‑enabled client  (saving templates, publishing, etc.)
+  ────────────────────────────────────────────────────────────*/
 export const sanityWriteClient = createClient({
   projectId,
   dataset,
   apiVersion : '2023-10-01',
-  token,                        // must be set in env for writes
+  token      : writeToken,    // Contributor token
   perspective: 'previewDrafts',
   useCdn     : false,
-});
+})

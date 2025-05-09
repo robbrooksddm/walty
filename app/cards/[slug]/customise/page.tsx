@@ -1,3 +1,7 @@
+/**********************************************************************
+ * cards/[slug]/customise/page.tsx
+ *********************************************************************/
+
 import { templates } from "@/data/templates";
 import CustomiseClient from "./CustomiseClient";
 

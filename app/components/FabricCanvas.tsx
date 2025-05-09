@@ -30,19 +30,58 @@ const SCALE     = PREVIEW_W / PAGE_W
 ;(fabric.Object.prototype as any).touchCornerSize = Math.round(4 / SCALE)
 
 /* ---------- types ------------------------------------------------ */
+
+/** What a Sanity image-reference looks like once it’s saved in Studio */
+export interface SanityImageRef {
+  _type : 'image'
+  asset : { _type:'reference'; _ref:string }
+}
+
 export interface Layer {
-  type :'image' | 'text'
-  src?: string; assetId?: string; width?: number; height?: number
-  text?: string; fontSize?: number; fontFamily?: string
-  fontWeight?: any; fontStyle?: any; underline?: boolean
-  fill?: string; textAlign?: string; lineHeight?: number
+  /** Fabric object kind */
+  type : 'image' | 'text'
+
+  /** Image source
+   *  • string  → direct CDN / blob URL  
+   *  • object  → Sanity asset reference returned by uploads or Studio
+   */
+  src?: string | SanityImageRef
+  assetId?: string               // “image-…” id returned from /api/upload
+  width?:  number
+  height?: number
+
+  /* ─ text-specific props ─ */
+  text?: string
+  fontSize?:   number
+  fontFamily?: string
+  fontWeight?: any
+  fontStyle?:  any
+  underline?:  boolean
+  fill?:       string
+  textAlign?:  string
+  lineHeight?: number
+
+  /* ─ common props ─ */
   opacity?: number
-  x: number; y: number; scaleX?: number; scaleY?: number
-  selectable?: boolean; editable?: boolean; locked?: boolean
+  x: number
+  y: number
+  scaleX?: number
+  scaleY?: number
+  selectable?: boolean
+  editable?:   boolean
+  locked?:     boolean
+
+  /* ─ AI placeholder bookkeeping ─ */
   _isAI?: boolean
+
+  /** allow future ad-hoc properties without TS complaints */
   [k: string]: any
 }
-export interface TemplatePage { name: string; layers: Layer[] }
+
+export interface TemplatePage {
+  name  : string
+  layers: Layer[]
+}
 
 /* ---------- helpers --------------------------------------------- */
 export const getActiveTextbox = (fc: fabric.Canvas | null) =>
@@ -67,6 +106,13 @@ const syncGhost = (
   ghost.style.width  = `${width  * SCALE}px`
   ghost.style.height = `${height * SCALE}px`
 }
+
+const getSrcUrl = (src: string | { _type:'image'; asset:{ _ref:string } } | undefined): string | undefined =>
+  typeof src === 'string'
+    ? src                              // already a URL / blob
+    : src && src.asset?._ref           // Sanity image ref → build the CDN URL
+      ? `https://cdn.sanity.io/images/${process.env.NEXT_PUBLIC_SANITY_PROJECT_ID}/production/${src.asset._ref.replace('image-','').replace('-png','').replace('-jpg','')}.png`
+      : undefined                      // can’t resolve yet
 
 /* ---------- undo / redo ----------------------------------------- */
 const _hist: fabric.Object[][] = []
@@ -103,41 +149,6 @@ const addGuides = (fc: fabric.Canvas) => {
     mk([inset, PAGE_H - inset, inset, inset]),
   ].forEach(l => fc.add(l))
 }
-
-/* ---------- checkerboard ----------------------------------------
-const addCheckerboard = (fc: fabric.Canvas) => {
-  if (fc.getObjects().some(o => (o as any)._checker)) return   // already there
-
-  const SIZE = mm(5)               // 5 mm squares
-  const cols = Math.ceil(PAGE_W / SIZE)
-  const rows = Math.ceil(PAGE_H / SIZE)
-
-  const group = new fabric.Group([], {
-    selectable: false,
-    evented: false,
-    excludeFromExport: true,
-  })
-  ;(group as any)._checker = true   // ← flag so we never add twice
-
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      if ((r + c) % 2) continue     // chess pattern
-      group.add(new fabric.Rect({
-        left:  c * SIZE,
-        top:   r * SIZE,
-        width: SIZE,
-        height: SIZE,
-        fill: '#ececec',
-        originX: 'left',
-        originY: 'top',
-      }))
-    }
-  }
-
-  group.sendToBack()
-  fc.add(group)
-}
----------------------------------------- */
 
 /* ---------- white backdrop -------------------------------------- */
 const addBackdrop = (fc: fabric.Canvas) => {
@@ -235,11 +246,36 @@ export default function FabricCanvas ({ pageIdx, page, onReady }: Props) {
       isEditing.current = true; snap(fc)
       const t = e.target as any
       if (t?.layerIdx === undefined) return
-      const d: Partial<Layer> = {
-        x: t.left, y: t.top, scaleX: t.scaleX, scaleY: t.scaleY,
-      }
-      if (t.type === 'textbox') Object.assign(d, { text: t.text, fontSize: t.fontSize, fill: t.fill })
-      if (t.type === 'image')   Object.assign(d, { width: t.width * t.scaleX, height: t.height * t.scaleY })
+
+        /* ---------- common geometry ---------------------------- */
+  const d: Partial<Layer> = {
+    x: t.left, y: t.top,
+    scaleX: t.scaleX,  // ✨  remember explicit scale
+    scaleY: t.scaleY,
+  }
+  /* ---------- images ------------------------------------- */
+  if (t.type === 'image') {
+    Object.assign(d, {
+      width : t.width  * t.scaleX,
+      height: t.height * t.scaleY,
+    })
+  }
+  /* ---------- text --------------------------------------- */
+  if (t.type === 'textbox') {
+    Object.assign(d, {
+      text       : t.text,
+      fontSize   : t.fontSize,
+      fontFamily : t.fontFamily,
+      fontWeight : t.fontWeight,
+      fontStyle  : t.fontStyle,
+      underline  : t.underline,
+      fill       : t.fill,
+      textAlign  : t.textAlign,
+      lineHeight : t.lineHeight,
+      opacity    : t.opacity,
+    })
+  }
+
       updateLayer(pageIdx, t.layerIdx, d)
       setTimeout(() => { isEditing.current = false })
     })
@@ -247,10 +283,26 @@ export default function FabricCanvas ({ pageIdx, page, onReady }: Props) {
     fc.on('text:changed', e => {
       const t = e.target as any
       if (t?.layerIdx === undefined) return
-      updateLayer(pageIdx, t.layerIdx, {
-        text: t.text, fontSize: t.fontSize, fill: t.fill,
-        width: t.width * t.scaleX, height: t.height * t.scaleY,
-      })
+      
+              /* ✨ shield the redraw-effect while the user is typing */
+        isEditing.current = true
+            
+        updateLayer(pageIdx, t.layerIdx, {
+            text       : t.text,
+            fontSize   : t.fontSize,
+            fontFamily : t.fontFamily,
+            fontWeight : t.fontWeight,
+            fontStyle  : t.fontStyle,
+            underline  : t.underline,
+            fill       : t.fill,
+            textAlign  : t.textAlign,
+            lineHeight : t.lineHeight,
+            opacity    : t.opacity,
+            width : t.width  * t.scaleX,
+            height: t.height * t.scaleY,
+          })
+            /* allow redraw again after this frame */
+            setTimeout(() => { isEditing.current = false })
     })
 
     fcRef.current = fc; onReady(fc)
@@ -274,11 +326,18 @@ export default function FabricCanvas ({ pageIdx, page, onReady }: Props) {
       const ly: Layer | null = (raw as any).type ? raw as Layer : fromSanity(raw)
       if (!ly) continue
 
-      /* ---------- IMAGES --------------------------------------- */
-      if (ly.type === 'image' && ly.src) {
-        const opts = ly.src.startsWith('http') ? { crossOrigin: 'anonymous' } : undefined
-        fabric.Image.fromURL(ly.src, rawImg => {
-          const img = rawImg instanceof fabric.Image ? rawImg : new fabric.Image(rawImg)
+/* ---------- IMAGES --------------------------------------------- */
+if (ly.type === 'image' && ly.src) {
+  // ① make sure we have a usable URL
+  const srcUrl = getSrcUrl(ly.src);
+  if (!srcUrl) continue;                 // nothing we can render yet
+
+  // ② CORS flag only for http/https URLs
+  const opts = srcUrl.startsWith('http') ? { crossOrigin: 'anonymous' } : undefined;
+
+  fabric.Image.fromURL(srcUrl, rawImg => {
+    const img = rawImg instanceof fabric.Image ? rawImg : new fabric.Image(rawImg);
+    /* … the rest of your existing code … */
 
           /* scale */
           if (ly.scaleX == null || ly.scaleY == null) {
@@ -296,16 +355,20 @@ export default function FabricCanvas ({ pageIdx, page, onReady }: Props) {
             opacity: ly.opacity ?? 1,
           })
 
-          /* AI placeholder = ghost overlay + outline ------------- */
-           // ly comes from fromSanity(raw) but we need to look at the original node
- if (raw._type === 'aiLayer') {
-            const locked = !!ly.locked
-            img.set({ selectable: !locked, evented: !locked, hasControls: !locked })
+          /* ---------- AI placeholder extras -------------------------------- */
+if (raw._type === 'aiLayer') {
+  const spec = raw.source
+  const locked = !!ly.locked
+  img.set({ selectable: !locked, evented: !locked, hasControls: !locked })
 
-  /* ✨  ADD THIS  —  open the drawer on click  */
+  /* ✨  SINGLE click — open the Selfie-drawer and pass the ref-ID */
   img.on('mouseup', () => {
-    document.dispatchEvent(new CustomEvent('open-selfie-drawer'))
+    const plId = spec?._ref ?? spec?._id ?? null
+    document.dispatchEvent(
+      new CustomEvent('open-selfie-drawer', { detail: { placeholderId: plId } })
+    )
   })
+
 
 
             // ─── open the Selfie Drawer on click ─────────────────────────

@@ -4,7 +4,7 @@
  * convert every layer with `fromSanity`.
  *********************************************************************/
 
-import {sanity}                from '@/sanity/lib/client'
+import { sanityPreview }          from '@/sanity/lib/client'
 import {fromSanity}            from '@/app/library/layerAdapters'
 import type {TemplatePage}     from '@/app/components/FabricCanvas'
 
@@ -53,13 +53,20 @@ export async function getTemplatePages(
     draftKey:  idOrSlug.startsWith('drafts.') ? idOrSlug : `drafts.${idOrSlug}`,
   }
 
-  const raw = await sanity.fetch<{pages?: any[]}>(query, params)
+  const raw = await sanityPreview.fetch<{pages?: any[]}>(query, params)
 
   const pages = Array.isArray(raw?.pages) && raw.pages.length === 4
     ? raw.pages
     : EMPTY
 
   const names = ['front', 'inner-L', 'inner-R', 'back'] as const
+
+// ─── DEBUG – show what actually came back from Sanity ───
+console.log(
+  '\n▶ getTemplatePages raw =\n',
+  JSON.stringify(raw, null, 2),
+  '\n',
+);
 
   return names.map((name, i) => ({
     name,
