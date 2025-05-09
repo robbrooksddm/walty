@@ -29,57 +29,80 @@ const SCALE     = PREVIEW_W / PAGE_W
 ;(fabric.Object.prototype as any).cornerSize      = Math.round(4 / SCALE)
 ;(fabric.Object.prototype as any).touchCornerSize = Math.round(4 / SCALE)
 
-/* ---------- types ------------------------------------------------ */
+/* ------------------------------------------------------------------ *
+ *  Fabric-layer types  •  2025-06-11
+ *    –  NEW  ImageSrc helper alias (string | SanityImageRef | null)
+ *    –  src is now   src?: ImageSrc        (allows the temporary null)
+ *    –  tighter docs + small alphabetic re-order for readability
+ * ------------------------------------------------------------------ */
 
-/** What a Sanity image-reference looks like once it’s saved in Studio */
+/** What a Sanity-stored image reference looks like once the asset
+ *  has been uploaded or when the document is fetched back from Studio.
+ */
 export interface SanityImageRef {
   _type : 'image'
-  asset : { _type:'reference'; _ref:string }
+  asset : { _type: 'reference'; _ref: string }
 }
 
+/** Anything the canvas can draw as an image _right now_ */
+export type ImageSrc = string | SanityImageRef | null
+
+/** A single canvas layer (image | text) */
 export interface Layer {
-  /** Fabric object kind */
-  type : 'image' | 'text'
+  /* ---- layer kind ------------------------------------------------ */
+  type: 'image' | 'text'
 
-  /** Image source
-   *  • string  → direct CDN / blob URL  
-   *  • object  → Sanity asset reference returned by uploads or Studio
+  /* ---- IMAGE specific ------------------------------------------- */
+  /**  
+   * `string`   → direct CDN / blob URL  
+   * `object`   → Sanity asset reference (after upload / fetch)  
+   * `null`     → “nothing yet” placeholder while the upload is in-flight  
    */
-  src?: string | SanityImageRef
-  assetId?: string               // “image-…” id returned from /api/upload
-  width?:  number
-  height?: number
+  src?: ImageSrc
 
-  /* ─ text-specific props ─ */
-  text?: string
-  fontSize?:   number
-  fontFamily?: string
-  fontWeight?: any
-  fontStyle?:  any
-  underline?:  boolean
-  fill?:       string
-  textAlign?:  string
-  lineHeight?: number
+  /**  
+   * Always-safe CDN URL.  Added as soon as the upload succeeds so the
+   * editor never has to “wait” for Sanity to resolve the reference.
+   */
+  srcUrl?:  string
 
-  /* ─ common props ─ */
-  opacity?: number
+  /** `image-…` ID returned by `/api/upload` */
+  assetId?: string
+
+  /* ---- SHARED geometry / style ---------------------------------- */
   x: number
   y: number
-  scaleX?: number
-  scaleY?: number
-  selectable?: boolean
-  editable?:   boolean
-  locked?:     boolean
+  width:  number
+  height?: number
 
-  /* ─ AI placeholder bookkeeping ─ */
+  opacity?:   number
+  scaleX?:    number
+  scaleY?:    number
+  selectable?:boolean
+  editable?:  boolean
+  locked?:    boolean
+
+  /* ---- TEXT specific -------------------------------------------- */
+  text?:        string
+  fill?:        string
+  fontSize?:    number
+  fontFamily?:  string
+  fontStyle?:   '' | 'normal' | 'italic' | 'oblique'
+  fontWeight?:  string | number
+  underline?:   boolean
+  textAlign?:   'left' | 'center' | 'right'
+  lineHeight?:  number
+
+  /* ---- AI placeholder bookkeeping ------------------------------- */
   _isAI?: boolean
 
-  /** allow future ad-hoc properties without TS complaints */
+  /** Allow future ad-hoc properties without TypeScript complaints */
   [k: string]: any
 }
 
+/** A single page inside the greeting-card template */
 export interface TemplatePage {
-  name  : string
+  name:   string
   layers: Layer[]
 }
 
@@ -107,12 +130,24 @@ const syncGhost = (
   ghost.style.height = `${height * SCALE}px`
 }
 
-const getSrcUrl = (src: string | { _type:'image'; asset:{ _ref:string } } | undefined): string | undefined =>
-  typeof src === 'string'
-    ? src                              // already a URL / blob
-    : src && src.asset?._ref           // Sanity image ref → build the CDN URL
-      ? `https://cdn.sanity.io/images/${process.env.NEXT_PUBLIC_SANITY_PROJECT_ID}/production/${src.asset._ref.replace('image-','').replace('-png','').replace('-jpg','')}.png`
-      : undefined                      // can’t resolve yet
+const getSrcUrl = (raw: Layer): string | undefined => {
+    /* 1 — explicit override from the editor */
+    if (raw.srcUrl) return raw.srcUrl
+  
+    /* 2 — plain string already means “loadable url / blob” */
+    if (typeof raw.src === 'string') return raw.src
+  
+    /* 3 — Sanity image reference → build the CDN url */
+    if (raw.src && raw.src.asset?._ref) {
+      const id = raw.src.asset._ref             // image-xyz-2000x2000-png
+        .replace('image-', '')                  // xyz-2000x2000-png
+        .replace(/\-(png|jpg|jpeg|webp)$/, '')  // xyz-2000x2000
+      return `https://cdn.sanity.io/images/${process.env.NEXT_PUBLIC_SANITY_PROJECT_ID}/production/${id}.png`
+    }
+  
+    /* nothing usable yet */
+    return undefined
+  }                   // can’t resolve yet
 
 /* ---------- undo / redo ----------------------------------------- */
 const _hist: fabric.Object[][] = []
@@ -327,9 +362,9 @@ export default function FabricCanvas ({ pageIdx, page, onReady }: Props) {
       if (!ly) continue
 
 /* ---------- IMAGES --------------------------------------------- */
-if (ly.type === 'image' && ly.src) {
+if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
   // ① make sure we have a usable URL
-  const srcUrl = getSrcUrl(ly.src);
+  const srcUrl = getSrcUrl(ly);
   if (!srcUrl) continue;                 // nothing we can render yet
 
   // ② CORS flag only for http/https URLs

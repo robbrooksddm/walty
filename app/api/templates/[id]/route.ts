@@ -1,47 +1,73 @@
 /**********************************************************************
  * PATCH / POST /api/templates/[id]
- * - Always writes to the **draft** (id prefixed with `drafts.`)
- * - If the draft isn’t there yet we create a stub first, then patch.
+ * -------------------------------------------------------------------
+ * • Always writes to the **draft** (id prefixed with `drafts.`)
+ * • If the draft doesn’t exist we create a stub, then patch.
+ * • Keeps each page’s `name` so Studio previews show the right titles.
  *********************************************************************/
-import { NextRequest, NextResponse }           from 'next/server'
-import { sanityWriteClient as sanity }         from '@/sanity/lib/client'
-import { toSanity }                            from '@/app/library/layerAdapters'
 
+import { NextRequest, NextResponse } from 'next/server'
+import { sanityWriteClient as sanity } from '@/sanity/lib/client'
+import { toSanity } from '@/app/library/layerAdapters'
+
+const FALLBACK_NAMES = ['front', 'inner-L', 'inner-R', 'back'] as const
+
+/* ------------------------------------------------------------------ */
+/* shared helper – normalises the page array                           */
+/* ------------------------------------------------------------------ */
+function normalisePages(pagesRaw: any[]): { name: string; layers: any[] }[] {
+  return pagesRaw.map((p, i) => ({
+    name:   typeof p?.name === 'string' && p.name.trim()
+              ? p.name.trim()
+              : FALLBACK_NAMES[i] ?? `page-${i}`,
+    layers: Array.isArray(p?.layers) ? p.layers.map(toSanity) : [],
+  }))
+}
+
+/* ------------------------------------------------------------------ */
+/* route handler                                                      */
+/* ------------------------------------------------------------------ */
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
   try {
-/* ---------- 1. validate body ---------- */
-const body  = await req.json()
-console.log('POST body', JSON.stringify(body, null, 2))
-const { pages } = body         // ← same as before, just after the log
+    /* ---------- 1 ▸ validate body ----------------------------- */
+    const { pages } = (await req.json()) as { pages: any }
     if (!Array.isArray(pages) || pages.length !== 4) {
       return NextResponse.json(
-        { error: '`pages` must be a 4-element array' },
+        { error: '`pages` must be an array with exactly four items' },
+        { status: 400 },
+      )
+    }
+    if (!pages.every(p => Array.isArray(p?.layers))) {
+      return NextResponse.json(
+        { error: 'Each page object must contain a `layers` array' },
         { status: 400 },
       )
     }
 
-    /* ---------- 2. convert layers ---------- */
-    const sanePages = pages.map((p: any) => ({
-      layers: (p.layers ?? []).map(toSanity),
-    }))
+    const sanePages = normalisePages(pages)
+    /* dev-log AFTER validation, so the console is tidy */
+    console.log('▶ sanePages →', JSON.stringify(sanePages, null, 2))
 
-    /* ---------- 3. draft id ---------- */
+    /* ---------- 2 ▸ draft id ---------------------------------- */
     const draftId = `drafts.${params.id}`
 
-    /* ---------- 4. create-or-patch in one transaction ---------- */
+    /* ---------- 3 ▸ create-or-patch in one transaction -------- */
     await sanity
       .transaction()
       .createIfNotExists({
-        _id   : draftId,
-        _type : 'cardTemplate',
-        title : '(untitled)',           // bare minimum so Studio is happy
-        pages : [],
+        _id  : draftId,
+        _type: 'cardTemplate',
+        title: '(untitled)',   // minimal stub so Studio is happy
+        pages: [],
       })
       .patch(draftId, p =>
-        p.set({ pages: sanePages, json: JSON.stringify(pages) }),
+        p.set({
+          pages: sanePages,
+          json : JSON.stringify(pages), // raw mirror – round-trip safety-net
+        }),
       )
       .commit({ autoGenerateArrayKeys: true })
 
@@ -52,5 +78,5 @@ const { pages } = body         // ← same as before, just after the log
   }
 }
 
-/* Allow POST as well */
+/* Allow POST as an alias for PATCH (the editor still uses POST) */
 export const POST = PATCH

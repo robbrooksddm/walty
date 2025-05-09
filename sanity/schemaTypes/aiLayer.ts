@@ -40,10 +40,20 @@ export default defineType({
   ],
 
   preview: {
-    select: { title: 'source.prompt', media: 'source.refImage' },
-    prepare: ({ title, media }) => ({
-      title: title ? `${title.slice(0, 40)}…` : 'AI placeholder',
-      media,
-    }),
+    /* pull title, prompt *and* the thumbnail from the referenced doc */
+    select: {
+      title   : 'source.title',        // short label
+      prompt  : 'source.prompt',       // full prompt (optional subtitle)
+      media   : 'source.refImage',
+    },
+    prepare({ title, prompt, media }) {
+      return {
+        title    : title ?? 'AI placeholder',     // use short title when present
+        subtitle : !title && prompt               // show truncated prompt only if no title
+                     ? `${prompt.slice(0, 40)}…`
+                     : undefined,
+        media,
+      }
+    },
   },
 })

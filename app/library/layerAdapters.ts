@@ -150,18 +150,21 @@ if (layer.type === 'image') {
     ...(layer.scaleY  != null && { scaleY: layer.scaleY }),
   };
 
-  /* 1️⃣  If the editor uploaded the file we have an asset-ID */
-  if (layer.assetId) {
-    obj.src = {
-      _type: 'image',
-      asset: { _type: 'reference', _ref: layer.assetId },
-    };
-  }
-
-  /* 2️⃣  If it’s an external URL fall back to `srcUrl` (schema allows it) */
-  else if (typeof layer.src === 'string') {
-    obj.srcUrl = layer.src;
-  }
+/* 1️⃣ Already have assetId → easiest */
+if (layer.assetId) {
+  obj.src = {
+    _type: 'image',
+    asset: { _type: 'reference', _ref: layer.assetId },
+  };
+}
+/* 2️⃣ Sanity reference already sitting in layer.src */
+else if (layer.src && typeof layer.src === 'object') {
+  obj.src = layer.src as any;     // keep it verbatim
+}
+/* 3️⃣ External URL → keep as raw link */
+else if (typeof layer.src === 'string') {
+  obj.srcUrl = layer.src;
+}
 
   return obj;
 }

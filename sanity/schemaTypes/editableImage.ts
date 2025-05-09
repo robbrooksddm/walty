@@ -1,27 +1,62 @@
 /**********************************************************************
- * editableImage.ts – customer-editable image layer
+ * editableImage.ts – inline, customer-editable image layer
  *********************************************************************/
-import { defineType, defineField } from 'sanity'
+import {defineType, defineField} from 'sanity'
+import {ImageIcon}               from '@sanity/icons'
+import React                     from 'react'
 
 export default defineType({
   name : 'editableImage',
   type : 'object',
   title: 'Editable image',
+  icon : ImageIcon,
 
+  /* ── geometry + style (hidden) ── */
   fields: [
-    /* normal author-visible settings ----------------------------- */
-    defineField({ name: 'src',  type: 'image',  title: 'Default image', options:{ hotspot:true } }),
-    defineField({ name: 'x',    type: 'number', title: 'X (px)' }),
-    defineField({ name: 'y',    type: 'number', title: 'Y (px)' }),
-    defineField({ name: 'w',    type: 'number', title: 'Width  (px)' }),
-    defineField({ name: 'h',    type: 'number', title: 'Height (px)' }),
+    ...(['x','y','w','h','width','height','scaleX','scaleY','opacity'] as const)
+      .map((n) => defineField({name: n, type: 'number', hidden: true})),
 
-    /* hidden, editor-only metadata ------------------------------- */
-    defineField({ name: 'width',   type: 'number', hidden: true }),   // Fabric calc
-    defineField({ name: 'height',  type: 'number', hidden: true }),
-    defineField({ name: 'scaleX',  type: 'number', hidden: true }),
-    defineField({ name: 'scaleY',  type: 'number', hidden: true }),
-    defineField({ name: 'opacity', type: 'number', hidden: true }),
-    defineField({ name: 'srcUrl',  type: 'url',    hidden: true }),   // raw URL fallback
+    /* uploaded Sanity asset */
+    defineField({
+      name : 'src',
+      type : 'image',
+      title: 'Image asset',
+      options: {hotspot: true},
+    }),
+
+    /* raw URL / blob while the upload is still in progress */
+    defineField({name: 'srcUrl', type: 'url', hidden: true}),
   ],
+
+  /* ── layer-list preview ── */
+  preview: {
+    select: {
+      imgAsset: 'src.asset', // asset ref (if present)
+      url     : 'srcUrl',    // raw URL fallback
+    },
+    prepare({imgAsset, url}: {imgAsset?: unknown; url?: string}) {
+      /* build a React node that React can mount */
+      const media =
+        imgAsset
+          ? (imgAsset as unknown as React.ReactNode)
+          : url
+              ? React.createElement('img', {
+                  src  : url,
+                  style: {
+                    objectFit   : 'cover',
+                    width       : '100%',
+                    height      : '100%',
+                    borderRadius: 4,
+                  },
+                })
+              : ImageIcon
+
+      /* ✅ we **return** the preview object */
+      return {
+        title   : 'Image',
+        subtitle: imgAsset ? undefined : 'external image',
+        media,
+      }
+    },
+  },
 })

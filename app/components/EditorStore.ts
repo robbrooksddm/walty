@@ -1,11 +1,17 @@
 /**********************************************************************
  * EditorStore.ts – single source-of-truth (Zustand)
  * 2025-05-09  • adds Selfie-Drawer state + helpers
- * 2025-06-05  • addImage now uploads to /api/upload and stores assetId
+ * 2025-06-05  • addImage uploads to /api/upload and stores assetId
+ * 2025-06-12  • FIX: “vanishing layer” race-condition
+ *              – optimistic layer now carries  ▸ srcUrl   (blob:)
+ *                                              ▸ uploading (flag)
+ *              – swap-in happens only after upload finishes
  *********************************************************************/
+
 import { create } from 'zustand'
 import type { Layer, TemplatePage } from './FabricCanvas'
 
+/*────────────────────────── types ──────────────────────────*/
 type DrawerState =
   | 'closed'
   | 'idle'
@@ -14,52 +20,61 @@ type DrawerState =
   | 'grid'
   | 'applying'
 
+/** we extend Layer locally with the fields the editor
+ *  (not Sanity) needs while the upload is in-flight            */
+type EditorLayer = Layer & {
+  /** temporary blob: URL shown in FabricCanvas & sidebar */
+  srcUrl?: string
+  /** true while the upload POST is in progress            */
+  uploading?: boolean
+}
+
 interface EditorState {
-  /* ─────────────── card data ─────────────── */
+  /* ───── card data ───── */
   pages: TemplatePage[]
   activePage: number
 
-  /* ─────────────── drawer data ───────────── */
+  /* ───── drawer data ─── */
   drawerState: DrawerState
   drawerImages: string[]
   drawerProgress: number
   selectedFile?: File
   choice?: number // index 0-3 in the variant grid
 
-  /* ─────────────── setters ──────────────── */
+  /* ───── setters ───── */
   setPages: (p: TemplatePage[]) => void
   setActive: (idx: number) => void
-  setPageLayers: (page: number, layers: Layer[]) => void
+  setPageLayers: (page: number, layers: EditorLayer[]) => void
 
   setDrawerState: (s: DrawerState) => void
   setDrawerImgs: (imgs: string[]) => void
   setProgress: (n: number) => void
 
-  /* ─────────────── canvas ↔ sidebar actions ─────────────── */
+  /* ───── canvas ↔ sidebar actions ───── */
   addText: () => void
   addImage: (file: File) => Promise<void>
-  updateLayer: (page: number, idx: number, data: Partial<Layer>) => void
+  updateLayer: (page: number, idx: number, data: Partial<EditorLayer>) => void
   reorder: (from: number, to: number) => void
   deleteLayer: (idx: number) => void
 }
 
+/*────────────────────────── store ──────────────────────────*/
 export const useEditor = create<EditorState>((set, get) => ({
-  /* ─────────────── card data ─────────────── */
+  /* ───── card data ───── */
   pages: [],
   activePage: 0,
 
-  /* ─────────────── drawer defaults ───────── */
+  /* ───── drawer defaults ───── */
   drawerState: 'idle',
   drawerImages: [],
   drawerProgress: 0,
 
-  /* ─────────────── generic setters ───────── */
-  setPages: pages => set({ pages }),
-  setActive: activePage => set({ activePage }),
-
-  setDrawerState: s => set({ drawerState: s, drawerProgress: 0 }),
-  setDrawerImgs: imgs => set({ drawerImages: imgs, choice: undefined }),
-  setProgress: n => set({ drawerProgress: n }),
+  /* ───── generic setters ───── */
+  setPages      : pages      => set({ pages }),
+  setActive     : activePage => set({ activePage }),
+  setDrawerState: s          => set({ drawerState: s, drawerProgress: 0 }),
+  setDrawerImgs : imgs       => set({ drawerImages: imgs, choice: undefined }),
+  setProgress   : n          => set({ drawerProgress: n }),
 
   /* FabricCanvas pushes its full layer list on every change */
   setPageLayers: (pageIdx, layers) =>
@@ -70,85 +85,100 @@ export const useEditor = create<EditorState>((set, get) => ({
       return { pages }
     }),
 
-  /* ─────────────── editor actions ─────────────── */
+  /*──────────────────────── editor actions ───────────────────────*/
+
+  /** quick “hello world” layer */
   addText: () =>
     set(state => {
-      const i = state.activePage
+      const i     = state.activePage
       const pages = [...state.pages]
-      const layer: Layer = {
-        type: 'text',
-        text: 'New text',
-        x: 100,
-        y: 100,
+
+      const layer: EditorLayer = {
+        type : 'text',
+        text : 'New text',
+        x    : 100,
+        y    : 100,
         width: 200,
       }
+
       pages[i] = { ...pages[i], layers: [...pages[i].layers, layer] }
       return { pages }
     }),
 
-  /* ------------ addImage with upload + real assetId ------------ */
-  addImage: async file => {
-    /* 1 ▸ optimistic placeholder so user sees it instantly */
-    const tempUrl = URL.createObjectURL(file)
+  /*--------------------------------------------------------------
+   * addImage(file)
+   *  • shows an optimistic placeholder immediately
+   *  • uploads to /api/upload   (expects {url, assetId} JSON)
+   *  • swaps the placeholder for the real Sanity reference
+   *------------------------------------------------------------*/
+  addImage: async (file) => {
+    /* 1 ▸ optimistic placeholder */
+    const tempUrl = URL.createObjectURL(file)          // blob:
     const pageIdx = get().activePage
 
     set(state => {
-      const pages = [...state.pages]
-      const layer: Layer = {
-        type: 'image',
-        src: tempUrl, // temporary blob URL
+      const pages  = [...state.pages]
+      const layer: EditorLayer = {
+        type     : 'image',
+        srcUrl   : tempUrl,
+        uploading: true,            // ← flag!
         x: 100,
         y: 100,
         width: 300,
       }
-      pages[pageIdx] = { ...pages[pageIdx], layers: [...pages[pageIdx].layers, layer] }
+      pages[pageIdx] = {
+        ...pages[pageIdx],
+        layers: [...pages[pageIdx].layers, layer],
+      }
       return { pages }
     })
 
-/* 2 ▸ upload then replace --------------------------------- */
-try {
-  const fd  = new FormData();
-  fd.append('file', file);
-  const res = await fetch('/api/upload', { method: 'POST', body: fd });
-  if (!res.ok) throw new Error(await res.text());
-  const { url, assetId } = await res.json();            // ← assetId is the Sanity _id
+    /* 2 ▸ upload */
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
 
-  set(state => {
-    const i      = state.activePage;
-    const pages  = [...state.pages];
-    const layers = [...pages[i].layers];
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      if (!res.ok) throw new Error(await res.text())
 
-    // find the optimistic placeholder we added earlier
-    const j = layers.findIndex(
-      l => l.type === 'image' && l.src === tempUrl
-    );
-    if (j !== -1) {
-      layers[j] = {
-        ...layers[j],
+      const { url, assetId } = await res.json()
 
-        // ☑️  what Sanity expects:
-        src: {
-          _type : 'image',
-          asset : { _type: 'reference', _ref: assetId },
-        },
+      /* 3 ▸ swap-in real asset */
+      set(state => {
+        const pages  = [...state.pages]
+        const layers = [...pages[pageIdx].layers]
 
-        // keep the CDN url around so the editor can display it instantly
-        srcUrl  : url,
-        assetId,
-      };
+        const j = layers.findIndex(
+          l => l.type === 'image' && (l as EditorLayer).uploading && (l as EditorLayer).srcUrl === tempUrl
+        )
+
+        if (j !== -1) {
+          layers[j] = {
+            ...layers[j],
+            uploading: false,
+            assetId,                       // ⭐  added
+
+            // Sanity-friendly reference
+            src: {
+              _type : 'image',
+              asset : { _type: 'reference', _ref: assetId },
+            },
+            srcUrl: url,      // keep the CDN url for instant draw / future preview
+          } as EditorLayer
+          pages[pageIdx] = { ...pages[pageIdx], layers }
+        }
+        return { pages }
+      })
+    } catch (err) {
+      console.error('Upload failed:', err)
+      /* optional: show toast, mark layer errored, etc. */
     }
-    pages[i] = { ...pages[i], layers };
-    return { pages };
-  });
-} catch (err) {
-  console.error('Upload error', err);
-}
   },
 
   /* merge live edits coming back from FabricCanvas */
   updateLayer: (pageIdx, idx, data) =>
     set(state => {
-      const pages = [...state.pages]
+      const pages  = [...state.pages]
       const layers = [...pages[pageIdx].layers]
       if (!layers[idx]) return { pages }
       layers[idx] = { ...layers[idx], ...data }
@@ -159,8 +189,8 @@ try {
   /* drag-to-reorder in LayerPanel */
   reorder: (from, to) =>
     set(state => {
-      const i = state.activePage
-      const pages = [...state.pages]
+      const i      = state.activePage
+      const pages  = [...state.pages]
       const layers = [...pages[i].layers]
       const [moved] = layers.splice(from, 1)
       layers.splice(to, 0, moved)
@@ -171,8 +201,8 @@ try {
   /* delete button in LayerPanel */
   deleteLayer: idx =>
     set(state => {
-      const i = state.activePage
-      const pages = [...state.pages]
+      const i      = state.activePage
+      const pages  = [...state.pages]
       const layers = [...pages[i].layers]
       layers.splice(idx, 1)
       pages[i] = { ...pages[i], layers }
