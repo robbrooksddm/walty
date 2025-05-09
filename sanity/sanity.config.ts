@@ -12,13 +12,12 @@ import {deskTool}   from 'sanity/desk'
 import {media}      from 'sanity-plugin-media'
 import {visionTool} from '@sanity/vision'
 
-import {structure}   from './structure'
+import {structure} from './structure'
 import {schemaTypes} from './schemaTypes'
 
 /* custom buttons (each sets showAsAction:'button') */
 import cardEditorAction from './plugins/cardEditorAction'
 import SaveDraftAction  from './plugins/saveDraftAction'
-
 
 /* ------------------------------------------------ document actions - */
 const cardTemplateActions = (
@@ -27,11 +26,11 @@ const cardTemplateActions = (
 ): DocumentActionComponent[] => {
   if (ctx.schemaType !== 'cardTemplate') return prev
 
-  /* built-ins */
+  /* built‑ins */
   const publish = prev.find(a => a.action === 'publish')
   const others  = prev.filter(a => a.action !== 'publish')
 
-  /* wrap Publish so we recompute disabled every time Studio re-renders */
+  /* wrap Publish so we recompute disabled every time Studio re‑renders */
   const gatedPublish: DocumentActionComponent | null = publish
     ? (props: DocumentActionProps) => {
         const draftOrLive = props.draft || props.published
@@ -47,10 +46,10 @@ const cardTemplateActions = (
     : null
 
   return [
-    SaveDraftAction,           // bottom row
-    cardEditorAction,          // bottom row
+    SaveDraftAction,   // bottom row
+    cardEditorAction,  // bottom row
     ...(gatedPublish ? [gatedPublish] : []), // bottom row (grey/enabled)
-    ...others,                 // Duplicate / Delete stay in “…” menu
+    ...others,         // Duplicate / Delete stay in “…” menu
   ]
 }
 
@@ -73,7 +72,7 @@ export default defineConfig({
 
   /* plugins */
   plugins: [
-    deskTool({structure}),
+    deskTool({ structure}),
     media(),
     visionTool(),
   ],
