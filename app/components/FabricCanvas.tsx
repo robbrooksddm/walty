@@ -26,8 +26,15 @@ const PREVIEW_H = Math.round(PAGE_H * PREVIEW_W / PAGE_W)
 const SCALE     = PREVIEW_W / PAGE_W
 
 /* ---------- Fabric tweak: bigger handles ------------------------ */
+const SEL_COLOR = '#8b5cf6'                      // same purple you use
+
 ;(fabric.Object.prototype as any).cornerSize      = Math.round(4 / SCALE)
 ;(fabric.Object.prototype as any).touchCornerSize = Math.round(4 / SCALE)
+;(fabric.Object.prototype as any).borderColor       = SEL_COLOR
+;(fabric.Object.prototype as any).borderDashArray   = [6 / SCALE, 4 / SCALE]
+;(fabric.Object.prototype as any).borderScaleFactor = 1     // 1-pixel stroke
+;(fabric.Object.prototype as any).cornerStrokeColor = SEL_COLOR
+
 
 /* ------------------------------------------------------------------ *
  *  Fabric-layer types  •  2025-06-11
@@ -224,80 +231,100 @@ export default function FabricCanvas ({ pageIdx, page, onReady }: Props) {
   const setPageLayers = useEditor(s => s.setPageLayers)
   const updateLayer   = useEditor(s => s.updateLayer)
 
-  /* ---------- mount once --------------------------------------- */
-  useEffect(() => {
-    if (!canvasRef.current) return
+/* ---------- mount once --------------------------------------- */
+useEffect(() => {
+  if (!canvasRef.current) return
 
-    const fc = new fabric.Canvas(canvasRef.current, {
-      backgroundColor: '#fff', width: PAGE_W, height: PAGE_H,
-      preserveObjectStacking: true,
+/* ── 1 ▸ Canvas bootstrap ─────────────────────────────────── */
+const fc = new fabric.Canvas(canvasRef.current, {
+  backgroundColor       : '#fff',
+  width                 : PAGE_W,
+  height                : PAGE_H,
+  preserveObjectStacking: true,
+})
+addBackdrop(fc)
+fc.setViewportTransform([SCALE, 0, 0, SCALE, 0, 0])
+fc.setWidth(PREVIEW_W)
+fc.setHeight(PREVIEW_H)
+;(window as any).fc = fc                                 // dev helper
+
+/* helper: physical-pixel dash & padding ------------------- */
+const PAD  = 4 / SCALE                    // 4 CSS-px margin all around
+const dash = (gap:number) => [gap / SCALE, (gap - 2) / SCALE]
+
+/* ── 2 ▸ Hover overlay only ─────────────────────────────── */
+const hoverHL = new fabric.Rect({
+  originX:'left', originY:'top', strokeUniform:true,
+  fill:'transparent',
+  stroke:'#a78bfa',               // lighter purple
+  strokeWidth:1 / SCALE,
+  strokeDashArray:dash(4),
+  selectable:false, evented:false, visible:false,
+  excludeFromExport:true,
+})
+fc.add(hoverHL)
+hoverRef.current = hoverHL
+
+/* ── 3 ▸ Selection lifecycle (no extra overlay) ─────────── */
+let scrollHandler: (() => void) | null = null
+
+fc.on('selection:created', () => {
+  hoverHL.visible = false            // hide leftover hover rectangle
+  fc.requestRenderAll()
+  scrollHandler = () => fc.requestRenderAll()
+  window.addEventListener('scroll', scrollHandler, { passive:true })
+})
+.on('selection:cleared', () => {
+  if (scrollHandler) { window.removeEventListener('scroll', scrollHandler); scrollHandler = null }
+})
+
+/* also hide hover during any transform of the active object */
+fc.on('object:moving',   () => { hoverHL.visible = false })
+  .on('object:scaling',  () => { hoverHL.visible = false })
+  .on('object:rotating', () => { hoverHL.visible = false })
+
+/* ── 4 ▸ Hover outline (only when NOT the active object) ─── */
+fc.on('mouse:over', e => {
+  const t = e.target as fabric.Object | undefined
+  if (!t || (t as any)._guide || t === hoverHL) return
+  if (fc.getActiveObject() === t) return           // skip active selection
+
+  const box = t.getBoundingRect(true, true)
+  hoverHL.set({
+    width : box.width  + PAD * 2,
+    height: box.height + PAD * 2,
+    left  : box.left  - PAD,
+    top   : box.top   - PAD,
+    visible: true,
+  })
+  hoverHL.setCoords()
+  hoverHL.bringToFront()
+  fc.requestRenderAll()
+})
+.on('mouse:out', () => {
+  hoverHL.visible = false
+  fc.requestRenderAll()
+})
+
+addGuides(fc)                                 // green safe-zone guides
+  /* ── 4.5 ▸ Fabric ➜ Zustand sync ──────────────────────────── */
+  fc.on('object:modified', e=>{
+    isEditing.current = true
+    snap(fc)
+    const t = e.target as any
+    if (t?.layerIdx === undefined) return
+
+    const d: Partial<Layer> = {
+      x      : t.left,
+      y      : t.top,
+      scaleX : t.scaleX,
+      scaleY : t.scaleY,
+    }
+    if (t.type === 'image') Object.assign(d, {
+      width  : t.getScaledWidth(),
+      height : t.getScaledHeight(),
     })
-    /*addCheckerboard(fc)*/
-    addBackdrop(fc)
-    fc.setViewportTransform([SCALE, 0, 0, SCALE, 0, 0])
-    fc.setWidth(PREVIEW_W); fc.setHeight(PREVIEW_H)
-    ;(window as any).fc = fc  // dev helper
-
-    /* purple hover outline */
-    const hl = new fabric.Rect({
-      left: 0, top: 0, width: 10, height: 10, fill: 'transparent',
-      stroke: '#8b5cf6', strokeWidth: 2 / SCALE,
-      strokeDashArray: [6 / SCALE, 4 / SCALE],
-      selectable: false, evented: false, visible: false,
-      excludeFromExport: true,
-    })
-    hoverRef.current = hl; fc.add(hl)
-
-    addGuides(fc)
-
-    fc.on('selection:created', () => hl.visible = false)
-      .on('selection:updated', () => hl.visible = false)
-      .on('selection:cleared', () => hl.visible = false)
-
-    fc.on('mouse:over', e => {
-      const t = e.target as any
-      if (!t || t._guide) return
-      hl.set({
-        width : t.width  * t.scaleX,
-        height: t.height * t.scaleY,
-        left  : t.left,
-        top   : t.top,
-        visible: true,
-      })
-      fc.requestRenderAll()
-    })
-    fc.on('mouse:out', () => { hl.visible = false; fc.requestRenderAll() })
-
-    /* history & cleanup */
-    fc.on('object:added',   () => snap(fc))
-    fc.on('object:removed', e => {
-      snap(fc)
-      const g = (e.target as any)?._ghost as HTMLDivElement | undefined
-      g?.remove()
-    })
-
-    /* Fabric ➜ Zustand sync */
-    fc.on('object:modified', e => {
-      isEditing.current = true; snap(fc)
-      const t = e.target as any
-      if (t?.layerIdx === undefined) return
-
-        /* ---------- common geometry ---------------------------- */
-  const d: Partial<Layer> = {
-    x: t.left, y: t.top,
-    scaleX: t.scaleX,  // ✨  remember explicit scale
-    scaleY: t.scaleY,
-  }
-  /* ---------- images ------------------------------------- */
-  if (t.type === 'image') {
-    Object.assign(d, {
-      width : t.width  * t.scaleX,
-      height: t.height * t.scaleY,
-    })
-  }
-  /* ---------- text --------------------------------------- */
-  if (t.type === 'textbox') {
-    Object.assign(d, {
+    if (t.type === 'textbox') Object.assign(d, {
       text       : t.text,
       fontSize   : t.fontSize,
       fontFamily : t.fontFamily,
@@ -309,41 +336,101 @@ export default function FabricCanvas ({ pageIdx, page, onReady }: Props) {
       lineHeight : t.lineHeight,
       opacity    : t.opacity,
     })
-  }
+    updateLayer(pageIdx, t.layerIdx, d)
+    setTimeout(()=>{ isEditing.current = false })
+  })
 
-      updateLayer(pageIdx, t.layerIdx, d)
-      setTimeout(() => { isEditing.current = false })
+  fc.on('text:changed', e=>{
+    const t = e.target as any
+    if (t?.layerIdx === undefined) return
+    isEditing.current = true
+    updateLayer(pageIdx, t.layerIdx, {
+      text       : t.text,
+      fontSize   : t.fontSize,
+      fontFamily : t.fontFamily,
+      fontWeight : t.fontWeight,
+      fontStyle  : t.fontStyle,
+      underline  : t.underline,
+      fill       : t.fill,
+      textAlign  : t.textAlign,
+      lineHeight : t.lineHeight,
+      opacity    : t.opacity,
+      width      : t.getScaledWidth(),
+      height     : t.getScaledHeight(),
     })
+    setTimeout(()=>{ isEditing.current = false })
+  })
 
-    fc.on('text:changed', e => {
-      const t = e.target as any
-      if (t?.layerIdx === undefined) return
-      
-              /* ✨ shield the redraw-effect while the user is typing */
-        isEditing.current = true
-            
-        updateLayer(pageIdx, t.layerIdx, {
-            text       : t.text,
-            fontSize   : t.fontSize,
-            fontFamily : t.fontFamily,
-            fontWeight : t.fontWeight,
-            fontStyle  : t.fontStyle,
-            underline  : t.underline,
-            fill       : t.fill,
-            textAlign  : t.textAlign,
-            lineHeight : t.lineHeight,
-            opacity    : t.opacity,
-            width : t.width  * t.scaleX,
-            height: t.height * t.scaleY,
+  /* ── 5 ▸ Clipboard + keyboard shortcuts (unchanged logic) ─── */
+  const copyBuf:{json:any;offset:number} = { json:null, offset:0 }
+
+  const onKey = (e:KeyboardEvent) => {
+    const act = fc.getActiveObject() as any
+    const sel = Array.isArray(act?.objects) ? act.objects : act ? [act] : []
+    const cmd = e.metaKey || e.ctrlKey
+
+    /* Copy */ if (cmd && e.code==='KeyC'){
+      if (!sel.length) return
+      copyBuf.json   = sel.map((o:fabric.Object)=>o.toJSON())
+      copyBuf.offset = 0; e.preventDefault()
+    }
+    /* Cut */ else if (cmd && e.code==='KeyX'){
+      if (!sel.length) return
+      copyBuf.json   = sel.map((o:fabric.Object)=>o.toJSON())
+      copyBuf.offset = 0; sel.forEach((o:any)=>fc.remove(o))
+      snap(fc); e.preventDefault()
+    }
+    /* Paste */ else if (cmd && e.code==='KeyV'){
+      if (!copyBuf.json) return
+      copyBuf.offset += 10
+      fabric.util.enlivenObjects(
+        copyBuf.json as any,
+        (objs:fabric.Object[])=>{
+          objs.forEach(o=>{
+            o.set({ left:(o.left??0)+copyBuf.offset,
+                    top :(o.top ??0)+copyBuf.offset })
+            fc.add(o); o.setCoords()
           })
-            /* allow redraw again after this frame */
-            setTimeout(() => { isEditing.current = false })
-    })
+          snap(fc)
+        },
+        ''                                      // namespace
+      )
+      e.preventDefault()
+    }
+    /* Delete */ else if (e.code==='Delete'||e.code==='Backspace'){
+      if (!sel.length) return
+      sel.forEach((o:any)=>fc.remove(o)); snap(fc); e.preventDefault()
+    }
+    /* Arrow-nudging */ else if (e.code.startsWith('Arrow')){
+      if (!sel.length) return
+      const step = e.shiftKey ? 10 : 1
+      sel.forEach((o:any)=>{
+        if (e.code==='ArrowLeft')  o.left -= step
+        if (e.code==='ArrowRight') o.left += step
+        if (e.code==='ArrowUp')    o.top  -= step
+        if (e.code==='ArrowDown')  o.top  += step
+        o.setCoords()
+        if (o.layerIdx!==undefined)
+          updateLayer(pageIdx,o.layerIdx,{x:o.left,y:o.top})
+      })
+      fc.requestRenderAll(); snap(fc); e.preventDefault()
+    }
+  }
+  window.addEventListener('keydown', onKey)
 
-    fcRef.current = fc; onReady(fc)
-    return () => { onReady(null); fc.dispose() }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  /* ── 6 ▸ Expose canvas & tidy up ──────────────────────────── */
+  fcRef.current = fc; onReady(fc)
+
+  return () => {
+    window.removeEventListener('keydown', onKey)
+    if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
+    onReady(null)
+    fc.dispose()
+  }
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [])
+/* ---------- END mount once ----------------------------------- */
+
 
 
   /* ---------- redraw on page change ----------------------------- */
