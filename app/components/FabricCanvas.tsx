@@ -156,22 +156,6 @@ const getSrcUrl = (raw: Layer): string | undefined => {
     return undefined
   }                   // can’t resolve yet
 
-/* ---------- undo / redo ----------------------------------------- */
-const _hist: fabric.Object[][] = []
-let   _ptr  = -1
-const snap = (fc: fabric.Canvas) => {
-  _hist.splice(_ptr + 1)
-  _hist.push(fc.getObjects().map(o => o.toObject()))
-  _ptr = _hist.length - 1
-}
-export const undo = (fc: fabric.Canvas) => {
-  if (_ptr <= 0) return
-  _ptr--; fc.loadFromJSON({ objects: _hist[_ptr] }, () => fc.renderAll())
-}
-export const redo = (fc: fabric.Canvas) => {
-  if (_ptr >= _hist.length - 1) return
-  _ptr++; fc.loadFromJSON({ objects: _hist[_ptr] }, () => fc.renderAll())
-}
 
 /* ---------- guides ---------------------------------------------- */
 const addGuides = (fc: fabric.Canvas) => {
@@ -310,7 +294,7 @@ addGuides(fc)                                 // green safe-zone guides
   /* ── 4.5 ▸ Fabric ➜ Zustand sync ──────────────────────────── */
   fc.on('object:modified', e=>{
     isEditing.current = true
-    snap(fc)
+    useEditor.getState().pushHistory()
     const t = e.target as any
     if (t?.layerIdx === undefined) return
 
@@ -378,7 +362,8 @@ addGuides(fc)                                 // green safe-zone guides
       if (!sel.length) return
       copyBuf.json   = sel.map((o:fabric.Object)=>o.toJSON())
       copyBuf.offset = 0; sel.forEach((o:any)=>fc.remove(o))
-      snap(fc); e.preventDefault()
+      useEditor.getState().pushHistory()
+; e.preventDefault()
     }
     /* Paste */ else if (cmd && e.code==='KeyV'){
       if (!copyBuf.json) return
@@ -391,7 +376,7 @@ addGuides(fc)                                 // green safe-zone guides
                     top :(o.top ??0)+copyBuf.offset })
             fc.add(o); o.setCoords()
           })
-          snap(fc)
+          useEditor.getState().pushHistory()
         },
         ''                                      // namespace
       )
@@ -399,7 +384,8 @@ addGuides(fc)                                 // green safe-zone guides
     }
     /* Delete */ else if (e.code==='Delete'||e.code==='Backspace'){
       if (!sel.length) return
-      sel.forEach((o:any)=>fc.remove(o)); snap(fc); e.preventDefault()
+      sel.forEach((o:any)=>fc.remove(o)); useEditor.getState().pushHistory()
+      ; e.preventDefault()
     }
     /* Arrow-nudging */ else if (e.code.startsWith('Arrow')){
       if (!sel.length) return
@@ -413,7 +399,8 @@ addGuides(fc)                                 // green safe-zone guides
         if (o.layerIdx!==undefined)
           updateLayer(pageIdx,o.layerIdx,{x:o.left,y:o.top})
       })
-      fc.requestRenderAll(); snap(fc); e.preventDefault()
+      fc.requestRenderAll(); useEditor.getState().pushHistory()
+      ; e.preventDefault()
     }
   }
   window.addEventListener('keydown', onKey)

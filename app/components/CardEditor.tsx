@@ -14,7 +14,7 @@ import { useEditor }                    from './EditorStore'
 if (typeof window !== 'undefined') (window as any).useEditor = useEditor // debug helper
 
 import LayerPanel                       from './LayerPanel'
-import FabricCanvas, { undo, redo }     from './FabricCanvas'
+import FabricCanvas                      from './FabricCanvas'
 import TextToolbar                      from './TextToolbar'
 import SelfieDrawer                     from './SelfieDrawer'
 import type { TemplatePage }            from './FabricCanvas'
@@ -79,6 +79,9 @@ export default function CardEditor({
   const addText     = useEditor(s => s.addText)
   const addImage    = useEditor(s => s.addImage)
   const updateLayer = useEditor(s => s.updateLayer)
+  const undo = useEditor(s => s.undo)
+  const redo = useEditor(s => s.redo)
+
 
   /* 3 ─ visible section ------------------------------------------ */
   const [section, setSection] = useState<Section>('front')
@@ -197,17 +200,17 @@ const handleSwap = (url: string) => {
       <LayerPanel />
 
       {/* main */}
-      <div className="flex-1 flex flex-col">
-        <TextToolbar
-          canvas    ={activeFc}
-          addText   ={addText}
-          addImage  ={addImage}
-          onUndo    ={() => activeFc && undo(activeFc)}
-          onRedo    ={() => activeFc && redo(activeFc)}
-          onSave    ={handleSave}
-          mode      ={mode}
-          saving    ={saving}
-        />
+     <div className="flex-1 flex flex-col">
+     <TextToolbar
+     canvas   ={activeFc}
+     addText  ={addText}
+     addImage ={addImage}
+     onUndo   ={undo}
+     onRedo   ={redo}
+     onSave   ={handleSave}
+     mode     ={mode}
+     saving   ={saving}
+/>
 
         {/* tabs */}
         <nav className="flex justify-center gap-8 py-3 text-sm font-medium">

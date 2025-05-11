@@ -1,56 +1,54 @@
 /**********************************************************************
- * EditorStore.ts – single source-of-truth (Zustand)
- * 2025-05-09  • adds Selfie-Drawer state + helpers
- * 2025-06-05  • addImage uploads to /api/upload and stores assetId
- * 2025-06-12  • FIX: “vanishing layer” race-condition
- *              – optimistic layer now carries  ▸ srcUrl   (blob:)
- *                                              ▸ uploading (flag)
- *              – swap-in happens only after upload finishes
+ * EditorStore.ts – single source-of-truth (Zustand) + History
+ * 2025-06-15 • adds: undo / redo that stay in sync with Sanity
  *********************************************************************/
-
 import { create } from 'zustand'
 import type { Layer, TemplatePage } from './FabricCanvas'
 
-/*────────────────────────── types ──────────────────────────*/
-type DrawerState =
-  | 'closed'
-  | 'idle'
-  | 'picked'
-  | 'generating'
-  | 'grid'
-  | 'applying'
+/* ---------- helpers ------------------------------------------------ */
+const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v))
 
-/** we extend Layer locally with the fields the editor
- *  (not Sanity) needs while the upload is in-flight            */
-type EditorLayer = Layer & {
-  /** temporary blob: URL shown in FabricCanvas & sidebar */
+/* ---------- extra editor-only fields ------------------------------- */
+export type EditorLayer = Layer & {
+  /** blob: URL shown while an upload is in-flight                   */
   srcUrl?: string
-  /** true while the upload POST is in progress            */
+  /** `true` between upload POST → success                           */
   uploading?: boolean
 }
 
+/* ---------- Selfie drawer state (unchanged) ----------------------- */
+type DrawerState =
+  | 'closed' | 'idle' | 'picked' | 'generating'
+  | 'grid'   | 'applying'
+
+/* ---------- full Zustand shape ------------------------------------ */
 interface EditorState {
-  /* ───── card data ───── */
+  /* ---- card data ---- */
   pages: TemplatePage[]
   activePage: number
 
-  /* ───── drawer data ─── */
+  /* ---- Selfie drawer ---- */
   drawerState: DrawerState
   drawerImages: string[]
   drawerProgress: number
   selectedFile?: File
-  choice?: number // index 0-3 in the variant grid
+  choice?: number                      // 0-3 in the variant-grid
 
-  /* ───── setters ───── */
+  /* ---- UNDO / REDO ---- */
+  history: TemplatePage[][]
+  histPtr: number                      // points at `history[histPtr]`
+  pushHistory: () => void
+  undo: () => void
+  redo: () => void
+
+  /* ---- simple setters ---- */
   setPages: (p: TemplatePage[]) => void
-  setActive: (idx: number) => void
-  setPageLayers: (page: number, layers: EditorLayer[]) => void
-
+  setActive: (i: number) => void
   setDrawerState: (s: DrawerState) => void
-  setDrawerImgs: (imgs: string[]) => void
-  setProgress: (n: number) => void
+  setDrawerImgs:  (a: string[]) => void
+  setProgress:    (n: number) => void
 
-  /* ───── canvas ↔ sidebar actions ───── */
+  /* ---- canvas ↔ sidebar actions ---- */
   addText: () => void
   addImage: (file: File) => Promise<void>
   updateLayer: (page: number, idx: number, data: Partial<EditorLayer>) => void
@@ -58,7 +56,7 @@ interface EditorState {
   deleteLayer: (idx: number) => void
 }
 
-/*────────────────────────── store ──────────────────────────*/
+/* ------------------------------------------------------------------ */
 export const useEditor = create<EditorState>((set, get) => ({
   /* ───── card data ───── */
   pages: [],
@@ -69,143 +67,162 @@ export const useEditor = create<EditorState>((set, get) => ({
   drawerImages: [],
   drawerProgress: 0,
 
+  /* ───── history ───── */
+  history: [],
+  histPtr: -1,
+
+  /* ───── history helpers ───── */
+  pushHistory: () => {
+    const { history, histPtr, pages } = get()
+    const snapshot = clone(pages)
+
+    /* overwrite anything “ahead” of the current pointer              */
+    const next = history.slice(0, histPtr + 1)
+    next.push(snapshot)
+
+    set({ history: next, histPtr: next.length - 1 })
+  },
+
+  undo: () => {
+    const { histPtr, history } = get()
+    if (histPtr <= 0) return                  // nothing left to undo
+
+    const newPtr = histPtr - 1
+    set({
+      pages  : clone(history[newPtr]),
+      histPtr: newPtr,
+    })
+  },
+
+  redo: () => {
+    const { histPtr, history } = get()
+    if (histPtr >= history.length - 1) return // nothing to redo
+
+    const newPtr = histPtr + 1
+    set({
+      pages  : clone(history[newPtr]),
+      histPtr: newPtr,
+    })
+  },
+
   /* ───── generic setters ───── */
-  setPages      : pages      => set({ pages }),
-  setActive     : activePage => set({ activePage }),
-  setDrawerState: s          => set({ drawerState: s, drawerProgress: 0 }),
-  setDrawerImgs : imgs       => set({ drawerImages: imgs, choice: undefined }),
-  setProgress   : n          => set({ drawerProgress: n }),
+  setPages: pages => {
+    set({ pages })
+    /* initialise history once we know the starting template          */
+    if (get().history.length === 0) get().pushHistory()
+  },
 
-  /* FabricCanvas pushes its full layer list on every change */
-  setPageLayers: (pageIdx, layers) =>
-    set(state => {
-      const pages = [...state.pages]
-      if (!pages[pageIdx]) return { pages }
-      pages[pageIdx] = { ...pages[pageIdx], layers }
-      return { pages }
-    }),
+  setActive     : i   => set({ activePage: i }),
+  setDrawerState: s   => set({ drawerState: s, drawerProgress: 0 }),
+  setDrawerImgs : arr => set({ drawerImages: arr, choice: undefined }),
+  setProgress   : n   => set({ drawerProgress: n }),
 
-  /*──────────────────────── editor actions ───────────────────────*/
+  /*────────────────────── editor actions ───────────────────────────*/
+  addText: () => {
+    const { activePage, pages, pushHistory } = get()
+    const nextPages = clone(pages)
 
-  /** quick “hello world” layer */
-  addText: () =>
-    set(state => {
-      const i     = state.activePage
-      const pages = [...state.pages]
+    nextPages[activePage].layers.push({
+      type : 'text',
+      text : 'New text',
+      x    : 100,
+      y    : 100,
+      width: 200,
+    })
 
-      const layer: EditorLayer = {
-        type : 'text',
-        text : 'New text',
-        x    : 100,
-        y    : 100,
-        width: 200,
-      }
-
-      pages[i] = { ...pages[i], layers: [...pages[i].layers, layer] }
-      return { pages }
-    }),
+    set({ pages: nextPages })
+    pushHistory()
+  },
 
   /*--------------------------------------------------------------
    * addImage(file)
-   *  • shows an optimistic placeholder immediately
-   *  • uploads to /api/upload   (expects {url, assetId} JSON)
-   *  • swaps the placeholder for the real Sanity reference
+   *  – optimistic placeholder
+   *  – upload POST  →  { url, assetId }
+   *  – swap-in Sanity reference
    *------------------------------------------------------------*/
   addImage: async (file) => {
-    /* 1 ▸ optimistic placeholder */
-    const tempUrl = URL.createObjectURL(file)          // blob:
-    const pageIdx = get().activePage
+    const { activePage, pages, pushHistory } = get()
 
-    set(state => {
-      const pages  = [...state.pages]
-      const layer: EditorLayer = {
-        type     : 'image',
-        srcUrl   : tempUrl,
-        uploading: true,            // ← flag!
-        x: 100,
-        y: 100,
-        width: 300,
-      }
-      pages[pageIdx] = {
-        ...pages[pageIdx],
-        layers: [...pages[pageIdx].layers, layer],
-      }
-      return { pages }
-    })
+    /* 1 ▸ optimistic blob: layer ---------------------------------- */
+    const blobUrl  = URL.createObjectURL(file)
+    const nextPages= clone(pages)
+    nextPages[activePage].layers.push({
+      type     : 'image',
+      x        : 100,
+      y        : 100,
+      width    : 300,
+      srcUrl   : blobUrl,
+      uploading: true,
+    } as EditorLayer)
 
-    /* 2 ▸ upload */
+    set({ pages: nextPages })
+    pushHistory()                              // snapshot with placeholder
+
+    /* 2 ▸ upload --------------------------------------------------- */
     try {
       const fd = new FormData()
       fd.append('file', file)
-
       const res = await fetch('/api/upload', { method: 'POST', body: fd })
       if (!res.ok) throw new Error(await res.text())
 
       const { url, assetId } = await res.json()
 
-      /* 3 ▸ swap-in real asset */
-      set(state => {
-        const pages  = [...state.pages]
-        const layers = [...pages[pageIdx].layers]
-
-        const j = layers.findIndex(
-          l => l.type === 'image' && (l as EditorLayer).uploading && (l as EditorLayer).srcUrl === tempUrl
-        )
-
-        if (j !== -1) {
-          layers[j] = {
-            ...layers[j],
-            uploading: false,
-            assetId,                       // ⭐  added
-
-            // Sanity-friendly reference
-            src: {
-              _type : 'image',
-              asset : { _type: 'reference', _ref: assetId },
-            },
-            srcUrl: url,      // keep the CDN url for instant draw / future preview
-          } as EditorLayer
-          pages[pageIdx] = { ...pages[pageIdx], layers }
-        }
-        return { pages }
-      })
+      /* 3 ▸ swap-in real Sanity reference -------------------------- */
+      const swapPages = clone(get().pages)
+      const layers    = swapPages[activePage].layers
+      const i         = layers.findIndex(
+                          l => l.type === 'image' &&
+                               (l as EditorLayer).uploading &&
+                               (l as EditorLayer).srcUrl === blobUrl
+                        )
+      if (i !== -1) {
+        layers[i] = {
+          ...layers[i],
+          uploading: false,
+          assetId,
+          srcUrl: url,
+          src   : {
+            _type : 'image',
+            asset : { _type: 'reference', _ref: assetId },
+          },
+        } as EditorLayer
+        set({ pages: swapPages })
+        pushHistory()                          // snapshot with final image
+      }
     } catch (err) {
       console.error('Upload failed:', err)
-      /* optional: show toast, mark layer errored, etc. */
+      /* optional: toast or mark layer errored */
     }
   },
 
-  /* merge live edits coming back from FabricCanvas */
-  updateLayer: (pageIdx, idx, data) =>
-    set(state => {
-      const pages  = [...state.pages]
-      const layers = [...pages[pageIdx].layers]
-      if (!layers[idx]) return { pages }
-      layers[idx] = { ...layers[idx], ...data }
-      pages[pageIdx] = { ...pages[pageIdx], layers }
-      return { pages }
-    }),
+  /* live edits coming back from FabricCanvas ---------------------- */
+  updateLayer: (pageIdx, idx, data) => {
+    const { pages, pushHistory } = get()
+    const nextPages = clone(pages)
 
-  /* drag-to-reorder in LayerPanel */
-  reorder: (from, to) =>
-    set(state => {
-      const i      = state.activePage
-      const pages  = [...state.pages]
-      const layers = [...pages[i].layers]
-      const [moved] = layers.splice(from, 1)
-      layers.splice(to, 0, moved)
-      pages[i] = { ...pages[i], layers }
-      return { pages }
-    }),
+    Object.assign(nextPages[pageIdx].layers[idx] ?? {}, data)
+    set({ pages: nextPages })
+    pushHistory()
+  },
 
-  /* delete button in LayerPanel */
-  deleteLayer: idx =>
-    set(state => {
-      const i      = state.activePage
-      const pages  = [...state.pages]
-      const layers = [...pages[i].layers]
-      layers.splice(idx, 1)
-      pages[i] = { ...pages[i], layers }
-      return { pages }
-    }),
+  /* drag-to-reorder in LayerPanel --------------------------------- */
+  reorder: (from, to) => {
+    const { activePage, pages, pushHistory } = get()
+    const nextPages = clone(pages)
+    const [moved]   = nextPages[activePage].layers.splice(from, 1)
+    nextPages[activePage].layers.splice(to, 0, moved)
+
+    set({ pages: nextPages })
+    pushHistory()
+  },
+
+  /* delete layer (sidebar OR ⌫ key) ------------------------------- */
+  deleteLayer: idx => {
+    const { activePage, pages, pushHistory } = get()
+    const nextPages = clone(pages)
+    nextPages[activePage].layers.splice(idx, 1)
+
+    set({ pages: nextPages })
+    pushHistory()
+  },
 }))
