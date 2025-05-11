@@ -112,6 +112,11 @@ export interface TemplatePage {
   name:   string
   layers: Layer[]
 }
+/* ----------another helper --------------------------------------------- */
+const discardSelection = (fc: fabric.Canvas) => {
+  fc.discardActiveObject();   // removes the wrapper
+  fc.requestRenderAll();
+};
 
 /* ---------- helpers --------------------------------------------- */
 export const getActiveTextbox = (fc: fabric.Canvas | null) =>
@@ -156,6 +161,73 @@ const getSrcUrl = (raw: Layer): string | undefined => {
     return undefined
   }                   // can’t resolve yet
 
+/* ── 1 ▸ TWO NEW TINY HELPERS ─────────────────────────────────── */
+
+/** Convert a Fabric object → our Layer shape */
+const objToLayer = (o: fabric.Object): Layer => {
+  if ((o as any).type === 'textbox') {
+    const t = o as fabric.Textbox
+    return {
+      type      : 'text',
+      text      : t.text || '',
+      x         : t.left || 0,
+      y         : t.top  || 0,
+      width     : t.width || 200,
+      fontSize  : t.fontSize,
+      fontFamily: t.fontFamily,
+      fontWeight: t.fontWeight,
+      fontStyle : t.fontStyle,
+      underline : t.underline,
+      fill      : t.fill as string,
+      textAlign : t.textAlign as any,
+      lineHeight: t.lineHeight,
+      opacity   : t.opacity,
+      scaleX    : t.scaleX,
+      scaleY    : t.scaleY,
+    }
+  }
+  const i = o as fabric.Image
+  return {
+    type   : 'image',
+    srcUrl : (i as any).__src || '',
+    x      : i.left  || 0,
+    y      : i.top   || 0,
+    width  : i.getScaledWidth(),
+    height : i.getScaledHeight(),
+    opacity: i.opacity,
+    scaleX : i.scaleX,
+    scaleY : i.scaleY,
+  }
+}
+
+/** Read every on-canvas object → Layers, update Zustand + history */
+const syncLayersFromCanvas = (fc: fabric.Canvas, pageIdx: number) => {
+  const objs = fc
+    .getObjects()
+    .filter(o =>
+      !(o as any)._guide &&
+      !(o as any)._backdrop &&
+      !(o as any).excludeFromExport &&
+      (o as any).type !== 'activeSelection'      // skip wrapper
+    )
+    .reverse();                                  // bottom → top
+
+  /* remember original src on pasted images */
+  objs.forEach(o => {
+    if ((o as any).type === 'image' && !(o as any).__src) {
+      (o as any).__src = (o as any).getSrc?.() || (o as any).src;
+    }
+  });
+
+  /* give every object an up-to-date index */
+  objs.forEach((o, i) => ((o as any).layerIdx = i));
+
+  /* stash in Zustand + history */
+  const layers = objs.map(objToLayer);
+  const store  = useEditor.getState();
+  store.setPageLayers(pageIdx, layers);
+  store.pushHistory();
+};
 
 /* ---------- guides ---------------------------------------------- */
 const addGuides = (fc: fabric.Canvas) => {
@@ -294,7 +366,6 @@ addGuides(fc)                                 // green safe-zone guides
   /* ── 4.5 ▸ Fabric ➜ Zustand sync ──────────────────────────── */
   fc.on('object:modified', e=>{
     isEditing.current = true
-    useEditor.getState().pushHistory()
     const t = e.target as any
     if (t?.layerIdx === undefined) return
 
@@ -345,65 +416,118 @@ addGuides(fc)                                 // green safe-zone guides
     setTimeout(()=>{ isEditing.current = false })
   })
 
-  /* ── 5 ▸ Clipboard + keyboard shortcuts (unchanged logic) ─── */
-  const copyBuf:{json:any;offset:number} = { json:null, offset:0 }
+/* ───────────────── clipboard & keyboard shortcuts ────────────────── */
 
-  const onKey = (e:KeyboardEvent) => {
-    const act = fc.getActiveObject() as any
-    const sel = Array.isArray(act?.objects) ? act.objects : act ? [act] : []
-    const cmd = e.metaKey || e.ctrlKey
+/** Raw serialised objects we keep on the “clipboard” */
+type Clip = { json: any[]; nudge: number }
+const clip: Clip = { json: [], nudge: 0 }
 
-    /* Copy */ if (cmd && e.code==='KeyC'){
-      if (!sel.length) return
-      copyBuf.json   = sel.map((o:fabric.Object)=>o.toJSON())
-      copyBuf.offset = 0; e.preventDefault()
-    }
-    /* Cut */ else if (cmd && e.code==='KeyX'){
-      if (!sel.length) return
-      copyBuf.json   = sel.map((o:fabric.Object)=>o.toJSON())
-      copyBuf.offset = 0; sel.forEach((o:any)=>fc.remove(o))
-      useEditor.getState().pushHistory()
-; e.preventDefault()
-    }
-    /* Paste */ else if (cmd && e.code==='KeyV'){
-      if (!copyBuf.json) return
-      copyBuf.offset += 10
-      fabric.util.enlivenObjects(
-        copyBuf.json as any,
-        (objs:fabric.Object[])=>{
-          objs.forEach(o=>{
-            o.set({ left:(o.left??0)+copyBuf.offset,
-                    top :(o.top ??0)+copyBuf.offset })
-            fc.add(o); o.setCoords()
-          })
-          useEditor.getState().pushHistory()
-        },
-        ''                                      // namespace
-      )
-      e.preventDefault()
-    }
-    /* Delete */ else if (e.code==='Delete'||e.code==='Backspace'){
-      if (!sel.length) return
-      sel.forEach((o:any)=>fc.remove(o)); useEditor.getState().pushHistory()
-      ; e.preventDefault()
-    }
-    /* Arrow-nudging */ else if (e.code.startsWith('Arrow')){
-      if (!sel.length) return
-      const step = e.shiftKey ? 10 : 1
-      sel.forEach((o:any)=>{
-        if (e.code==='ArrowLeft')  o.left -= step
-        if (e.code==='ArrowRight') o.left += step
-        if (e.code==='ArrowUp')    o.top  -= step
-        if (e.code==='ArrowDown')  o.top  += step
-        o.setCoords()
-        if (o.layerIdx!==undefined)
-          updateLayer(pageIdx,o.layerIdx,{x:o.left,y:o.top})
-      })
-      fc.requestRenderAll(); useEditor.getState().pushHistory()
-      ; e.preventDefault()
-    }
+/** Small helper – return the wrapper itself (if any) and its children */
+const allObjs = (o: fabric.Object) =>
+  (o as any).type === 'activeSelection'
+    ? [(o as any), ...(o as any)._objects as fabric.Object[]]
+    : [o]
+
+/** Extra props we must keep when serialising */
+const PROPS = [
+  'src', 'srcUrl', 'assetId', '__src',               // images
+  'text', 'fontSize', 'fontFamily', 'fill',          // text
+  'fontWeight', 'fontStyle', 'underline',
+  'textAlign', 'lineHeight', 'opacity',
+  'scaleX', 'scaleY', 'width', 'height',
+  'locked', 'selectable', 'left', 'top',
+]
+
+const onKey = (e: KeyboardEvent) => {
+  const active = fc.getActiveObject() as fabric.Object | undefined
+  const cmd    = e.metaKey || e.ctrlKey
+
+  /* —— COPY ————————————————————————————————————— */
+  if (cmd && e.code === 'KeyC' && active) {
+    clip.json  = [(active).toJSON(PROPS)]            // keep the wrapper!
+    clip.nudge = 0
+    e.preventDefault()
+    return
   }
-  window.addEventListener('keydown', onKey)
+
+  /* —— CUT —————————————————————————————————————— */
+  if (cmd && e.code === 'KeyX' && active) {
+    clip.json  = [(active).toJSON(PROPS)]
+    clip.nudge = 0
+
+    /* remove wrapper + every child */
+    allObjs(active).forEach(o => fc.remove(o))
+    syncLayersFromCanvas(fc, pageIdx)
+    e.preventDefault()
+    return
+  }
+
+  /* —— PASTE ———————————————————————————————————— */
+  if (cmd && e.code === 'KeyV' && clip.json.length) {
+    clip.nudge += 10                                   // cascade each paste
+
+    fabric.util.enlivenObjects(clip.json, (objs: fabric.Object[]) => {
+      const root = objs[0]                             // our wrapper/group
+
+      /* offset once (wrapper carries the children) */
+      root.set({
+        left: (root.left ?? 0) + clip.nudge,
+        top : (root.top  ?? 0) + clip.nudge,
+      })
+      root.setCoords()
+
+      /* Fabric gives us a Group – break it straight into an ActiveSelection */
+      if ((root as any).type === 'group') {
+        const g = root as fabric.Group
+        const kids = g._objects as fabric.Object[]
+        kids.forEach(o => fc.add(o))
+        fc.remove(g)                                   // drop the temp group
+
+        const sel = new fabric.ActiveSelection(kids, { canvas: fc } as any)
+        fc.setActiveObject(sel)
+      } else {
+        fc.add(root)
+        fc.setActiveObject(root)
+      }
+
+      fc.requestRenderAll()
+      syncLayersFromCanvas(fc, pageIdx)
+    }, '')                                             // namespace = ''
+    e.preventDefault()
+    return
+  }
+
+  /* —— DELETE ——————————————————————————————————— */
+  if (!cmd && (e.code === 'Delete' || e.code === 'Backspace') && active) {
+    allObjs(active).forEach(o => fc.remove(o))
+    syncLayersFromCanvas(fc, pageIdx)
+    e.preventDefault()
+    return
+  }
+
+  /* —— ARROW-NUDGE ————————————————————————————— */
+  if (!cmd && e.code.startsWith('Arrow') && active) {
+    const step = e.shiftKey ? 10 : 1
+    const dx   = e.code === 'ArrowLeft'  ? -step
+               : e.code === 'ArrowRight' ?  step : 0
+    const dy   = e.code === 'ArrowUp'    ? -step
+               : e.code === 'ArrowDown'  ?  step : 0
+
+    allObjs(active).forEach(o => {
+      o.set({ left: (o.left ?? 0) + dx,
+              top : (o.top  ?? 0) + dy })
+      o.setCoords()
+    })
+
+    fc.requestRenderAll()
+    syncLayersFromCanvas(fc, pageIdx)
+    e.preventDefault()
+  }
+}
+
+/* avoid duplicates during hot-reload */
+window.removeEventListener('keydown', onKey)
+window.addEventListener('keydown', onKey)
 
   /* ── 6 ▸ Expose canvas & tidy up ──────────────────────────── */
   fcRef.current = fc; onReady(fc)

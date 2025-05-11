@@ -48,6 +48,9 @@ interface EditorState {
   setDrawerImgs:  (a: string[]) => void
   setProgress:    (n: number) => void
 
+    /* new — FabricCanvas pushes a whole page’s layer list */
+  setPageLayers: (page: number, layers: EditorLayer[]) => void
+
   /* ---- canvas ↔ sidebar actions ---- */
   addText: () => void
   addImage: (file: File) => Promise<void>
@@ -116,6 +119,15 @@ export const useEditor = create<EditorState>((set, get) => ({
   setDrawerState: s   => set({ drawerState: s, drawerProgress: 0 }),
   setDrawerImgs : arr => set({ drawerImages: arr, choice: undefined }),
   setProgress   : n   => set({ drawerProgress: n }),
+
+    /* push whole layer arrays coming from FabricCanvas */
+    setPageLayers : (pageIdx: number, layers: EditorLayer[]) =>
+      set(state => {
+        const pages = [...state.pages]
+        if (!pages[pageIdx]) return { pages }
+        pages[pageIdx] = { ...pages[pageIdx], layers }
+        return { pages }
+      }),
 
   /*────────────────────── editor actions ───────────────────────────*/
   addText: () => {
