@@ -110,7 +110,6 @@ export async function POST(req: NextRequest) {
       quality,
       background,
       user    : placeholderId,
-      response_format: 'b64_json',
     });
 
     /* 7 ▸ Validate response */
