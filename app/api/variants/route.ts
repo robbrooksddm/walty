@@ -1,5 +1,5 @@
 /**********************************************************************
- * app/api/variants/route.ts – GPT-Image-1 thumbnail editor (v5.3)
+ * app/api/variants/route.ts – GPT-Image-1 thumbnail editor (v5.3-fixed)
  *********************************************************************/
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
       force?       : boolean
       nonce?       : string
     };
+  // `selfieBase64` must be a data-URL containing base64-encoded PNG
 
   if (!checkBudget()) {
     return NextResponse.json({ error: 'Daily budget exhausted' }, { status: 429 });
@@ -59,10 +60,11 @@ export async function POST(req: NextRequest) {
   /* 1 ▸ Fetch metadata from Sanity */
   const {
     prompt,
-    version : promptVersion,
-    refUrl  = '',
-    ratio   = '1:1',                 // 1:1 | 3:2 | 2:3
-    background = 'transparent',
+    version   : promptVersion,
+    refUrl    = '',
+    ratio     = '1:1',          // 1:1 | 3:2 | 2:3
+    quality   = 'medium',       // low | medium | high | auto
+    background= 'transparent',  // transparent | opaque | auto
   } = await getPromptForPlaceholder(placeholderId);
 
   /* 2 ▸ Map ratio → OpenAI size flag */
@@ -85,10 +87,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    /* 5 ▸ Build [ template, selfie ] array */
-    const templateFile = refUrl
-      ? await fileFromUrl(forcePngUrl(refUrl))
-      : null;
+    /* 5 ▸ Build [template, selfie] array */
+    const templateFile = refUrl ? await fileFromUrl(forcePngUrl(refUrl)) : null;
 
     if (!templateFile) {
       return NextResponse.json(
@@ -98,23 +98,23 @@ export async function POST(req: NextRequest) {
     }
 
     const selfieFile = await fileFromBase64(selfieBase64);
+    const referenceImages = [templateFile, selfieFile];   // ORDER matters
 
-    const referenceImages = [templateFile, selfieFile];   // <-- ORDER matters
-
-    /* 6 ▸ images.edit (no mask / no generation flags) */
+    /* 6 ▸ images.edit */
     const result = await (openai.images as any).edit({
       model   : IMAGE_MODEL,
       image   : referenceImages,
       prompt,
       n       : NUM_VARIANTS,
       size,
-      user    : placeholderId,
       quality,
       background,
+      user    : placeholderId,
+      response_format: 'b64_json',
     });
 
     /* 7 ▸ Validate response */
-    if (!result.data?.length || !result.data[0].b64_json) {
+    if (!result.data?.length || typeof result.data[0].b64_json !== 'string') {
       return NextResponse.json(
         { error: 'Image edit returned no usable result — please retry.' },
         { status: 502 },
@@ -122,16 +122,9 @@ export async function POST(req: NextRequest) {
     }
 
     /* 8 ▸ Convert b64_json → data-URL */
-    const urls = await Promise.all(
-      result.data.map(async ({ b64_json }: { b64_json: string }) => {
-        let b64 = b64_json;
-        if (background === 'transparent') {
-          const buf = Buffer.from(b64_json, 'base64');
-          const cleaned = await cleanAlpha(buf);
-          b64 = cleaned.toString('base64');
-        }
-        return `data:image/png;base64,${b64}`;
-      }),
+    const urls = result.data.map(
+      ({ b64_json }: { b64_json: string }) =>
+        `data:image/png;base64,${b64_json}`,
     );
 
     /* 9 ▸ Optional debug dump */
@@ -150,7 +143,7 @@ export async function POST(req: NextRequest) {
       { ex: 60 * 60 * 24 },
     );
 
-    /* 11 ▸ Return to client */
+    /* 11 ▸ Return */
     return NextResponse.json(urls);
 
   } catch (err) {
