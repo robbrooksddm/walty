@@ -100,8 +100,8 @@ export async function POST(req: NextRequest) {
     const selfieFile = await fileFromBase64(selfieBase64);
     const referenceImages = [templateFile, selfieFile];   // ORDER matters
 
-    /* 6 ▸ images.edit */
-    const result = await (openai.images as any).edit({
+  /* 6 ▸ images.edit – send PNGs and request base64 output */
+  const result = await (openai.images as any).edit({
       model   : IMAGE_MODEL,
       image   : referenceImages,
       prompt,
@@ -110,7 +110,8 @@ export async function POST(req: NextRequest) {
       quality,
       background,
       user    : placeholderId,
-      response_format: 'b64_json',
+    // receive base64-encoded PNGs via b64_json
+    response_format: 'b64_json',
     });
 
     /* 7 ▸ Validate response */
@@ -121,16 +122,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    /* 8 ▸ Convert b64_json → data-URL */
-    const urls: string[] = [];
-    for (const { b64_json } of result.data as { b64_json: string }[]) {
-      let base64 = b64_json;
-      if (background === 'transparent') {
-        const cleaned = await cleanAlpha(Buffer.from(b64_json, 'base64'));
-        base64 = cleaned.toString('base64');
-      }
-      urls.push(`data:image/png;base64,${base64}`);
-    }
+  /* 8 ▸ Convert b64_json (base64 PNG) → data-URL */
+  const urls = result.data.map(
+    ({ b64_json }: { b64_json: string }) =>
+      `data:image/png;base64,${b64_json}`,
+  );
 
     /* 9 ▸ Optional debug dump */
     if (!process.env.NODE_ENV?.startsWith('prod')) {
