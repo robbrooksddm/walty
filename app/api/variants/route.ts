@@ -122,10 +122,15 @@ export async function POST(req: NextRequest) {
     }
 
     /* 8 ▸ Convert b64_json → data-URL */
-    const urls = result.data.map(
-      ({ b64_json }: { b64_json: string }) =>
-        `data:image/png;base64,${b64_json}`,
-    );
+    const urls: string[] = [];
+    for (const { b64_json } of result.data as { b64_json: string }[]) {
+      let base64 = b64_json;
+      if (background === 'transparent') {
+        const cleaned = await cleanAlpha(Buffer.from(b64_json, 'base64'));
+        base64 = cleaned.toString('base64');
+      }
+      urls.push(`data:image/png;base64,${base64}`);
+    }
 
     /* 9 ▸ Optional debug dump */
     if (!process.env.NODE_ENV?.startsWith('prod')) {
