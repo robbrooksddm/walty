@@ -269,6 +269,66 @@ const addBackdrop = (fc: fabric.Canvas) => {
   fc.add(bg)
 }
 
+/* ---------- image cropping ------------------------------------ */
+export const startCrop = (fc: fabric.Canvas, img: fabric.Image) => {
+  const rect = new fabric.Rect({
+    originX: 'left',
+    originY: 'top',
+    left: 0,
+    top: 0,
+    width: img.getScaledWidth(),
+    height: img.getScaledHeight(),
+    fill: 'rgba(0,0,0,0.2)',
+    stroke: '#fff',
+    strokeDashArray: [4 / SCALE, 4 / SCALE],
+    strokeWidth: 1 / SCALE,
+  })
+
+  const grp = new fabric.Group([rect], {
+    originX: 'left',
+    originY: 'top',
+    left: img.left ?? 0,
+    top: img.top ?? 0,
+  })
+
+  const clampPos = () => {
+    const bounds = img.getBoundingRect()
+    const w = grp.getScaledWidth()
+    const h = grp.getScaledHeight()
+    const maxLeft = bounds.left + bounds.width - w
+    const maxTop = bounds.top + bounds.height - h
+    grp.left = Math.max(bounds.left, Math.min(grp.left ?? 0, maxLeft))
+    grp.top = Math.max(bounds.top, Math.min(grp.top ?? 0, maxTop))
+    grp.setCoords()
+  }
+
+  const clampScale = () => {
+    const bounds = img.getBoundingRect()
+    const w = rect.width ?? 0
+    const h = rect.height ?? 0
+    const curLeft = grp.left ?? 0
+    const curTop = grp.top ?? 0
+    const maxW = bounds.left + bounds.width - curLeft
+    const maxH = bounds.top + bounds.height - curTop
+    const newW = Math.min(w * grp.scaleX!, maxW)
+    const newH = Math.min(h * grp.scaleY!, maxH)
+    grp.scaleX = newW / w
+    grp.scaleY = newH / h
+  }
+
+  grp.on('moving', clampPos)
+  grp.on('scaling', () => {
+    clampScale()
+    clampPos()
+  })
+
+  fc.add(grp)
+  fc.setActiveObject(grp)
+  grp.setCoords()
+  fc.requestRenderAll()
+  return grp
+}
+
 
 /* ---------- component ------------------------------------------- */
 interface Props {
