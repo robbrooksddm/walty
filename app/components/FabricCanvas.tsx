@@ -389,21 +389,38 @@ const startCrop = (img: fabric.Image) => {
   fc.setActiveObject(grp)
 
   const sync = () => {
-    const g = cropGroupRef.current
+    const g  = cropGroupRef.current
     const pic = cropImgRef.current
     const st  = cropStartRef.current
     if (!g || !pic || !st) return
-    const w = g.width! * g.scaleX!
-    const h = g.height! * g.scaleY!
-    const newLeft = g.left || 0
-    const newTop  = g.top  || 0
 
-    const cropX = (newLeft - st.left) / st.scaleX + st.cropX
-    const cropY = (newTop  - st.top ) / st.scaleY + st.cropY
-    const cropW = w / st.scaleX
-    const cropH = h / st.scaleY
+    const origW = pic.getElement().naturalWidth || pic.width!
+    const origH = pic.getElement().naturalHeight || pic.height!
 
-    pic.set({ left:newLeft, top:newTop, cropX, cropY, width:cropW, height:cropH })
+    let cropW = (g.width! * g.scaleX!) / st.scaleX
+    let cropH = (g.height! * g.scaleY!) / st.scaleY
+
+    let cropX = (g.left! - st.left) / st.scaleX + st.cropX
+    let cropY = (g.top!  - st.top ) / st.scaleY + st.cropY
+
+    const SNAP = 4 / SCALE
+
+    if (cropX < SNAP) cropX = 0
+    if (cropY < SNAP) cropY = 0
+    if (origW - (cropX + cropW) < SNAP) cropX = origW - cropW
+    if (origH - (cropY + cropH) < SNAP) cropY = origH - cropH
+
+    cropX = Math.max(0, Math.min(origW - cropW, cropX))
+    cropY = Math.max(0, Math.min(origH - cropH, cropY))
+    cropW = Math.max(1, Math.min(origW - cropX, cropW))
+    cropH = Math.max(1, Math.min(origH - cropY, cropH))
+
+    const left = st.left + (cropX - st.cropX) * st.scaleX
+    const top  = st.top  + (cropY - st.cropY) * st.scaleY
+
+    g.set({ left, top })
+
+    pic.set({ left: st.left, top: st.top, cropX, cropY, width: cropW, height: cropH })
     pic.setCoords()
     fc.requestRenderAll()
   }
@@ -465,6 +482,8 @@ const commitCrop = () => {
       cropH: img.height,
     })
   }
+
+  startCrop(img)
 }
 
 /* ── 2 ▸ Hover overlay only ─────────────────────────────── */
