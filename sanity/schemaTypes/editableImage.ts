@@ -26,6 +26,20 @@ export default defineType({
 
     /* raw URL / blob while the upload is still in progress */
     defineField({name: 'srcUrl', type: 'url', hidden: true}),
+
+    /* optional crop rectangle */
+    defineField({
+      name : 'crop',
+      type : 'object',
+      title: 'Crop',
+      hidden: true,
+      fields: [
+        { name: 'left',   type: 'number' },
+        { name: 'top',    type: 'number' },
+        { name: 'width',  type: 'number' },
+        { name: 'height', type: 'number' },
+      ],
+    }),
   ],
 
   /* ── layer-list preview ── */

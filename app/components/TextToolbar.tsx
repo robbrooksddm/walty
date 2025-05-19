@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import { fabric }              from 'fabric'
 import { getActiveTextbox }    from './FabricCanvas'
+import { useEditor }           from './EditorStore'
 
 type Mode = 'staff'|'customer'
 const fonts = ['Arial','Georgia','monospace','Dingos Stamp']
@@ -25,6 +26,9 @@ interface Props{
 export default function TextToolbar(props:Props){
   const {canvas:fc,addText,addImage,onUndo,onRedo,onSave,mode,saving}=props
   if(!fc) return null
+
+  const startCrop = useEditor(s=>s.startCrop)
+  const activePage = useEditor(s=>s.activePage)
 
   /* re-render when Fabric selection changes */
   const [_,force] = useState({})
@@ -76,6 +80,17 @@ export default function TextToolbar(props:Props){
                      e.currentTarget.value=''
                    }}/>
           </label>
+
+          {/* Crop */}
+          <button
+            disabled={(fc.getActiveObject() as any)?.type !== 'image'}
+            onClick={() => {
+              const obj = fc.getActiveObject() as any
+              if (obj && obj.type === 'image')
+                startCrop(activePage, obj.layerIdx)
+            }}
+            className="toolbar-btn"
+          >Crop</button>
 
           {/* font family */}
           <select disabled={!tb} value={tb?.fontFamily ?? fonts[0]}

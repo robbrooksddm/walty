@@ -64,6 +64,7 @@ if (raw._type === 'aiLayer') {
       scaleX: raw.scaleX,
       scaleY: raw.scaleY,
       opacity: raw.opacity,
+      ...(raw.crop && { crop: raw.crop }),
       selectable: raw._type !== 'bgImage',
       editable  : raw._type !== 'bgImage',
     }
@@ -148,6 +149,7 @@ if (layer.type === 'image') {
     ...(layer.opacity != null && { opacity: layer.opacity }),
     ...(layer.scaleX  != null && { scaleX: layer.scaleX }),
     ...(layer.scaleY  != null && { scaleY: layer.scaleY }),
+    ...(layer.crop && { crop: layer.crop }),
   };
 
 /* 1️⃣ Already have assetId → easiest */

@@ -14,6 +14,8 @@ export type EditorLayer = Layer & {
   srcUrl?: string
   /** `true` between upload POST → success                           */
   uploading?: boolean
+  /** optional crop rectangle */
+  crop?: { left:number; top:number; width:number; height:number }
 }
 
 /* ---------- Selfie drawer state (unchanged) ----------------------- */
@@ -40,6 +42,12 @@ interface EditorState {
   pushHistory: () => void
   undo: () => void
   redo: () => void
+
+  /* ---- crop mode ---- */
+  cropping: { page: number; idx: number } | null
+  startCrop: (page: number, idx: number) => void
+  cancelCrop: () => void
+  commitCrop: (page: number, idx: number, data: Partial<EditorLayer>) => void
 
   /* ---- simple setters ---- */
   setPages: (p: TemplatePage[]) => void
@@ -69,6 +77,9 @@ export const useEditor = create<EditorState>((set, get) => ({
   drawerState: 'idle',
   drawerImages: [],
   drawerProgress: 0,
+
+  /* cropping state */
+  cropping: null,
 
   /* ───── history ───── */
   history: [],
@@ -128,6 +139,17 @@ export const useEditor = create<EditorState>((set, get) => ({
         pages[pageIdx] = { ...pages[pageIdx], layers }
         return { pages }
       }),
+
+  /* ---- crop helpers ---- */
+  startCrop  : (page, idx) => set({ cropping: { page, idx } }),
+  cancelCrop : () => set({ cropping: null }),
+  commitCrop : (page, idx, data) => {
+    const { pages } = get()
+    const next = clone(pages)
+    Object.assign(next[page].layers[idx] ?? {}, data)
+    set({ pages: next, cropping: null })
+    get().pushHistory()
+  },
 
   /*────────────────────── editor actions ───────────────────────────*/
   addText: () => {

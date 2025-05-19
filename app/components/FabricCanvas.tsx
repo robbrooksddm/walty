@@ -76,6 +76,9 @@ export interface Layer {
   /** `image-…` ID returned by `/api/upload` */
   assetId?: string
 
+  /** optional crop rectangle */
+  crop?: { left:number; top:number; width:number; height:number }
+
   /* ---- SHARED geometry / style ---------------------------------- */
   x: number
   y: number
@@ -197,6 +200,7 @@ const objToLayer = (o: fabric.Object): Layer => {
     opacity: i.opacity,
     scaleX : i.scaleX,
     scaleY : i.scaleY,
+    crop   : { left:i.cropX||0, top:i.cropY||0, width:i.width||0, height:i.height||0 },
   }
 }
 
@@ -283,6 +287,11 @@ export default function FabricCanvas ({ pageIdx, page, onReady }: Props) {
   const hoverRef  = useRef<fabric.Rect | null>(null)
   const hydrating = useRef(false)
   const isEditing = useRef(false)
+  const cropRef   = useRef<{ img:fabric.Image; rect:fabric.Rect; orig:any }|null>(null)
+
+  const cropping    = useEditor(s=>s.cropping)
+  const cancelCrop  = useEditor(s=>s.cancelCrop)
+  const commitCrop  = useEditor(s=>s.commitCrop)
 
   const setPageLayers = useEditor(s => s.setPageLayers)
   const updateLayer   = useEditor(s => s.updateLayer)
@@ -360,6 +369,12 @@ fc.on('mouse:over', e => {
 .on('mouse:out', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
+})
+.on('mouse:dblclick', e => {
+  const t = e.target as any
+  if (t && t.type === 'image' && t.layerIdx != null) {
+    useEditor.getState().startCrop(pageIdx, t.layerIdx)
+  }
 })
 
 addGuides(fc)                                 // green safe-zone guides
@@ -542,6 +557,118 @@ window.addEventListener('keydown', onKey)
 }, [])
 /* ---------- END mount once ----------------------------------- */
 
+/* ---------- crop mode ----------------------------------------- */
+useEffect(() => {
+  const fc = fcRef.current
+  if (!fc) return
+  if (!cropping || cropping.page !== pageIdx) return
+  if (cropRef.current) return
+
+  const img = fc.getObjects().find(o => (o as any).layerIdx === cropping.idx) as fabric.Image
+  if (!img) { cancelCrop(); return }
+
+  const rect = new fabric.Rect({
+    left: img.left ?? 0,
+    top: img.top ?? 0,
+    width: img.getScaledWidth(),
+    height: img.getScaledHeight(),
+    fill: 'transparent',
+    stroke: SEL_COLOR,
+    strokeDashArray: [4 / SCALE, 4 / SCALE],
+    strokeWidth: 1 / SCALE,
+    cornerColor: SEL_COLOR,
+    transparentCorners: false,
+  })
+  rect.setControlsVisibility({ mtr: false })
+  fc.add(rect)
+  fc.setActiveObject(rect)
+  cropRef.current = {
+    img,
+    rect,
+    orig: {
+      left: img.left,
+      top: img.top,
+      cropX: img.cropX || 0,
+      cropY: img.cropY || 0,
+      width: img.width!,
+      height: img.height!,
+      scaleX: img.scaleX || 1,
+      scaleY: img.scaleY || 1,
+    },
+  }
+
+  let prev: fabric.Point | null = null
+  const down = (e: any) => { prev = fc.getPointer(e.e) }
+  const move = (e: any) => {
+    if (!prev) return
+    const p = fc.getPointer(e.e)
+    const dx = p.x - prev.x
+    const dy = p.y - prev.y
+    img.set({ left: (img.left ?? 0) + dx, top: (img.top ?? 0) + dy })
+    img.setCoords()
+    fc.requestRenderAll()
+    prev = p
+  }
+  const up = () => { prev = null }
+  rect.on('mousedown', down).on('mousemove', move).on('mouseup', up)
+    .on('scaling', () => {
+      const w = rect.getScaledWidth()
+      const h = rect.getScaledHeight()
+      rect.set({ width: w, height: h, scaleX: 1, scaleY: 1 })
+      rect.setCoords()
+      fc.requestRenderAll()
+    })
+
+  const onKey = (ev: KeyboardEvent) => {
+    if (!cropRef.current) return
+    if (ev.code === 'Enter') {
+      const { img, rect, orig } = cropRef.current
+      const crop = {
+        left: orig.cropX + (orig.left - (img.left ?? 0)) / orig.scaleX,
+        top: orig.cropY + (orig.top - (img.top ?? 0)) / orig.scaleY,
+        width: rect.width! / orig.scaleX,
+        height: rect.height! / orig.scaleY,
+      }
+      img.set({
+        left: orig.left,
+        top: orig.top,
+        cropX: crop.left,
+        cropY: crop.top,
+        width: crop.width,
+        height: crop.height,
+      })
+      img.setCoords()
+      fc.remove(rect)
+      cropRef.current = null
+      commitCrop(pageIdx, cropping.idx, { x: orig.left, y: orig.top, crop })
+      document.removeEventListener('keydown', onKey)
+    } else if (ev.code === 'Escape') {
+      const { img, rect, orig } = cropRef.current
+      img.set({
+        left: orig.left,
+        top: orig.top,
+        cropX: orig.cropX,
+        cropY: orig.cropY,
+        width: orig.width,
+        height: orig.height,
+      })
+      img.setCoords()
+      fc.remove(rect)
+      cropRef.current = null
+      cancelCrop()
+      document.removeEventListener('keydown', onKey)
+    }
+  }
+  document.addEventListener('keydown', onKey)
+
+  return () => {
+    rect.off('mousedown', down).off('mousemove', move).off('mouseup', up)
+    document.removeEventListener('keydown', onKey)
+    if (fc.getObjects().includes(rect)) fc.remove(rect)
+    cropRef.current = null
+  }
+}, [cropping, pageIdx])
+
 
 
   /* ---------- redraw on page change ----------------------------- */
@@ -578,6 +705,15 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
             img.scale(s)
           } else {
             img.set({ scaleX: ly.scaleX, scaleY: ly.scaleY })
+          }
+
+          if (ly.crop) {
+            img.set({
+              cropX: ly.crop.left,
+              cropY: ly.crop.top,
+              width: ly.crop.width,
+              height: ly.crop.height,
+            })
           }
 
           /* shared props */
