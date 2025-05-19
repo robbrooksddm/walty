@@ -346,11 +346,18 @@ interface Props {
 
 export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const fcRef     = useRef<fabric.Canvas | null>(null)
-  const hoverRef  = useRef<fabric.Rect | null>(null)
+  const fcRef      = useRef<fabric.Canvas | null>(null)
+  const hoverRef   = useRef<fabric.Rect | null>(null)
   const cropRef   = useRef<fabric.Rect | null>(null)
-  const hydrating = useRef(false)
-  const isEditing = useRef(false)
+  const hydrating  = useRef(false)
+  const isEditing  = useRef(false)
+  const isCropping = useRef(false)
+  const cropRef    = useRef<fabric.Group | null>(null)
+  const cropImg    = useRef<fabric.Image | null>(null)
+  const cropStart  = useRef<{
+    left:number; top:number; cropX:number; cropY:number;
+    cropW:number; cropH:number; scaleX:number; scaleY:number
+  } | null>(null)
   const isCropping= useRef(false)
   const cropRef   = useRef<fabric.Group | null>(null)
   const cropImg   = useRef<fabric.Image | null>(null)
@@ -407,6 +414,121 @@ fc.setHeight(PREVIEW_H)
 /* helper: physical-pixel dash & padding ------------------- */
 const PAD  = 4 / SCALE                    // 4 CSS-px margin all around
 const dash = (gap:number) => [gap / SCALE, (gap - 2) / SCALE]
+
+/* crop helpers -------------------------------------------------- */
+const startCrop = (img: fabric.Image) => {
+  if (isCropping.current) return
+  isCropping.current = true
+  cropImg.current = img
+  cropStart.current = {
+    left  : img.left  ?? 0,
+    top   : img.top   ?? 0,
+    cropX : img.cropX ?? 0,
+    cropY : img.cropY ?? 0,
+    cropW : img.width ?? img.getScaledWidth(),
+    cropH : img.height?? img.getScaledHeight(),
+    scaleX: img.scaleX ?? 1,
+    scaleY: img.scaleY ?? 1,
+  }
+  const w = img.getScaledWidth()
+  const h = img.getScaledHeight()
+  const rect = new fabric.Rect({
+    left: 0, top: 0, width: w, height: h,
+    fill: 'rgba(0,0,0,0.03)', stroke: SEL_COLOR,
+    strokeDashArray: dash(4), strokeUniform: true,
+    cornerColor: SEL_COLOR, lockRotation: true,
+  })
+  rect.setControlsVisibility({ mtr:false })
+  const gp = { stroke:'#0004', selectable:false, evented:false, strokeWidth:1/SCALE }
+  const v1 = new fabric.Line([w/3,0,w/3,h], gp)
+  const v2 = new fabric.Line([w*2/3,0,w*2/3,h], gp)
+  const h1 = new fabric.Line([0,h/3,w,h/3], gp)
+  const h2 = new fabric.Line([0,h*2/3,w,h*2/3], gp)
+  const grp = new fabric.Group([rect,v1,v2,h1,h2],{
+    left: img.left, top: img.top, originX:'left', originY:'top'
+  })
+  cropRef.current = grp
+  fc.add(grp)
+  fc.setActiveObject(grp)
+
+  const sync = () => {
+    const g = cropRef.current
+    const pic = cropImg.current
+    const st  = cropStart.current
+    if (!g || !pic || !st) return
+    const w = g.width! * g.scaleX!
+    const h = g.height! * g.scaleY!
+    const newLeft = g.left || 0
+    const newTop  = g.top  || 0
+
+    const cropX = (newLeft - st.left) / st.scaleX + st.cropX
+    const cropY = (newTop  - st.top ) / st.scaleY + st.cropY
+    const cropW = w / st.scaleX
+    const cropH = h / st.scaleY
+
+    pic.set({ left:newLeft, top:newTop, cropX, cropY, width:cropW, height:cropH })
+    pic.setCoords()
+    fc.requestRenderAll()
+  }
+
+  grp.on('moving', sync).on('scaling', sync)
+}
+
+const cancelCrop = () => {
+  if (!isCropping.current) return
+  const g = cropRef.current
+  const img = cropImg.current
+  if (g) { g.off('moving').off('scaling'); fc.remove(g) }
+  if (img && cropStart.current) {
+    const st = cropStart.current
+    img.set({
+      left: st.left, top: st.top,
+      cropX: st.cropX, cropY: st.cropY,
+      width: st.cropW, height: st.cropH,
+    })
+    img.setCoords()
+  }
+  cropRef.current = null
+  cropImg.current = null
+  cropStart.current = null
+  isCropping.current = false
+  if (img) fc.setActiveObject(img)
+  fc.requestRenderAll()
+}
+
+const commitCrop = () => {
+  if (!isCropping.current) return
+  const g = cropRef.current
+  const img = cropImg.current
+  if (!g || !img) { cancelCrop(); return }
+
+  g.off('moving').off('scaling')
+  fc.remove(g)
+  cropRef.current = null
+  cropStart.current = null
+  cropImg.current = null
+  isCropping.current = false
+
+  img.setCoords()
+
+  fc.setActiveObject(img)
+  fc.requestRenderAll()
+
+  if ((img as any).layerIdx !== undefined) {
+    updateLayer(pageIdx, (img as any).layerIdx, {
+      x: img.left ?? 0,
+      y: img.top  ?? 0,
+      width : img.getScaledWidth(),
+      height: img.getScaledHeight(),
+      scaleX: img.scaleX,
+      scaleY: img.scaleY,
+      cropX: img.cropX,
+      cropY: img.cropY,
+      cropW: img.width,
+      cropH: img.height,
+    })
+  }
+}
 
 /* crop helpers -------------------------------------------------- */
 const startCrop = (img: fabric.Image) => {
