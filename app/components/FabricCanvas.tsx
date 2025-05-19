@@ -275,67 +275,6 @@ const addBackdrop = (fc: fabric.Canvas) => {
   fc.add(bg)
 }
 
-/* ---------- image cropping ------------------------------------ */
-export const startCrop = (fc: fabric.Canvas, img: fabric.Image) => {
-  const rect = new fabric.Rect({
-    originX: 'left',
-    originY: 'top',
-    left: 0,
-    top: 0,
-    width: img.getScaledWidth(),
-    height: img.getScaledHeight(),
-    fill: 'rgba(0,0,0,0.2)',
-    stroke: '#fff',
-    strokeDashArray: [4 / SCALE, 4 / SCALE],
-    strokeWidth: 1 / SCALE,
-  })
-
-  const grp = new fabric.Group([rect], {
-    originX: 'left',
-    originY: 'top',
-    left: img.left ?? 0,
-    top: img.top ?? 0,
-  })
-
-  const clampPos = () => {
-    const bounds = img.getBoundingRect()
-    const w = grp.getScaledWidth()
-    const h = grp.getScaledHeight()
-    const maxLeft = bounds.left + bounds.width - w
-    const maxTop = bounds.top + bounds.height - h
-    grp.left = Math.max(bounds.left, Math.min(grp.left ?? 0, maxLeft))
-    grp.top = Math.max(bounds.top, Math.min(grp.top ?? 0, maxTop))
-    grp.setCoords()
-  }
-
-  const clampScale = () => {
-    const bounds = img.getBoundingRect()
-    const w = rect.width ?? 0
-    const h = rect.height ?? 0
-    const curLeft = grp.left ?? 0
-    const curTop = grp.top ?? 0
-    const maxW = bounds.left + bounds.width - curLeft
-    const maxH = bounds.top + bounds.height - curTop
-    const newW = Math.min(w * grp.scaleX!, maxW)
-    const newH = Math.min(h * grp.scaleY!, maxH)
-    grp.scaleX = newW / w
-    grp.scaleY = newH / h
-  }
-
-  grp.on('moving', clampPos)
-  grp.on('scaling', () => {
-    clampScale()
-    clampPos()
-  })
-
-  fc.add(grp)
-  fc.setActiveObject(grp)
-  grp.setCoords()
-  fc.requestRenderAll()
-  return grp
-}
-
-
 /* ---------- component ------------------------------------------- */
 interface Props {
   pageIdx    : number
@@ -345,22 +284,20 @@ interface Props {
 }
 
 export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const fcRef      = useRef<fabric.Canvas | null>(null)
-  const hoverRef   = useRef<fabric.Rect | null>(null)
-  const cropRef   = useRef<fabric.Rect | null>(null)
-  const hydrating  = useRef(false)
-  const isEditing  = useRef(false)
-  const isCropping = useRef(false)
-  const cropRef    = useRef<fabric.Group | null>(null)
-  const cropImg    = useRef<fabric.Image | null>(null)
-  const cropStart  = useRef<{
+  const canvasRef    = useRef<HTMLCanvasElement>(null)
+  const fcRef        = useRef<fabric.Canvas | null>(null)
+  const hoverRef     = useRef<fabric.Rect | null>(null)
+  const cropMaskRef  = useRef<fabric.Rect | null>(null)
+  const hydrating    = useRef(false)
+  const isEditing    = useRef(false)
+
+  const croppingRef   = useRef(false)
+  const cropGroupRef  = useRef<fabric.Group | null>(null)
+  const cropImgRef    = useRef<fabric.Image | null>(null)
+  const cropStartRef  = useRef<{
     left:number; top:number; cropX:number; cropY:number;
     cropW:number; cropH:number; scaleX:number; scaleY:number
   } | null>(null)
-  const isCropping= useRef(false)
-  const cropRef   = useRef<fabric.Group | null>(null)
-  const cropImg   = useRef<fabric.Image | null>(null)
 
   const setPageLayers = useEditor(s => s.setPageLayers)
   const updateLayer   = useEditor(s => s.updateLayer)
@@ -390,7 +327,7 @@ const cropMask = new fabric.Rect({
 })
 fc.add(cropMask)
 cropMask.sendToBack()
-cropRef.current = cropMask
+cropMaskRef.current = cropMask
 
 const patchCropFn = (name: 'commitCrop' | 'cancelCrop') => {
   const anyFc = fc as any
@@ -417,10 +354,10 @@ const dash = (gap:number) => [gap / SCALE, (gap - 2) / SCALE]
 
 /* crop helpers -------------------------------------------------- */
 const startCrop = (img: fabric.Image) => {
-  if (isCropping.current) return
-  isCropping.current = true
-  cropImg.current = img
-  cropStart.current = {
+  if (croppingRef.current) return
+  croppingRef.current = true
+  cropImgRef.current = img
+  cropStartRef.current = {
     left  : img.left  ?? 0,
     top   : img.top   ?? 0,
     cropX : img.cropX ?? 0,
@@ -447,14 +384,14 @@ const startCrop = (img: fabric.Image) => {
   const grp = new fabric.Group([rect,v1,v2,h1,h2],{
     left: img.left, top: img.top, originX:'left', originY:'top'
   })
-  cropRef.current = grp
+  cropGroupRef.current = grp
   fc.add(grp)
   fc.setActiveObject(grp)
 
   const sync = () => {
-    const g = cropRef.current
-    const pic = cropImg.current
-    const st  = cropStart.current
+    const g = cropGroupRef.current
+    const pic = cropImgRef.current
+    const st  = cropStartRef.current
     if (!g || !pic || !st) return
     const w = g.width! * g.scaleX!
     const h = g.height! * g.scaleY!
@@ -475,12 +412,12 @@ const startCrop = (img: fabric.Image) => {
 }
 
 const cancelCrop = () => {
-  if (!isCropping.current) return
-  const g = cropRef.current
-  const img = cropImg.current
+  if (!croppingRef.current) return
+  const g = cropGroupRef.current
+  const img = cropImgRef.current
   if (g) { g.off('moving').off('scaling'); fc.remove(g) }
-  if (img && cropStart.current) {
-    const st = cropStart.current
+  if (img && cropStartRef.current) {
+    const st = cropStartRef.current
     img.set({
       left: st.left, top: st.top,
       cropX: st.cropX, cropY: st.cropY,
@@ -488,26 +425,26 @@ const cancelCrop = () => {
     })
     img.setCoords()
   }
-  cropRef.current = null
-  cropImg.current = null
-  cropStart.current = null
-  isCropping.current = false
+  cropGroupRef.current = null
+  cropImgRef.current = null
+  cropStartRef.current = null
+  croppingRef.current = false
   if (img) fc.setActiveObject(img)
   fc.requestRenderAll()
 }
 
 const commitCrop = () => {
-  if (!isCropping.current) return
-  const g = cropRef.current
-  const img = cropImg.current
+  if (!croppingRef.current) return
+  const g = cropGroupRef.current
+  const img = cropImgRef.current
   if (!g || !img) { cancelCrop(); return }
 
   g.off('moving').off('scaling')
   fc.remove(g)
-  cropRef.current = null
-  cropStart.current = null
-  cropImg.current = null
-  isCropping.current = false
+  cropGroupRef.current = null
+  cropStartRef.current = null
+  cropImgRef.current = null
+  croppingRef.current = false
 
   img.setCoords()
 
@@ -526,80 +463,6 @@ const commitCrop = () => {
       cropY: img.cropY,
       cropW: img.width,
       cropH: img.height,
-    })
-  }
-}
-
-/* crop helpers -------------------------------------------------- */
-const startCrop = (img: fabric.Image) => {
-  if (isCropping.current) return
-  isCropping.current = true
-  cropImg.current = img
-  const w = img.getScaledWidth()
-  const h = img.getScaledHeight()
-  const rect = new fabric.Rect({
-    left: 0, top: 0, width: w, height: h,
-    fill: 'rgba(0,0,0,0.03)', stroke: SEL_COLOR,
-    strokeDashArray: dash(4), strokeUniform: true,
-    cornerColor: SEL_COLOR, lockRotation: true,
-  })
-  rect.setControlsVisibility({ mtr:false })
-  const gp = { stroke:'#0004', selectable:false, evented:false, strokeWidth:1/SCALE }
-  const v1 = new fabric.Line([w/3,0,w/3,h], gp)
-  const v2 = new fabric.Line([w*2/3,0,w*2/3,h], gp)
-  const h1 = new fabric.Line([0,h/3,w,h/3], gp)
-  const h2 = new fabric.Line([0,h*2/3,w,h*2/3], gp)
-  const grp = new fabric.Group([rect,v1,v2,h1,h2],{
-    left: img.left, top: img.top, originX:'left', originY:'top'
-  })
-  cropRef.current = grp
-  fc.add(grp)
-  fc.setActiveObject(grp)
-}
-
-const cancelCrop = () => {
-  if (!isCropping.current) return
-  const g = cropRef.current
-  if (g) fc.remove(g)
-  cropRef.current = null
-  cropImg.current = null
-  isCropping.current = false
-  fc.requestRenderAll()
-}
-
-const commitCrop = () => {
-  if (!isCropping.current) return
-  const g = cropRef.current
-  const img = cropImg.current
-  if (!g || !img) { cancelCrop(); return }
-
-  const w = g.width! * g.scaleX!
-  const h = g.height! * g.scaleY!
-  const newLeft = g.left || 0
-  const newTop  = g.top  || 0
-
-  const cropX = (newLeft - (img.left || 0)) / (img.scaleX || 1) + (img.cropX || 0)
-  const cropY = (newTop  - (img.top  || 0)) / (img.scaleY || 1) + (img.cropY || 0)
-  const cropW = w / (img.scaleX || 1)
-  const cropH = h / (img.scaleY || 1)
-
-  img.set({ left:newLeft, top:newTop, cropX, cropY, width:cropW, height:cropH })
-  img.setCoords()
-
-  fc.remove(g)
-  cropRef.current = null
-  cropImg.current = null
-  isCropping.current = false
-
-  fc.setActiveObject(img)
-  fc.requestRenderAll()
-
-  if ((img as any).layerIdx !== undefined) {
-    updateLayer(pageIdx, (img as any).layerIdx, {
-      x:newLeft, y:newTop,
-      width:img.getScaledWidth(), height:img.getScaledHeight(),
-      scaleX:img.scaleX, scaleY:img.scaleY,
-      cropX, cropY, cropW, cropH,
     })
   }
 }
@@ -742,7 +605,7 @@ const onKey = (e: KeyboardEvent) => {
   const active = fc.getActiveObject() as fabric.Object | undefined
   const cmd    = e.metaKey || e.ctrlKey
 
-  if (isCropping.current) {
+  if (croppingRef.current) {
     if (e.code === 'Escape') { cancelCrop(); e.preventDefault(); return }
     if (e.code === 'Enter') { commitCrop(); e.preventDefault(); return }
   }
@@ -862,7 +725,7 @@ document.addEventListener('start-crop', cropListener)
   /* ---------- crop overlay toggle ------------------------------ */
   useEffect(() => {
     const fc   = fcRef.current
-    const mask = cropRef.current
+    const mask = cropMaskRef.current
     if (!fc || !mask) return
 
     if (isCropping) {
