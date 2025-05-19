@@ -10,6 +10,7 @@ import { writeFileSync }             from 'fs';
 import { getPromptForPlaceholder }   from '@/sanity/lib/getPromptForPlaceholder';
 import { incCost, checkBudget }      from '@/lib/budget';
 import { KV }                        from '@/lib/kv';
+import { cleanAlpha }                from '@/lib/cleanAlpha';
 
 /* — OpenAI client — */
 const openai = new OpenAI({
@@ -61,8 +62,7 @@ export async function POST(req: NextRequest) {
     version : promptVersion,
     refUrl  = '',
     ratio   = '1:1',                 // 1:1 | 3:2 | 2:3
-    quality = 'medium',             // low | medium | high | auto
-    background = 'transparent',     // transparent | opaque | auto
+    background = 'transparent',
   } = await getPromptForPlaceholder(placeholderId);
 
   /* 2 ▸ Map ratio → OpenAI size flag */
@@ -122,9 +122,16 @@ export async function POST(req: NextRequest) {
     }
 
     /* 8 ▸ Convert b64_json → data-URL */
-    const urls = result.data.map(
-      ({ b64_json }: { b64_json: string }) =>
-        `data:image/png;base64,${b64_json}`,
+    const urls = await Promise.all(
+      result.data.map(async ({ b64_json }: { b64_json: string }) => {
+        let b64 = b64_json;
+        if (background === 'transparent') {
+          const buf = Buffer.from(b64_json, 'base64');
+          const cleaned = await cleanAlpha(buf);
+          b64 = cleaned.toString('base64');
+        }
+        return `data:image/png;base64,${b64}`;
+      }),
     );
 
     /* 9 ▸ Optional debug dump */
