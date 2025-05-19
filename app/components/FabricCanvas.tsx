@@ -272,15 +272,17 @@ const addBackdrop = (fc: fabric.Canvas) => {
 
 /* ---------- component ------------------------------------------- */
 interface Props {
-  pageIdx : number
-  page?   : TemplatePage
-  onReady : (fc: fabric.Canvas | null) => void
+  pageIdx    : number
+  page?      : TemplatePage
+  onReady    : (fc: fabric.Canvas | null) => void
+  isCropping?: boolean
 }
 
-export default function FabricCanvas ({ pageIdx, page, onReady }: Props) {
+export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fcRef     = useRef<fabric.Canvas | null>(null)
   const hoverRef  = useRef<fabric.Rect | null>(null)
+  const cropRef   = useRef<fabric.Rect | null>(null)
   const hydrating = useRef(false)
   const isEditing = useRef(false)
 
@@ -299,6 +301,35 @@ const fc = new fabric.Canvas(canvasRef.current, {
   preserveObjectStacking: true,
 })
 addBackdrop(fc)
+const cropMask = new fabric.Rect({
+  left: 0,
+  top: 0,
+  width: PAGE_W,
+  height: PAGE_H,
+  fill: 'rgba(0,0,0,0.25)',
+  selectable: false,
+  evented: false,
+  visible: false,
+  excludeFromExport: true,
+})
+fc.add(cropMask)
+cropMask.sendToBack()
+cropRef.current = cropMask
+
+const patchCropFn = (name: 'commitCrop' | 'cancelCrop') => {
+  const anyFc = fc as any
+  if (typeof anyFc[name] === 'function') {
+    const orig = anyFc[name].bind(fc)
+    anyFc[name] = (...args: any[]) => {
+      cropMask.visible = false
+      fc.requestRenderAll()
+      return orig(...args)
+    }
+  }
+}
+
+patchCropFn('commitCrop')
+patchCropFn('cancelCrop')
 fc.setViewportTransform([SCALE, 0, 0, SCALE, 0, 0])
 fc.setWidth(PREVIEW_W)
 fc.setHeight(PREVIEW_H)
@@ -541,6 +572,23 @@ window.addEventListener('keydown', onKey)
 // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [])
 /* ---------- END mount once ----------------------------------- */
+
+  /* ---------- crop overlay toggle ------------------------------ */
+  useEffect(() => {
+    const fc   = fcRef.current
+    const mask = cropRef.current
+    if (!fc || !mask) return
+
+    if (isCropping) {
+      mask.visible = true
+      const idx = fc.getObjects().findIndex(o => (o as any)._cropGroup)
+      if (idx > -1) fc.insertAt(mask, idx, false)
+      else mask.bringToFront()
+    } else {
+      mask.visible = false
+    }
+    fc.requestRenderAll()
+  }, [isCropping])
 
 
 
