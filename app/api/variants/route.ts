@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
       force?       : boolean
       nonce?       : string
     };
+  // `selfieBase64` must be a data URL containing base64-encoded PNG
 
   if (!checkBudget()) {
     return NextResponse.json({ error: 'Daily budget exhausted' }, { status: 429 });
@@ -99,25 +100,26 @@ export async function POST(req: NextRequest) {
 
     const referenceImages = [templateFile, selfieFile];   // <-- ORDER matters
 
-    /* 6 ▸ images.edit (no mask / no generation flags) */
+    /* 6 ▸ images.edit (no mask / no generation flags, returns base64) */
     const result = await (openai.images as any).edit({
-      model : IMAGE_MODEL,
-      image : referenceImages,
+      model          : IMAGE_MODEL,
+      image          : referenceImages,
       prompt,
-      n     : NUM_VARIANTS,
+      n              : NUM_VARIANTS,
       size,
-      user  : placeholderId,
+      user           : placeholderId,
+      response_format: 'b64_json',
     });
 
-    /* 7 ▸ Validate response */
-    if (!result.data?.length || !result.data[0].b64_json) {
+    /* 7 ▸ Validate response – ensure base64 field present */
+    if (!result.data?.length || typeof result.data[0].b64_json !== 'string') {
       return NextResponse.json(
         { error: 'Image edit returned no usable result — please retry.' },
         { status: 502 },
       );
     }
 
-    /* 8 ▸ Convert b64_json → data-URL */
+    /* 8 ▸ Convert b64_json → data-URL (handler expects base64) */
     const urls = result.data.map(
       ({ b64_json }: { b64_json: string }) =>
         `data:image/png;base64,${b64_json}`,
