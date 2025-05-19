@@ -110,8 +110,6 @@ export async function POST(req: NextRequest) {
       quality,
       background,
       user    : placeholderId,
-    // receive base64-encoded PNGs via b64_json
-    response_format: 'b64_json',
     });
 
     /* 7 ▸ Validate response */
