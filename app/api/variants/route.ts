@@ -61,6 +61,8 @@ export async function POST(req: NextRequest) {
     version : promptVersion,
     refUrl  = '',
     ratio   = '1:1',                 // 1:1 | 3:2 | 2:3
+    quality = 'medium',             // low | medium | high | auto
+    background = 'transparent',     // transparent | opaque | auto
   } = await getPromptForPlaceholder(placeholderId);
 
   /* 2 ▸ Map ratio → OpenAI size flag */
@@ -101,12 +103,14 @@ export async function POST(req: NextRequest) {
 
     /* 6 ▸ images.edit (no mask / no generation flags) */
     const result = await (openai.images as any).edit({
-      model : IMAGE_MODEL,
-      image : referenceImages,
+      model   : IMAGE_MODEL,
+      image   : referenceImages,
       prompt,
-      n     : NUM_VARIANTS,
+      n       : NUM_VARIANTS,
       size,
-      user  : placeholderId,
+      user    : placeholderId,
+      quality,
+      background,
     });
 
     /* 7 ▸ Validate response */
