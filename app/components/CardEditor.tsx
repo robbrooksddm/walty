@@ -104,6 +104,26 @@ export default function CardEditor({
   const handleCroppingChange = (idx: number, state: boolean) =>
     setCropping(prev => { const next = [...prev] as typeof prev; next[idx] = state; return next })
 
+  /* selection state for Crop button */
+  const [, forceSel] = useState({})
+  useEffect(() => {
+    const fc = activeFc
+    if (!fc) return
+    const tick = () => forceSel({})
+    fc.on('selection:created', tick)
+      .on('selection:updated', tick)
+      .on('selection:cleared', tick)
+    return () => {
+      fc.off('selection:created', tick)
+        .off('selection:updated', tick)
+        .off('selection:cleared', tick)
+    }
+  }, [activeFc])
+
+  const canCrop = !!activeFc && !cropping[activeIdx] &&
+    (activeFc.getActiveObject() as any)?.type === 'image'
+  const triggerCrop = () => document.dispatchEvent(new CustomEvent('start-crop'))
+
   /* 5 ─ save ------------------------------------------------------ */
   const [saving, setSaving] = useState(false)
   const handleSave = async () => {
@@ -206,8 +226,8 @@ const handleSwap = (url: string) => {
       <LayerPanel />
 
       {/* main */}
-     <div className="flex-1 flex flex-col">
-     <TextToolbar
+     <div className="flex-1 flex flex-col relative">
+    <TextToolbar
      canvas   ={activeFc}
      addText  ={addText}
      addImage ={addImage}
@@ -216,7 +236,12 @@ const handleSwap = (url: string) => {
      onSave   ={handleSave}
      mode     ={mode}
      saving   ={saving}
-/>
+    />
+    <div className="absolute left-4 top-2 pointer-events-auto">
+      <button onClick={triggerCrop} disabled={!canCrop} className="command-btn">
+        ✂ Crop
+      </button>
+    </div>
 
         {/* tabs */}
         <nav className="flex justify-center gap-8 py-3 text-sm font-medium">

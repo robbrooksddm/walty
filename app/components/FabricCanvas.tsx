@@ -289,6 +289,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const hoverRef     = useRef<fabric.Rect | null>(null)
   const cropMaskRef  = useRef<fabric.Rect | null>(null)
+  const cropWindowRef= useRef<fabric.Rect | null>(null)
   const hydrating    = useRef(false)
   const isEditing    = useRef(false)
 
@@ -315,6 +316,15 @@ const fc = new fabric.Canvas(canvasRef.current, {
   preserveObjectStacking: true,
 })
 addBackdrop(fc)
+const cropWindow = new fabric.Rect({
+  left: 0,
+  top: 0,
+  width: PAGE_W,
+  height: PAGE_H,
+  originX: 'left',
+  originY: 'top',
+})
+cropWindow.inverted = true
 const cropMask = new fabric.Rect({
   left: 0,
   top: 0,
@@ -325,10 +335,12 @@ const cropMask = new fabric.Rect({
   evented: false,
   visible: false,
   excludeFromExport: true,
+  clipPath: cropWindow,
 })
 fc.add(cropMask)
 cropMask.sendToBack()
 cropMaskRef.current = cropMask
+cropWindowRef.current = cropWindow
 
 const patchCropFn = (name: 'commitCrop' | 'cancelCrop') => {
   const anyFc = fc as any
@@ -391,6 +403,11 @@ const startCrop = (img: fabric.Image) => {
   fc.add(grp)
   fc.setActiveObject(grp)
 
+  const maskWin = cropWindowRef.current
+  if (maskWin) {
+    maskWin.set({ left: img.left, top: img.top, width: w, height: h })
+  }
+
   const sync = () => {
     const g  = cropGroupRef.current
     const pic = cropImgRef.current
@@ -401,11 +418,14 @@ const startCrop = (img: fabric.Image) => {
     const origW = el.naturalWidth || pic.width!
     const origH = el.naturalHeight || pic.height!
 
+    const dx = g.left! - st.left
+    const dy = g.top!  - st.top
+
     let cropW = (g.width! * g.scaleX!) / st.scaleX
     let cropH = (g.height! * g.scaleY!) / st.scaleY
 
-    let cropX = (g.left! - st.left) / st.scaleX + st.cropX
-    let cropY = (g.top!  - st.top ) / st.scaleY + st.cropY
+    let cropX = st.cropX - dx / st.scaleX
+    let cropY = st.cropY - dy / st.scaleY
 
     const SNAP = 4 / SCALE
 
@@ -419,13 +439,18 @@ const startCrop = (img: fabric.Image) => {
     cropW = Math.max(1, Math.min(origW - cropX, cropW))
     cropH = Math.max(1, Math.min(origH - cropY, cropH))
 
-    const left = st.left + (cropX - st.cropX) * st.scaleX
-    const top  = st.top  + (cropY - st.cropY) * st.scaleY
+    const left = st.left
+    const top  = st.top
 
     g.set({ left, top })
 
     pic.set({ left: st.left, top: st.top, cropX, cropY, width: cropW, height: cropH })
     pic.setCoords()
+
+    if (maskWin) {
+      maskWin.set({ left, top, width: g.width! * g.scaleX!, height: g.height! * g.scaleY! })
+    }
+
     fc.requestRenderAll()
   }
 
@@ -450,6 +475,8 @@ const cancelCrop = () => {
   cropImgRef.current = null
   cropStartRef.current = null
   croppingRef.current = false
+  const maskWin = cropWindowRef.current
+  if (maskWin) maskWin.set({ width: 0, height: 0 })
   onCroppingChange?.(false)
   if (img) fc.setActiveObject(img)
   fc.requestRenderAll()
@@ -467,6 +494,8 @@ const commitCrop = () => {
   cropStartRef.current = null
   cropImgRef.current = null
   croppingRef.current = false
+  const maskWin = cropWindowRef.current
+  if (maskWin) maskWin.set({ width: 0, height: 0 })
 
   img.setCoords()
 
