@@ -98,6 +98,12 @@ export default function CardEditor({
     setCanvasMap(list => { const next = [...list]; next[idx] = fc; return next })
   const activeFc = canvasMap[activeIdx]
 
+  /* track cropping state per page */
+  const [cropping, setCropping] =
+    useState<[boolean, boolean, boolean, boolean]>([false, false, false, false])
+  const handleCroppingChange = (idx: number, state: boolean) =>
+    setCropping(prev => { const next = [...prev] as typeof prev; next[idx] = state; return next })
+
   /* 5 ─ save ------------------------------------------------------ */
   const [saving, setSaving] = useState(false)
   const handleSave = async () => {
@@ -233,20 +239,44 @@ const handleSwap = (url: string) => {
         <div className="flex-1 flex justify-center items-start overflow-auto bg-gray-100 dark:bg-gray-900 pt-6 gap-6">
           {/* front */}
           <div className={section === 'front' ? box : 'hidden'}>
-            <FabricCanvas pageIdx={0} page={pages[0]} onReady={fc => onReady(0, fc)} />
+            <FabricCanvas
+              pageIdx={0}
+              page={pages[0]}
+              onReady={fc => onReady(0, fc)}
+              isCropping={cropping[0]}
+              onCroppingChange={state => handleCroppingChange(0, state)}
+            />
           </div>
           {/* inside */}
           <div className={section === 'inside' ? 'flex gap-6' : 'hidden'}>
             <div className={box}>
-              <FabricCanvas pageIdx={1} page={pages[1]} onReady={fc => onReady(1, fc)} />
+              <FabricCanvas
+                pageIdx={1}
+                page={pages[1]}
+                onReady={fc => onReady(1, fc)}
+                isCropping={cropping[1]}
+                onCroppingChange={state => handleCroppingChange(1, state)}
+              />
             </div>
             <div className={box}>
-              <FabricCanvas pageIdx={2} page={pages[2]} onReady={fc => onReady(2, fc)} />
+              <FabricCanvas
+                pageIdx={2}
+                page={pages[2]}
+                onReady={fc => onReady(2, fc)}
+                isCropping={cropping[2]}
+                onCroppingChange={state => handleCroppingChange(2, state)}
+              />
             </div>
           </div>
           {/* back */}
           <div className={section === 'back' ? box : 'hidden'}>
-            <FabricCanvas pageIdx={3} page={pages[3]} onReady={fc => onReady(3, fc)} />
+            <FabricCanvas
+              pageIdx={3}
+              page={pages[3]}
+              onReady={fc => onReady(3, fc)}
+              isCropping={cropping[3]}
+              onCroppingChange={state => handleCroppingChange(3, state)}
+            />
           </div>
         </div>
 
