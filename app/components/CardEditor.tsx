@@ -239,7 +239,15 @@ const handleSwap = (url: string) => {
      mode     ={mode}
      saving   ={saving}
     />
-
+<div className="absolute left-4 top-2 pointer-events-auto">
+  <button
+    onClick={triggerCrop}
+    disabled={!canCrop}
+    className="command-btn"
+  >
+    ✯ Crop
+  </button>
+</div>
         {/* tabs */}
         <nav className="flex justify-center gap-8 py-3 text-sm font-medium">
           {(['front','inside','back'] as Section[]).map(lbl => (
