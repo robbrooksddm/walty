@@ -397,8 +397,9 @@ const startCrop = (img: fabric.Image) => {
     const st  = cropStartRef.current
     if (!g || !pic || !st) return
 
-    const origW = pic.getElement().naturalWidth || pic.width!
-    const origH = pic.getElement().naturalHeight || pic.height!
+    const el = pic.getElement() as HTMLImageElement
+    const origW = el.naturalWidth || pic.width!
+    const origH = el.naturalHeight || pic.height!
 
     let cropW = (g.width! * g.scaleX!) / st.scaleX
     let cropH = (g.height! * g.scaleY!) / st.scaleY
