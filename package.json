@@ -12,7 +12,7 @@
     "lint": "next lint",
     "purge:assets": "tsx ./scripts/purge-assets.ts",
     "purge:once": "tsx scripts/purgeTempAssets.ts",
-    "test": "jest"
+    "test": "pnpm exec jest --passWithNoTests"
   },
   "dependencies": {
     "@headlessui/react": "2.2.2",
