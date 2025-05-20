@@ -18,12 +18,14 @@ interface Props{
   onUndo   : () => void
   onRedo   : () => void
   onSave   : () => void|Promise<void>
+  onCrop   : () => void
+  canCrop  : boolean
   mode     : Mode
   saving   : boolean
 }
 
 export default function TextToolbar(props:Props){
-  const {canvas:fc,addText,addImage,onUndo,onRedo,onSave,mode,saving}=props
+  const {canvas:fc,addText,addImage,onUndo,onRedo,onSave,onCrop,canCrop,mode,saving}=props
   if(!fc) return null
 
   /* re-render when Fabric selection changes */
@@ -144,6 +146,7 @@ export default function TextToolbar(props:Props){
       <div className="absolute right-4 top-2 flex gap-4 pointer-events-auto">
         <button onClick={onUndo} className="command-btn">↶ Undo</button>
         <button onClick={onRedo} className="command-btn">↷ Redo</button>
+        <button onClick={onCrop} disabled={!canCrop} className="command-btn">✂ Crop</button>
         <button onClick={onSave} disabled={saving}
                 className={`command-btn font-semibold ${saving?'opacity-50 cursor-not-allowed':'text-blue-600'}`}>
           {saving ? '⏳ Saving…' : '💾 Save'}

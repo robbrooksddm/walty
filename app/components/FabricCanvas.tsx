@@ -330,7 +330,7 @@ const cropMask = new fabric.Rect({
   top: 0,
   width: PAGE_W,
   height: PAGE_H,
-  fill: 'rgba(0,0,0,0.25)',
+  fill: 'rgba(0,0,0,0.45)',
   selectable: false,
   evented: false,
   visible: false,
@@ -543,6 +543,7 @@ fc.on('selection:created', () => {
 })
 .on('selection:cleared', () => {
   if (scrollHandler) { window.removeEventListener('scroll', scrollHandler); scrollHandler = null }
+  if (croppingRef.current) { cancelCrop(); return }
 })
 
 /* also hide hover during any transform of the active object */
@@ -851,22 +852,12 @@ if (raw._type === 'aiLayer') {
 
   /* ✨  SINGLE click — open the Selfie-drawer and pass the ref-ID */
   img.on('mouseup', () => {
+    if (croppingRef.current) return
     const plId = spec?._ref ?? spec?._id ?? null
     document.dispatchEvent(
       new CustomEvent('open-selfie-drawer', { detail: { placeholderId: plId } })
     )
   })
-
-
-
-            // ─── open the Selfie Drawer on click ─────────────────────────
-img.on('mouseup', () => {
-  // make sure it’s still an AI placeholder
-  if ((img as any)._isAI || ly._isAI) {
-    useEditor.getState().setDrawerState('idle');   // <- OPEN drawer
-  }
-  
-});
 
             let ghost = (img as any)._ghost as HTMLDivElement | undefined
             if (!ghost) {
