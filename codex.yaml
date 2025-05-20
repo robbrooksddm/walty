@@ -1,0 +1,5 @@
+setup:
+  - corepack enable
+  - pnpm install --frozen-lockfile
+test:
+  - pnpm test
