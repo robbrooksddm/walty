@@ -281,9 +281,10 @@ interface Props {
   page?      : TemplatePage
   onReady    : (fc: fabric.Canvas | null) => void
   isCropping?: boolean
+  onCroppingChange?: (state: boolean) => void
 }
 
-export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false }: Props) {
+export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange }: Props) {
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const hoverRef     = useRef<fabric.Rect | null>(null)
@@ -336,6 +337,7 @@ const patchCropFn = (name: 'commitCrop' | 'cancelCrop') => {
     anyFc[name] = (...args: any[]) => {
       cropMask.visible = false
       fc.requestRenderAll()
+      onCroppingChange?.(false)
       return orig(...args)
     }
   }
@@ -356,6 +358,7 @@ const dash = (gap:number) => [gap / SCALE, (gap - 2) / SCALE]
 const startCrop = (img: fabric.Image) => {
   if (croppingRef.current) return
   croppingRef.current = true
+  onCroppingChange?.(true)
   cropImgRef.current = img
   cropStartRef.current = {
     left  : img.left  ?? 0,
@@ -446,6 +449,7 @@ const cancelCrop = () => {
   cropImgRef.current = null
   cropStartRef.current = null
   croppingRef.current = false
+  onCroppingChange?.(false)
   if (img) fc.setActiveObject(img)
   fc.requestRenderAll()
 }
@@ -482,8 +486,7 @@ const commitCrop = () => {
       cropH: img.height,
     })
   }
-
-  startCrop(img)
+  onCroppingChange?.(false)
 }
 
 /* ── 2 ▸ Hover overlay only ─────────────────────────────── */
