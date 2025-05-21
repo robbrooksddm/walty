@@ -29,6 +29,9 @@ export default function ImageToolbar({ canvas: fc, onUndo, onRedo, onSave, savin
   }, [fc])
 
   if (!fc) return null
+  const zoom = fc.viewportTransform?.[0] ?? 1       // same scale for X/Y
+  const fcH = (fc.getHeight() ?? 0) / zoom
+  const fcW = (fc.getWidth() ?? 0) / zoom
   const img = fc.getActiveObject() as fabric.Image | null
   if (!img || (img as any).type !== 'image') return null
 
@@ -40,7 +43,6 @@ export default function ImageToolbar({ canvas: fc, onUndo, onRedo, onSave, savin
   }
 
   const cycleVertical = () => {
-    const fcH = fc.getHeight() ?? 0
     const { top, height } = img.getBoundingRect()
     const current = Math.abs(top) < 1 ? 0 : Math.abs(top + height / 2 - fcH / 2) < 1 ? 1 : 2
     const next = (current + 1) % 3
@@ -49,7 +51,6 @@ export default function ImageToolbar({ canvas: fc, onUndo, onRedo, onSave, savin
   }
 
   const cycleHorizontal = () => {
-    const fcW = fc.getWidth() ?? 0
     const { left, width } = img.getBoundingRect()
     const current = Math.abs(left) < 1 ? 0 : Math.abs(left + width / 2 - fcW / 2) < 1 ? 1 : 2
     const next = (current + 1) % 3
