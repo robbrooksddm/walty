@@ -440,8 +440,6 @@ const startCrop = (img: fabric.Image) => {
     pic.setCoords()
 
     g.set({
-      scaleX: (cropW * st.scaleX) / w,
-      scaleY: (cropH * st.scaleY) / h,
     })
     g.setCoords()
 
