@@ -399,6 +399,7 @@ const startCrop = (img: fabric.Image) => {
   cropGroupRef.current = grp
   fc.add(grp)
   fc.setActiveObject(grp)
+  fc.requestRenderAll()
 
   const sync = () => {
     const g  = cropGroupRef.current
