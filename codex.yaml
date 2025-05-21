@@ -1,6 +1,6 @@
 setup:
-  - corepack enable                     # gives us pnpm
-  - pnpm config set store-dir .codex-cache/pnpm-store
+  - corepack enable
+  - pnpm config set store-dir .pnpm-store
   - pnpm install --offline --frozen-lockfile --ignore-scripts
 
 test:
