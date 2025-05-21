@@ -40,30 +40,29 @@ export default function ImageToolbar({ canvas: fc, onUndo, onRedo, onSave, savin
   }
 
   const cycleVertical = () => {
-    const h = img.getScaledHeight()
     const fcH = fc.getHeight() ?? 0
-    const top = img.top ?? 0
-    const current = Math.abs(top) < 1 ? 0 : Math.abs(top + h / 2 - fcH / 2) < 1 ? 1 : 2
+    const { top, height } = img.getBoundingRect()
+    const current = Math.abs(top) < 1 ? 0 : Math.abs(top + height / 2 - fcH / 2) < 1 ? 1 : 2
     const next = (current + 1) % 3
-    const newTop = next === 0 ? 0 : next === 1 ? fcH / 2 - h / 2 : fcH - h
-    mutate({ top: newTop })
+    const target = next === 0 ? 0 : next === 1 ? fcH / 2 - height / 2 : fcH - height
+    mutate({ top: img.top! + (target - top) })
   }
 
   const cycleHorizontal = () => {
-    const w = img.getScaledWidth()
     const fcW = fc.getWidth() ?? 0
-    const left = img.left ?? 0
-    const current = Math.abs(left) < 1 ? 0 : Math.abs(left + w / 2 - fcW / 2) < 1 ? 1 : 2
+    const { left, width } = img.getBoundingRect()
+    const current = Math.abs(left) < 1 ? 0 : Math.abs(left + width / 2 - fcW / 2) < 1 ? 1 : 2
     const next = (current + 1) % 3
-    const newLeft = next === 0 ? 0 : next === 1 ? fcW / 2 - w / 2 : fcW - w
-    mutate({ left: newLeft })
+    const target = next === 0 ? 0 : next === 1 ? fcW / 2 - width / 2 : fcW - width
+    mutate({ left: img.left! + (target - left) })
   }
 
   return (
     <div className="fixed top-0 inset-x-0 z-30 flex justify-center pointer-events-none select-none">
       <div className="toolbar pointer-events-auto flex flex-wrap items-center gap-2 border bg-white/95 backdrop-blur rounded-md shadow px-3 py-1 max-w-[600px] w-[calc(100%-10rem)]">
         <button onClick={() => document.dispatchEvent(new Event('start-crop'))} className="toolbar-btn">Crop</button>
-        <button onClick={() => mutate({ flipX: !img.flipX })} className="toolbar-btn">Flip</button>
+        <button onClick={() => mutate({ flipX: !img.flipX })} className="toolbar-btn">Flip&nbsp;H</button>
+        <button onClick={() => mutate({ flipY: !img.flipY })} className="toolbar-btn">Flip&nbsp;V</button>
         <input type="range" min={0} max={1} step={0.01} value={img.opacity ?? 1} onChange={e => mutate({ opacity: +e.target.value })} className="disabled:opacity-40" />
         <button onClick={cycleVertical} className="toolbar-btn">↕︎</button>
         <button onClick={cycleHorizontal} className="toolbar-btn">↔︎</button>
