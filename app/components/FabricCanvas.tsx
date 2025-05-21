@@ -289,6 +289,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const hoverRef     = useRef<fabric.Rect | null>(null)
   const cropMaskRef  = useRef<fabric.Rect | null>(null)
+  const cropRectRef  = useRef<fabric.Rect | null>(null)
   const hydrating    = useRef(false)
   const isEditing    = useRef(false)
 
@@ -379,14 +380,22 @@ const startCrop = (img: fabric.Image) => {
     cornerColor: SEL_COLOR, lockRotation: true,
   })
   rect.setControlsVisibility({ mtr:false })
+  cropRectRef.current = rect
+  const frame = new fabric.Rect({
+    left: 0, top: 0, width: w, height: h,
+    fill: 'transparent', stroke: SEL_COLOR,
+    strokeUniform: true,
+    selectable: false, evented: false,
+  })
   const gp = { stroke:'#0004', selectable:false, evented:false, strokeWidth:1/SCALE }
   const v1 = new fabric.Line([w/3,0,w/3,h], gp)
   const v2 = new fabric.Line([w*2/3,0,w*2/3,h], gp)
   const h1 = new fabric.Line([0,h/3,w,h/3], gp)
   const h2 = new fabric.Line([0,h*2/3,w,h*2/3], gp)
-  const grp = new fabric.Group([rect,v1,v2,h1,h2],{
+  const grp = new fabric.Group([frame,rect,v1,v2,h1,h2],{
     left: img.left, top: img.top, originX:'left', originY:'top'
   })
+  ;(grp as any)._cropGroup = true
   cropGroupRef.current = grp
   fc.add(grp)
   fc.setActiveObject(grp)
@@ -419,13 +428,26 @@ const startCrop = (img: fabric.Image) => {
     cropW = Math.max(1, Math.min(origW - cropX, cropW))
     cropH = Math.max(1, Math.min(origH - cropY, cropH))
 
-    const left = st.left + (cropX - st.cropX) * st.scaleX
-    const top  = st.top  + (cropY - st.cropY) * st.scaleY
+    const left = st.left - (cropX - st.cropX) * st.scaleX
+    const top  = st.top  - (cropY - st.cropY) * st.scaleY
 
-    g.set({ left, top })
-
-    pic.set({ left: st.left, top: st.top, cropX, cropY, width: cropW, height: cropH })
+    pic.set({ left, top, cropX, cropY, width: cropW, height: cropH })
     pic.setCoords()
+
+    g.set({
+      left: st.left,
+      top: st.top,
+      scaleX: (cropW * st.scaleX) / w,
+      scaleY: (cropH * st.scaleY) / h,
+    })
+    g.setCoords()
+
+    const mask = cropMaskRef.current
+    if (mask) {
+      mask.clipPath = rect
+      ;(mask.clipPath as any).inverted = true
+      ;(mask.clipPath as any).absolutePositioned = true
+    }
     fc.requestRenderAll()
   }
 
@@ -447,6 +469,7 @@ const cancelCrop = () => {
     img.setCoords()
   }
   cropGroupRef.current = null
+  cropRectRef.current = null
   cropImgRef.current = null
   cropStartRef.current = null
   croppingRef.current = false
@@ -464,6 +487,7 @@ const commitCrop = () => {
   g.off('moving').off('scaling')
   fc.remove(g)
   cropGroupRef.current = null
+  cropRectRef.current = null
   cropStartRef.current = null
   cropImgRef.current = null
   croppingRef.current = false
@@ -546,6 +570,9 @@ fc.on('mouse:over', e => {
 .on('mouse:dblclick', e => {
   const t = e.target as fabric.Object | undefined
   if (t && (t as any).type === 'image') startCrop(t as fabric.Image)
+})
+.on('mouse:down', e => {
+  if (croppingRef.current && !e.target) commitCrop()
 })
 
 addGuides(fc)                                 // green safe-zone guides
@@ -753,11 +780,17 @@ document.addEventListener('start-crop', cropListener)
 
     if (isCropping) {
       mask.visible = true
+      mask.clipPath = cropRectRef.current ?? undefined
+      if (mask.clipPath) {
+        ;(mask.clipPath as any).inverted = true
+        ;(mask.clipPath as any).absolutePositioned = true
+      }
       const idx = fc.getObjects().findIndex(o => (o as any)._cropGroup)
       if (idx > -1) fc.insertAt(mask, idx, false)
       else mask.bringToFront()
     } else {
       mask.visible = false
+      mask.clipPath = undefined
     }
     fc.requestRenderAll()
   }, [isCropping])
