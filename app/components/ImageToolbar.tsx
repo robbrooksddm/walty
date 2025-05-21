@@ -43,7 +43,7 @@ export default function ImageToolbar({ canvas: fc, onUndo, onRedo, onSave, savin
   }
 
   const cycleVertical = () => {
-    const { top, height } = img.getBoundingRect()
+    const { top, height } = img.getBoundingRect(true, true)
     const current = Math.abs(top) < 1 ? 0 : Math.abs(top + height / 2 - fcH / 2) < 1 ? 1 : 2
     const next = (current + 1) % 3
     const target = next === 0 ? 0 : next === 1 ? fcH / 2 - height / 2 : fcH - height
@@ -51,7 +51,7 @@ export default function ImageToolbar({ canvas: fc, onUndo, onRedo, onSave, savin
   }
 
   const cycleHorizontal = () => {
-    const { left, width } = img.getBoundingRect()
+    const { left, width } = img.getBoundingRect(true, true)
     const current = Math.abs(left) < 1 ? 0 : Math.abs(left + width / 2 - fcW / 2) < 1 ? 1 : 2
     const next = (current + 1) % 3
     const target = next === 0 ? 0 : next === 1 ? fcW / 2 - width / 2 : fcW - width
