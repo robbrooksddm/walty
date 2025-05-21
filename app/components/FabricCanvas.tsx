@@ -399,6 +399,7 @@ const startCrop = (img: fabric.Image) => {
   cropGroupRef.current = grp
   fc.add(grp)
   fc.setActiveObject(grp)
+  fc.requestRenderAll()
 
   const sync = () => {
     const g  = cropGroupRef.current
@@ -428,15 +429,17 @@ const startCrop = (img: fabric.Image) => {
     cropW = Math.max(1, Math.min(origW - cropX, cropW))
     cropH = Math.max(1, Math.min(origH - cropY, cropH))
 
-    const left = st.left - (cropX - st.cropX) * st.scaleX
-    const top  = st.top  - (cropY - st.cropY) * st.scaleY
-
-    pic.set({ left, top, cropX, cropY, width: cropW, height: cropH })
+    pic.set({
+      left : st.left,
+      top  : st.top,
+      cropX,
+      cropY,
+      width : cropW,
+      height: cropH,
+    })
     pic.setCoords()
 
     g.set({
-      left: st.left,
-      top: st.top,
       scaleX: (cropW * st.scaleX) / w,
       scaleY: (cropH * st.scaleY) / h,
     })
