@@ -24,11 +24,11 @@ interface Props{
 
 export default function TextToolbar(props:Props){
   const {canvas:fc,addText,addImage,onUndo,onRedo,onSave,mode,saving}=props
-  if(!fc) return null
 
   /* re-render when Fabric selection changes */
   const [_,force] = useState({})
   useEffect(()=>{
+    if(!fc) return
     const tick=()=>force({})
     fc.on('selection:created',tick)
       .on('selection:updated',tick)
@@ -38,7 +38,24 @@ export default function TextToolbar(props:Props){
                 .off('selection:cleared',tick)}
   },[fc])
 
-  const tb = getActiveTextbox(fc)
+  const tb = fc ? getActiveTextbox(fc) : null
+  const [caseState, setCaseState] =
+    useState<'upper' | 'title' | 'lower'>('upper')
+  const alignOrder = ['left', 'center', 'right', 'justify'] as const
+  const alignSymbols: Record<string, string> = {
+    left: '←',
+    center: '↔︎',
+    right: '→',
+    justify: '⎯',
+  }
+  const cycleAlign = () => {
+    if (!tb) return
+    const current = (tb.textAlign ?? 'left') as typeof alignOrder[number]
+    const idx = alignOrder.indexOf(current)
+    const next = alignOrder[(idx + 1) % alignOrder.length]
+    mutate({ textAlign: next as any })
+  }
+  if(!fc) return null
 
   /** mutate helper – apply Fabric props, keep focus, fire modified */
   const mutate = (p:Partial<fabric.Textbox>)=>{
@@ -65,17 +82,6 @@ export default function TextToolbar(props:Props){
             + Text
           </button>
 
-          {/* 📷 Image */}
-          <label className="relative cursor-pointer">
-            <span className="px-3 py-1 rounded bg-emerald-600 text-white shrink-0
-                             hover:bg-emerald-700 active:bg-emerald-800">📷 Image</span>
-            <input type="file" accept="image/*"
-                   className="absolute inset-0 opacity-0 cursor-pointer"
-                   onChange={e=>{
-                     const f=e.currentTarget.files?.[0]; if(f) addImage(f)
-                     e.currentTarget.value=''
-                   }}/>
-          </label>
 
           {/* font family */}
           <select disabled={!tb} value={tb?.fontFamily ?? fonts[0]}
@@ -108,23 +114,33 @@ export default function TextToolbar(props:Props){
           <button disabled={!tb} onClick={()=>mutate({underline:!tb!.underline})}
                   className="toolbar-btn underline">U</button>
 
-          {/* Aa / aa / AA */}
-          <button disabled={!tb} onClick={()=>mutate({text:tb!.text!.replace(/\b\w/g,c=>c.toUpperCase())})}
-                  className="toolbar-btn">Aa</button>
-          <button disabled={!tb} onClick={()=>mutate({text:tb!.text!.toLowerCase()})}
-                  className="toolbar-btn">aa</button>
-          <button disabled={!tb} onClick={()=>mutate({text:tb!.text!.toUpperCase()})}
-                  className="toolbar-btn">AA</button>
+          {/* text case cycle */}
+          <button
+            disabled={!tb}
+            onClick={() => {
+              if (!tb) return
+              if (caseState === 'upper') {
+                mutate({ text: tb!.text!.toUpperCase() })
+                setCaseState('title')
+              } else if (caseState === 'title') {
+                mutate({ text: tb!.text!.replace(/\b\w/g, c => c.toUpperCase()) })
+                setCaseState('lower')
+              } else {
+                mutate({ text: tb!.text!.toLowerCase() })
+                setCaseState('upper')
+              }
+            }}
+            className="toolbar-btn">
+            {caseState === 'upper' ? 'AA' : caseState === 'title' ? 'Aa' : 'aa'}
+          </button>
 
           {/* align */}
-          <select disabled={!tb} value={tb?.textAlign ?? ''}
-                  onChange={e=>mutate({textAlign:e.target.value as any})}
-                  className="border p-1 rounded disabled:opacity-40">
-            <option value="left">←</option>
-            <option value="center">↔︎</option>
-            <option value="right">→</option>
-            <option value="justify">⎯</option>
-          </select>
+          <button
+            disabled={!tb}
+            onClick={cycleAlign}
+            className="toolbar-btn">
+            {alignSymbols[tb?.textAlign ?? 'left']}
+          </button>
 
           {/* line-height */}
           <input disabled={!tb} type="number" step={0.1} min={0.5} max={3}
