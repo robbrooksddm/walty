@@ -193,9 +193,16 @@ const objToLayer = (o: fabric.Object): Layer => {
     }
   }
   const i = o as fabric.Image
-  return {
+  const srcUrl  = (i as any).__src || i.getSrc?.() || ''
+  const assetId = (i as any).assetId as string | undefined
+
+  const layer: Layer = {
     type   : 'image',
-    srcUrl : (i as any).__src || '',
+    src    : assetId
+               ? { _type:'image', asset:{ _type:'reference', _ref: assetId } }
+               : srcUrl,
+    srcUrl ,
+    assetId,
     x      : i.left  || 0,
     y      : i.top   || 0,
     width  : i.getScaledWidth(),
@@ -204,6 +211,13 @@ const objToLayer = (o: fabric.Object): Layer => {
     scaleX : i.scaleX,
     scaleY : i.scaleY,
   }
+
+  if (i.cropX != null) layer.cropX = i.cropX
+  if (i.cropY != null) layer.cropY = i.cropY
+  if (i.width  != null) layer.cropW = i.width
+  if (i.height != null) layer.cropH = i.height
+
+  return layer
 }
 
 /** Read every on-canvas object → Layers, update Zustand + history */
@@ -790,7 +804,11 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
 
   fabric.Image.fromURL(srcUrl, rawImg => {
     const img = rawImg instanceof fabric.Image ? rawImg : new fabric.Image(rawImg);
-    /* … the rest of your existing code … */
+
+    // keep original asset info so objToLayer can round-trip it
+    (img as any).__src   = srcUrl
+    if (ly.assetId) (img as any).assetId = ly.assetId
+    if (ly.srcUrl) (img as any).srcUrl = ly.srcUrl
 
           /* cropping */
           if (ly.cropX != null) img.cropX = ly.cropX
