@@ -4,6 +4,7 @@
 
    import cardTemplate  from './cardTemplate'
    import cardProduct   from './cardProduct'
+   import page          from './page'
    
    /* AI-related ---------------------------------------------------- */
    import aiPlaceholder from './aiPlaceholder'
@@ -12,6 +13,7 @@
    /* core editable objects ---------------------------------------- */
    import editableImage from './editableImage'
    import editableText  from './editableText'
+   import heroSection   from './heroSection'
    
    /* facet look-ups ----------------------------------------------- */
    import occasion from './occasion'   // ← RE-ADDED ✔
@@ -22,14 +24,16 @@
    /* one flat array that Studio expects --------------------------- */
    export const schemaTypes = [
      /* documents */
-     cardTemplate,
-     cardProduct,
-     aiPlaceholder,
+    cardTemplate,
+    cardProduct,
+    page,
+    aiPlaceholder,
    
      /* objects */
-     aiLayer,
-     editableImage,
-     editableText,
+    aiLayer,
+    editableImage,
+    editableText,
+    heroSection,
    
      /* facets */
      occasion,
