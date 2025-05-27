@@ -54,4 +54,4 @@ yarn-error.log*
 # 🖥️  OS / misc
 ############################################
 .DS_Store
-*.pem
+*.pem!/.pnpm-store
