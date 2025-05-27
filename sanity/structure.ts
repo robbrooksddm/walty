@@ -37,6 +37,8 @@ export const structure: StructureResolver = (S: StructureBuilder) =>
 
       S.documentTypeListItem('cardProduct').title('Card products'),
 
+      S.documentTypeListItem('page').title('Site pages'),
+
       /* look-ups & presets tucked into a drawer ------------------- */
       S.listItem()
         .title('Taxonomies')
