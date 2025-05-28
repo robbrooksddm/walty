@@ -10,6 +10,10 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --walty-cream : #F7F3EC;
+  --walty-teal  : #005B55;
+  --walty-orange: #C64A19;
+  --walty-brown : #3E2C20;
 }
 
 /* ❷  Font tokens */

@@ -1,17 +1,16 @@
 import React from "react";
 import "./globals.css";
 import { Domine, Inter } from "next/font/google";
+import WaltyNav from "@/components/site/WaltyNav";
 
-const inter = Inter({
+export const domine = Domine({
+  weight: ["400", "700"],
+  subsets: ["latin"],
+  variable: "--font-domine",
+});
+export const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
-  display: "swap",
-});
-const domine = Domine({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-domine",
-  display: "swap",
 });
 
 export const metadata = {
@@ -25,7 +24,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${domine.variable} font-sans`}>
+      <body className={`${inter.variable} ${domine.variable}`}>
+        <WaltyNav />
         {children}
       </body>
     </html>

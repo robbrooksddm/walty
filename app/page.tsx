@@ -14,26 +14,7 @@ export default function HomePage() {
       className="min-h-screen font-sans"
       style={{ backgroundColor: cream, color: teal }}
     >
-      {/* NAVBAR */}
-      <nav className="border-b" style={{ borderColor: `${teal}30` }}>
-        <div className="mx-auto max-w-7xl flex items-center justify-between px-6 py-4">
-          <Link href="/" className="shrink-0">
-            <Image
-              src="/images/logo-pill-teal.svg"
-              alt="Walty logo"
-              width={110}
-              height={38}
-            />
-          </Link>
-          <Link
-            href="/templates"
-            className="rounded-md px-4 py-2 text-sm font-semibold shadow"
-            style={{ backgroundColor: orange, color: cream }}
-          >
-            Design a Card
-          </Link>
-        </div>
-      </nav>
+
 
       {/* HERO */}
       <section className="mx-auto max-w-7xl grid md:grid-cols-2 gap-12 px-6 py-24 items-center">
