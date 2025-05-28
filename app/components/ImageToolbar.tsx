@@ -91,17 +91,39 @@ export default function ImageToolbar({ canvas: fc, onUndo, onRedo, onSave, savin
 
   const sendBackward = () => {
     const idx = (img as any).layerIdx ?? 0
-    const newIdx = Math.min(idx + 1, fc.getObjects().length - 1)
+    const layers = fc.getObjects().filter(o => (o as any).layerIdx !== undefined)
+    const newIdx = Math.min(idx + 1, layers.length - 1)
     if (newIdx !== idx) {
+      const editRef = (fc as any)._editingRef as { current: boolean } | undefined
+      if (editRef) editRef.current = true
+
+      fc.sendBackwards(img)
+      const objs = fc.getObjects().filter(o => (o as any).layerIdx !== undefined)
+      objs.forEach((o, i) => ((o as any).layerIdx = objs.length - 1 - i))
+      fc.requestRenderAll()
+
       reorder(idx, newIdx)
+
+      setTimeout(() => { if (editRef) editRef.current = false }, 0)
     }
   }
 
   const bringForward = () => {
     const idx = (img as any).layerIdx ?? 0
+    const layers = fc.getObjects().filter(o => (o as any).layerIdx !== undefined)
     const newIdx = Math.max(idx - 1, 0)
     if (newIdx !== idx) {
+      const editRef = (fc as any)._editingRef as { current: boolean } | undefined
+      if (editRef) editRef.current = true
+
+      fc.bringForward(img)
+      const objs = fc.getObjects().filter(o => (o as any).layerIdx !== undefined)
+      objs.forEach((o, i) => ((o as any).layerIdx = objs.length - 1 - i))
+      fc.requestRenderAll()
+
       reorder(idx, newIdx)
+
+      setTimeout(() => { if (editRef) editRef.current = false }, 0)
     }
   }
 
