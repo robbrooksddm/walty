@@ -69,6 +69,9 @@ importers:
         specifier: ^5.0.3
         version: 5.0.4(@types/react@19.1.4)(immer@10.1.1)(react@18.2.0)(use-sync-external-store@1.5.0(react@18.2.0))
     devDependencies:
+      '@sanity/icons':
+        specifier: ^3.7.0
+        version: 3.7.0(react@18.2.0)
       '@tailwindcss/postcss':
         specifier: ^4.1.4
         version: 4.1.7
@@ -8541,7 +8544,7 @@ snapshots:
     dependencies:
       '@sanity/client': 7.2.2(debug@4.4.1)
       '@sanity/comlink': 3.0.3
-      '@sanity/visual-editing-types': 1.0.18(@sanity/client@7.2.2)(@sanity/types@3.88.3(@types/react@19.1.4))
+      '@sanity/visual-editing-types': 1.0.18(@sanity/client@7.2.2(debug@4.4.1))(@sanity/types@3.88.3(@types/react@19.1.4)(debug@4.4.1))
     transitivePeerDependencies:
       - '@sanity/types'
 
@@ -8756,12 +8759,6 @@ snapshots:
       '@sanity/types': 3.88.3(@types/react@19.1.4)(debug@4.4.1)
 
   '@sanity/visual-editing-types@1.0.18(@sanity/client@7.2.2(debug@4.4.1))(@sanity/types@3.88.3(@types/react@19.1.4)(debug@4.4.1))':
-    dependencies:
-      '@sanity/client': 7.2.2(debug@4.4.1)
-    optionalDependencies:
-      '@sanity/types': 3.88.3(@types/react@19.1.4)(debug@4.4.1)
-
-  '@sanity/visual-editing-types@1.0.18(@sanity/client@7.2.2)(@sanity/types@3.88.3(@types/react@19.1.4))':
     dependencies:
       '@sanity/client': 7.2.2(debug@4.4.1)
     optionalDependencies:

@@ -39,6 +39,7 @@
     "styled-components": "^6.1.17"
   },
   "devDependencies": {
+    "@sanity/icons": "^3.7.0",
     "@tailwindcss/postcss": "^4.1.4",
     "@types/fabric": "^5.3.10",
     "@types/node": "^20",
