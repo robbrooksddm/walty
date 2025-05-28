@@ -16,6 +16,7 @@ if (typeof window !== 'undefined') (window as any).useEditor = useEditor // debu
 import LayerPanel                       from './LayerPanel'
 import FabricCanvas                      from './FabricCanvas'
 import TextToolbar                      from './TextToolbar'
+import ImageToolbar                     from './ImageToolbar'
 import SelfieDrawer                     from './SelfieDrawer'
 import type { TemplatePage }            from './FabricCanvas'
 
@@ -97,6 +98,26 @@ export default function CardEditor({
   const onReady = (idx: number, fc: fabric.Canvas | null) =>
     setCanvasMap(list => { const next = [...list]; next[idx] = fc; return next })
   const activeFc = canvasMap[activeIdx]
+
+  const [activeType, setActiveType] = useState<'text' | 'image' | null>(null)
+  useEffect(() => {
+    const fc = activeFc
+    if (!fc) return
+    const update = () => {
+      const obj = fc.getActiveObject() as any
+      const t = obj ? obj.type : null
+      setActiveType(t === 'textbox' ? 'text' : t === 'image' ? 'image' : null)
+    }
+    update()
+    fc.on('selection:created', update)
+      .on('selection:updated', update)
+      .on('selection:cleared', update)
+    return () => {
+      fc.off('selection:created', update)
+        .off('selection:updated', update)
+        .off('selection:cleared', update)
+    }
+  }, [activeFc])
 
   /* track cropping state per page */
   const [cropping, setCropping] =
@@ -207,16 +228,27 @@ const handleSwap = (url: string) => {
 
       {/* main */}
      <div className="flex-1 flex flex-col">
-     <TextToolbar
-     canvas   ={activeFc}
-     addText  ={addText}
-     addImage ={addImage}
-     onUndo   ={undo}
-     onRedo   ={redo}
-     onSave   ={handleSave}
-     mode     ={mode}
-     saving   ={saving}
-/>
+     {activeType === 'text' && (
+       <TextToolbar
+         canvas={activeFc}
+         addText={addText}
+         addImage={addImage}
+         onUndo={undo}
+         onRedo={redo}
+         onSave={handleSave}
+         mode={mode}
+         saving={saving}
+       />
+     )}
+     {activeType === 'image' && (
+       <ImageToolbar
+         canvas={activeFc}
+         onUndo={undo}
+         onRedo={redo}
+         onSave={handleSave}
+         saving={saving}
+       />
+     )}
 
         {/* tabs */}
         <nav className="flex justify-center gap-8 py-3 text-sm font-medium">

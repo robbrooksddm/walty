@@ -193,9 +193,16 @@ const objToLayer = (o: fabric.Object): Layer => {
     }
   }
   const i = o as fabric.Image
-  return {
+  const srcUrl  = (i as any).__src || i.getSrc?.() || ''
+  const assetId = (i as any).assetId as string | undefined
+
+  const layer: Layer = {
     type   : 'image',
-    srcUrl : (i as any).__src || '',
+    src    : assetId
+               ? { _type:'image', asset:{ _type:'reference', _ref: assetId } }
+               : srcUrl,
+    srcUrl ,
+    assetId,
     x      : i.left  || 0,
     y      : i.top   || 0,
     width  : i.getScaledWidth(),
@@ -204,6 +211,13 @@ const objToLayer = (o: fabric.Object): Layer => {
     scaleX : i.scaleX,
     scaleY : i.scaleY,
   }
+
+  if (i.cropX != null) layer.cropX = i.cropX
+  if (i.cropY != null) layer.cropY = i.cropY
+  if (i.width  != null) layer.cropW = i.width
+  if (i.height != null) layer.cropH = i.height
+
+  return layer
 }
 
 /** Read every on-canvas object → Layers, update Zustand + history */
@@ -711,13 +725,20 @@ const onKey = (e: KeyboardEvent) => {
                : e.code === 'ArrowDown'  ?  step : 0
 
     allObjs(active).forEach(o => {
-      o.set({ left: (o.left ?? 0) + dx,
-              top : (o.top  ?? 0) + dy })
-      o.setCoords()
+      const nx = (o as any).lockMovementX ? 0 : dx
+      const ny = (o as any).lockMovementY ? 0 : dy
+      if (nx || ny) {
+        o.set({ left: (o.left ?? 0) + nx,
+                top : (o.top  ?? 0) + ny })
+        o.setCoords()
+      }
     })
 
     fc.requestRenderAll()
+    const editRef = (fc as any)._editingRef as { current: boolean } | undefined
+    if (editRef) editRef.current = true
     syncLayersFromCanvas(fc, pageIdx)
+    setTimeout(() => { if (editRef) editRef.current = false }, 0)
     e.preventDefault()
   }
 }
@@ -732,6 +753,8 @@ const cropListener = () => {
 document.addEventListener('start-crop', cropListener)
 
   /* ── 6 ▸ Expose canvas & tidy up ──────────────────────────── */
+  // expose editing ref so external controls can pause re-hydration
+  ;(fc as any)._editingRef = isEditing
   fcRef.current = fc; onReady(fc)
 
   return () => {
@@ -768,7 +791,7 @@ document.addEventListener('start-crop', cropListener)
   useEffect(() => {
     const fc = fcRef.current
     if (!fc || !page) return
-    if (isEditing.current) return
+    if (isEditing.current || (fc as any)._editingRef?.current) return
 
     hydrating.current = true
     fc.clear(); hoverRef.current && fc.add(hoverRef.current)
@@ -790,7 +813,11 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
 
   fabric.Image.fromURL(srcUrl, rawImg => {
     const img = rawImg instanceof fabric.Image ? rawImg : new fabric.Image(rawImg);
-    /* … the rest of your existing code … */
+
+    // keep original asset info so objToLayer can round-trip it
+    (img as any).__src   = srcUrl
+    if (ly.assetId) (img as any).assetId = ly.assetId
+    if (ly.srcUrl) (img as any).srcUrl = ly.srcUrl
 
           /* cropping */
           if (ly.cropX != null) img.cropX = ly.cropX
