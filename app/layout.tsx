@@ -1,7 +1,9 @@
+// app/layout.tsx
 import React from "react";
 import "./globals.css";
 import { Domine, Inter } from "next/font/google";
-import WaltyNav from "@/components/site/WaltyNav";
+import { recoleta } from "@/lib/fonts";           // local font
+import WaltyNav from "@/components/site/WaltyNav"; // ← put this back
 
 export const domine = Domine({
   weight: ["400", "700"],
@@ -13,9 +15,7 @@ export const inter = Inter({
   variable: "--font-inter",
 });
 
-export const metadata = {
-  title: "Walty",
-};
+export const metadata = { title: "Walty" };
 
 export default function RootLayout({
   children,
@@ -24,7 +24,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${domine.variable}`}>
+      {/* use back-ticks so the template literals are evaluated */}
+      <body className={`${inter.variable} ${domine.variable} ${recoleta.variable}`}>
         <WaltyNav />
         {children}
       </body>
