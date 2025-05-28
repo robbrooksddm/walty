@@ -725,13 +725,20 @@ const onKey = (e: KeyboardEvent) => {
                : e.code === 'ArrowDown'  ?  step : 0
 
     allObjs(active).forEach(o => {
-      o.set({ left: (o.left ?? 0) + dx,
-              top : (o.top  ?? 0) + dy })
-      o.setCoords()
+      const nx = (o as any).lockMovementX ? 0 : dx
+      const ny = (o as any).lockMovementY ? 0 : dy
+      if (nx || ny) {
+        o.set({ left: (o.left ?? 0) + nx,
+                top : (o.top  ?? 0) + ny })
+        o.setCoords()
+      }
     })
 
     fc.requestRenderAll()
+    const editRef = (fc as any)._editingRef as { current: boolean } | undefined
+    if (editRef) editRef.current = true
     syncLayersFromCanvas(fc, pageIdx)
+    setTimeout(() => { if (editRef) editRef.current = false }, 0)
     e.preventDefault()
   }
 }
@@ -746,6 +753,8 @@ const cropListener = () => {
 document.addEventListener('start-crop', cropListener)
 
   /* ── 6 ▸ Expose canvas & tidy up ──────────────────────────── */
+  // expose editing ref so external controls can pause re-hydration
+  ;(fc as any)._editingRef = isEditing
   fcRef.current = fc; onReady(fc)
 
   return () => {
@@ -782,7 +791,7 @@ document.addEventListener('start-crop', cropListener)
   useEffect(() => {
     const fc = fcRef.current
     if (!fc || !page) return
-    if (isEditing.current) return
+    if (isEditing.current || (fc as any)._editingRef?.current) return
 
     hydrating.current = true
     fc.clear(); hoverRef.current && fc.add(hoverRef.current)
