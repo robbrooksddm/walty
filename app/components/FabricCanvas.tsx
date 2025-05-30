@@ -578,6 +578,7 @@ addGuides(fc)                                 // green safe-zone guides
     if (t.type === 'image') Object.assign(d, {
       width  : t.getScaledWidth(),
       height : t.getScaledHeight(),
+      opacity: t.opacity,
     })
     if (t.type === 'textbox') Object.assign(d, {
       text       : t.text,
