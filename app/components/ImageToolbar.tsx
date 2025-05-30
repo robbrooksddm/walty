@@ -30,22 +30,7 @@ import {
   AlignHorizontalJustifyCenter,
 } from "lucide-react";
 
-/* ───────────────────────── custom flip icons (outline style) ─── */
-const MirrorH = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} fill="none" {...props}>
-    <path d="M8 5 3 12l5 7" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M16 5l5 7-5 7" strokeLinecap="round" strokeLinejoin="round" />
-    <line x1="12" y1="4" x2="12" y2="20" />
-  </svg>
-);
-
-const MirrorV = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} fill="none" {...props}>
-    <path d="M5 8 12 3l7 5" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M5 16l7 5 7-5" strokeLinecap="round" strokeLinejoin="round" />
-    <line x1="4" y1="12" x2="20" y2="12" />
-  </svg>
-);
+/* Mirror icons are exported from ./toolbar/icons */
 
 /* ───────────────────────── reusable icon button ─── */
 interface IconBtnProps {
@@ -91,6 +76,7 @@ export default function ImageToolbar({ canvas: fc, onUndo, onRedo, onSave, savin
   const reorder        = useEditor(s => s.reorder);
   const updateLayer    = useEditor(s => s.updateLayer);
   const activePage     = useEditor(s => s.activePage);
+  const layerCount     = useEditor(s => s.pages[s.activePage]?.layers.length || 0);
   const [showOpacity, setShowOpacity] = useState(false);
 
   /* re-render on selection changes */
@@ -162,11 +148,11 @@ export default function ImageToolbar({ canvas: fc, onUndo, onRedo, onSave, savin
   /* layer order helpers */
   const sendBackward = () => {
     const idx = (img as any).layerIdx ?? 0;
-    if (idx < fc.getObjects().length - 1) reorder(idx, idx + 1);
+    if (idx < layerCount - 1) reorder(idx, idx + 1);
   };
   const bringForward = () => {
     const idx = (img as any).layerIdx ?? 0;
-    if (idx > 0) reorder(idx, idx - 1);
+    if (idx > 0 && idx <= layerCount - 1) reorder(idx, idx - 1);
   };
 
   /* ───────────────────────── render ─── */
