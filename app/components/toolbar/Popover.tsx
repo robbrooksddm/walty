@@ -1,5 +1,8 @@
+//Popover.tsx
+
 "use client";
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 interface Props {
   anchor: HTMLElement | null;
@@ -11,13 +14,20 @@ interface Props {
 export default function Popover({ anchor, open, onClose, children }: Props) {
   const ref = useRef<HTMLDivElement>(null);
 
-  /* close on click-away or Esc */
+  /* close on click-away / Esc */
   useEffect(() => {
     if (!open) return;
     const handle = (e: MouseEvent | KeyboardEvent) => {
       if (e instanceof KeyboardEvent && e.key === "Escape") onClose();
-      if (e instanceof MouseEvent && ref.current && !ref.current.contains(e.target as Node))
+      if (
+        e instanceof MouseEvent &&
+        ref.current &&
+        !ref.current.contains(e.target as Node) &&
+        anchor &&
+        !anchor.contains(e.target as Node)
+      ) {
         onClose();
+      }
     };
     window.addEventListener("mousedown", handle, { capture: true });
     window.addEventListener("keydown", handle);
@@ -25,17 +35,30 @@ export default function Popover({ anchor, open, onClose, children }: Props) {
       window.removeEventListener("mousedown", handle, { capture: true });
       window.removeEventListener("keydown", handle);
     };
-  }, [open, onClose]);
+  }, [open, onClose, anchor]);
 
   if (!open || !anchor) return null;
-  const r = anchor.getBoundingClientRect();
-  return (
+
+  /* centred under the trigger (6 px gap now that arrow is gone) */
+  const { bottom, left, width } = anchor.getBoundingClientRect();
+  const style: React.CSSProperties = {
+    position: "fixed",
+    top: bottom + 6,
+    left: left + width / 2,
+    transform: "translateX(-50%)",
+    zIndex: 50,
+  };
+
+  return createPortal(
     <div
       ref={ref}
-      style={{ left: r.left, top: r.bottom + 6 }}
-      className="fixed z-50 rounded-md border bg-[--walty-cream] shadow px-2 py-1"
+      style={style}
+      className="min-w-40 rounded-xl bg-[--walty-cream]/95
+                 px-3 py-2 shadow-lg ring-1 ring-walty-brown/15
+                 backdrop-blur animate-pop"
     >
       {children}
-    </div>
+    </div>,
+    document.body
   );
 }

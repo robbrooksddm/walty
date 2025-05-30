@@ -1,23 +1,22 @@
-"use client";
-
 /**
- * Walty-branded image toolbar · May 2025
+ * Walty‑branded image toolbar · single‑row layout (undo / redo / save float right)
  * ————————————————————————————————————————
- * • Recoleta font & Walty palette already loaded globally.
- * • Every control is a 44 × 44 px hit-area with teal stroke
- *   and orange hover / active.
- * • Opacity is a Droplet toggle that reveals a slider.
+ * • Toolbar itself stays centred; Undo‑Redo‑Save live in a separate cluster at top‑right.
+ * • 48 × 48 px buttons, 24 px icons, 11 px captions.
+ * • Uniform 24 px gap (`gap-6`) between buttons inside the bar.
  */
 
-import { useEffect, useState } from "react";
+"use client";
+
+import { useEffect, useState, forwardRef } from "react";
 import { fabric } from "fabric";
 import { useEditor } from "./EditorStore";
-import ToolFlipImage from "./toolbar/ToolFlipImage";
+import ToolFlipImage     from "./toolbar/ToolFlipImage";
+import ToolOpacitySlider from "./toolbar/ToolOpacitySlider";
 
 /* lucide-react icons */
 import {
   Crop,
-  Droplet,
   Eraser,
   Lock,
   Unlock,
@@ -25,31 +24,46 @@ import {
   ArrowUpToLine,
   RotateCcw,
   RotateCw,
+  Trash2,
   Save,
-  AlignVerticalJustifyCenter,
-  AlignHorizontalJustifyCenter,
 } from "lucide-react";
 
-/* Mirror icons are exported from ./toolbar/icons */
+import {
+  AlignToPageVertical,
+  AlignToPageHorizontal,
+} from "./toolbar/AlignToPage";
 
-/* ───────────────────────── reusable icon button ─── */
+/* ───────────────────────── Icon button ─── */
 interface IconBtnProps {
   Icon: React.ElementType;
-  label: string;
+  label: string;          // tooltip
+  caption?: string;       // text under icon
   onClick: () => void;
   active?: boolean;
   disabled?: boolean;
 }
 
-function IconButton({ Icon, label, onClick, active, disabled }: IconBtnProps) {
-  return (
+const IconButton = forwardRef<HTMLButtonElement, IconBtnProps>(
+  (
+    {
+      Icon,
+      label,
+      caption = label.split(" ")[0],
+      onClick,
+      active,
+      disabled,
+    },
+    ref
+  ) => (
     <button
+      ref={ref}
       type="button"
       aria-label={label}
       title={label}
       onClick={onClick}
       disabled={disabled}
-      className={`p-2 rounded focus:outline-none focus:ring-2 focus:ring-[--walty-orange] focus:ring-offset-1
+      className={`flex flex-col items-center justify-center w-12 p-2 gap-0.5
+                  rounded focus:outline-none focus:ring-2 focus:ring-[--walty-orange] focus:ring-offset-1
                   hover:bg-[--walty-orange]/10 disabled:opacity-40
                   ${active ? "bg-[--walty-orange]/10" : ""}`}
     >
@@ -57,9 +71,16 @@ function IconButton({ Icon, label, onClick, active, disabled }: IconBtnProps) {
         className={`w-6 h-6 stroke-[--walty-teal] transition-colors
                     ${active ? "stroke-[--walty-orange]" : "hover:stroke-[--walty-orange]"}`}
       />
+      <span
+        className={`text-[11px] leading-none font-medium tracking-wide
+                    ${active ? "text-[--walty-orange]" : "text-[--walty-teal]"}`}
+      >
+        {caption}
+      </span>
     </button>
-  );
-}
+  )
+);
+IconButton.displayName = "IconButton";
 
 /* ───────────────────────── main toolbar component ─── */
 interface Props {
@@ -77,7 +98,6 @@ export default function ImageToolbar({ canvas: fc, onUndo, onRedo, onSave, savin
   const updateLayer    = useEditor(s => s.updateLayer);
   const activePage     = useEditor(s => s.activePage);
   const layerCount     = useEditor(s => s.pages[s.activePage]?.layers.length || 0);
-  const [showOpacity, setShowOpacity] = useState(false);
 
   /* re-render on selection changes */
   useEffect(() => {
@@ -155,57 +175,45 @@ export default function ImageToolbar({ canvas: fc, onUndo, onRedo, onSave, savin
     if (idx > 0 && idx <= layerCount - 1) reorder(idx, idx - 1);
   };
 
+  /* remove active image */
+  const deleteCurrent = () => {
+    fc.remove(img);
+    fc.requestRenderAll();
+  };
+
   /* ───────────────────────── render ─── */
   return (
-    <div className="fixed top-2 inset-x-0 z-30 flex justify-center pointer-events-none select-none">
+    <div className="fixed inset-x-0 top-2 z-30 flex justify-center pointer-events-none select-none">
       {/* main bar */}
-      <div className="pointer-events-auto flex flex-wrap items-center gap-2
-                      bg-[--walty-cream]/95 backdrop-blur
-                      border border-[rgba(0,91,85,.2)] rounded-lg shadow
-                      px-3 py-2 max-w-[640px] w-[calc(100%-6rem)]">
-
-        {/* core actions */}
-        <IconButton Icon={Crop}    label="Crop"           onClick={() => document.dispatchEvent(new Event("start-crop"))} />
+      <div
+        className="pointer-events-auto flex flex-nowrap items-center gap-6
+                   bg-[--walty-cream]/95 backdrop-blur shadow-lg rounded-xl
+                   border border-[rgba(0,91,85,.2)] px-4 py-3 max-w-[720px] w-[calc(100%-6rem)]"
+      >
+        <IconButton Icon={Crop} label="Crop" onClick={() => document.dispatchEvent(new Event("start-crop"))} />
         <ToolFlipImage img={img} mutate={mutate} />
-
-        {/* opacity toggle */}
-        <IconButton Icon={Droplet} label="Opacity" active={showOpacity} onClick={() => setShowOpacity(!showOpacity)} />
-        {showOpacity && (
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={img.opacity ?? 1}
-            onChange={e => mutate({ opacity: +e.target.value })}
-            className="w-40 accent-[--walty-orange]"
-          />
-        )}
-
-        {/* align to page */}
-        <IconButton Icon={AlignVerticalJustifyCenter}   label="Align vertical centre"   onClick={cycleVertical} />
-        <IconButton Icon={AlignHorizontalJustifyCenter} label="Align horizontal centre" onClick={cycleHorizontal} />
-
-        <div className="border-l border-[rgba(0,91,85,.2)] h-5 mx-1" />
-
-        {/* extras */}
-        <IconButton Icon={Eraser}             label="Remove background"    onClick={() => alert("TODO: remove background")} />
-        <IconButton Icon={locked ? Unlock : Lock} label={locked ? "Unlock layer" : "Lock layer"} active={locked} onClick={toggleLock} />
-        <IconButton Icon={ArrowDownToLine}    label="Send layer backward"   onClick={sendBackward} />
-        <IconButton Icon={ArrowUpToLine}      label="Bring layer forward"   onClick={bringForward} />
+        <ToolOpacitySlider img={img} mutate={mutate} />
+        <IconButton Icon={AlignToPageVertical}   label="Center vertical" caption="Center Y" onClick={cycleVertical} />
+        <IconButton Icon={AlignToPageHorizontal} label="Center horizontal" caption="Center X" onClick={cycleHorizontal} />
+        <IconButton Icon={Eraser} label="Remove background" caption="BG Erase" onClick={() => alert("TODO: remove background") } />
+        <IconButton Icon={locked ? Lock : Unlock} label={locked ? "Unlock layer" : "Lock layer"} active={locked} onClick={toggleLock} />
+        <IconButton Icon={ArrowDownToLine} label="Send backward" caption="Send ↓" onClick={sendBackward} />
+        <IconButton Icon={ArrowUpToLine}   label="Bring forward" caption="Bring ↑" onClick={bringForward} />
+        <IconButton Icon={Trash2} label="Delete image" caption="Delete" onClick={deleteCurrent} />
       </div>
 
       {/* undo / redo / save cluster */}
       <div className="absolute right-4 top-2 flex gap-3 pointer-events-auto">
         <IconButton Icon={RotateCcw} label="Undo" onClick={onUndo} />
-        <IconButton Icon={RotateCw}  label="Redo" onClick={onRedo} />
+        <IconButton Icon={RotateCw} label="Redo" onClick={onRedo} />
         <button
           type="button"
           onClick={onSave}
           disabled={saving}
           className={`flex items-center gap-1 px-3 py-2 rounded font-semibold
                       ${saving ? "opacity-50 cursor-not-allowed"
-                                : "text-[--walty-orange] hover:bg-[--walty-orange]/10"}`}>
+                                : "text-[--walty-orange] hover:bg-[--walty-orange]/10"}`}
+        >
           <Save className="w-5 h-5" />
           {saving ? "Saving…" : "Save"}
         </button>

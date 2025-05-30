@@ -1,3 +1,5 @@
+//ToolFlipImage.tsx
+
 "use client";
 import { useRef, useState } from "react";
 import { fabric } from "fabric";
@@ -27,21 +29,28 @@ export default function ToolFlipImage({ img, mutate }: Props) {
         active={open}
       />
 
-      {/* pop-over */}
-      <Popover anchor={btnRef.current} open={open} onClose={() => setOpen(false)}>
-        <button
-          className="flex items-center gap-2 px-3 py-1 hover:bg-[--walty-orange]/10 rounded"
-          onClick={() => { mutate({ flipX: !(img as any).flipX }); setOpen(false); }}
-        >
-          <MirrorH className="w-5 h-5" /> Flip horizontal
-        </button>
-        <button
-          className="flex items-center gap-2 px-3 py-1 hover:bg-[--walty-orange]/10 rounded"
-          onClick={() => { mutate({ flipY: !(img as any).flipY }); setOpen(false); }}
-        >
-          <MirrorV className="w-5 h-5" /> Flip vertical
-        </button>
-      </Popover>
+{/* pop-over content */}
+<Popover anchor={btnRef.current} open={open} onClose={() => setOpen(false)}>
+  <button
+    className="flex w-full items-center gap-2 rounded-lg px-3 py-2
+               text-sm hover:bg-walty-orange/10 focus:outline-none
+               focus-visible:ring-2 focus-visible:ring-walty-orange"
+    onClick={() => { mutate({ flipX: !(img as any).flipX }); setOpen(false); }}
+  >
+    <MirrorH className="h-5 w-5 shrink-0" />
+    Flip horizontal
+  </button>
+
+  <button
+    className="flex w-full items-center gap-2 rounded-lg px-3 py-2
+               text-sm hover:bg-walty-orange/10 focus:outline-none
+               focus-visible:ring-2 focus-visible:ring-walty-orange"
+    onClick={() => { mutate({ flipY: !(img as any).flipY }); setOpen(false); }}
+  >
+    <MirrorV className="h-5 w-5 shrink-0" />
+    Flip vertical
+  </button>
+</Popover>
     </>
   );
 }
