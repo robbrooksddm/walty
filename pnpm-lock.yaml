@@ -8552,7 +8552,7 @@ snapshots:
     dependencies:
       '@sanity/client': 7.2.2(debug@4.4.1)
       '@sanity/comlink': 3.0.3
-      '@sanity/visual-editing-types': 1.0.18(@sanity/client@7.2.2)(@sanity/types@3.88.3(@types/react@19.1.4))
+      '@sanity/visual-editing-types': 1.0.18(@sanity/client@7.2.2(debug@4.4.1))(@sanity/types@3.88.3(@types/react@19.1.4)(debug@4.4.1))
     transitivePeerDependencies:
       - '@sanity/types'
 
@@ -8767,12 +8767,6 @@ snapshots:
       '@sanity/types': 3.88.3(@types/react@19.1.4)(debug@4.4.1)
 
   '@sanity/visual-editing-types@1.0.18(@sanity/client@7.2.2(debug@4.4.1))(@sanity/types@3.88.3(@types/react@19.1.4)(debug@4.4.1))':
-    dependencies:
-      '@sanity/client': 7.2.2(debug@4.4.1)
-    optionalDependencies:
-      '@sanity/types': 3.88.3(@types/react@19.1.4)(debug@4.4.1)
-
-  '@sanity/visual-editing-types@1.0.18(@sanity/client@7.2.2)(@sanity/types@3.88.3(@types/react@19.1.4))':
     dependencies:
       '@sanity/client': 7.2.2(debug@4.4.1)
     optionalDependencies:

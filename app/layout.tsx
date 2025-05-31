@@ -2,8 +2,8 @@
 import React from "react";
 import "./globals.css";
 import { Domine, Inter } from "next/font/google";
-import { recoleta } from "@/lib/fonts";           // local font
-import WaltyNav from "@/components/site/WaltyNav"; // ← put this back
+import { recoleta } from "@/lib/fonts"; // local font
+import WaltyNavWrapper from "@/components/site/WaltyNavWrapper"; // shows/hides navbar
 
 export const domine = Domine({
   weight: ["400", "700"],
@@ -25,8 +25,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       {/* use back-ticks so the template literals are evaluated */}
-      <body className={`${inter.variable} ${domine.variable} ${recoleta.variable}`}>
-        <WaltyNav />
+      <body
+        className={`${inter.variable} ${domine.variable} ${recoleta.variable}`}
+      >
+        <WaltyNavWrapper />
         {children}
       </body>
     </html>
