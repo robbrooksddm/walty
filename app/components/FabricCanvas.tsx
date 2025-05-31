@@ -32,14 +32,63 @@ const PAD  = 4 / SCALE;
 const dash = (gap: number) => [gap / SCALE, (gap - 2) / SCALE];
 
 /* ---------- Fabric tweak: bigger handles ------------------------ */
-const SEL_COLOR = '#8b5cf6'                      // same purple you use
+const SEL_COLOR = '#2EC4B6'                      // brand teal
 
-;(fabric.Object.prototype as any).cornerSize      = Math.round(4 / SCALE)
-;(fabric.Object.prototype as any).touchCornerSize = Math.round(4 / SCALE)
-;(fabric.Object.prototype as any).borderColor       = SEL_COLOR
-;(fabric.Object.prototype as any).borderDashArray   = [6 / SCALE, 4 / SCALE]
-;(fabric.Object.prototype as any).borderScaleFactor = 1     // 1-pixel stroke
-;(fabric.Object.prototype as any).cornerStrokeColor = SEL_COLOR
+;(fabric.Object.prototype as any).cornerSize         = Math.round(4 / SCALE)
+;(fabric.Object.prototype as any).touchCornerSize    = Math.round(4 / SCALE)
+;(fabric.Object.prototype as any).borderColor        = SEL_COLOR
+;(fabric.Object.prototype as any).borderDashArray    = []
+;(fabric.Object.prototype as any).borderScaleFactor  = 1     // 1-pixel stroke
+;(fabric.Object.prototype as any).cornerStrokeColor  = '#fff'
+;(fabric.Object.prototype as any).cornerColor        = '#fff'
+;(fabric.Object.prototype as any).transparentCorners = false
+;(fabric.Object.prototype as any).cornerStyle        = 'circle'
+
+const pillControl = function (
+  this: fabric.Control,
+  ctx: CanvasRenderingContext2D,
+  left: number,
+  top: number,
+  styleOverride: any,
+  fabricObject: fabric.Object
+) {
+  styleOverride = styleOverride || {}
+  const size   = this.sizeX || styleOverride.cornerSize || fabricObject.cornerSize
+  const width  = size * 1.8
+  const height = size * 0.6
+  const r      = height / 2
+
+  ctx.save()
+  ctx.fillStyle   = styleOverride.cornerColor || fabricObject.cornerColor
+  ctx.strokeStyle = styleOverride.cornerStrokeColor || fabricObject.cornerStrokeColor
+  ctx.lineWidth   = 1
+  ctx.translate(left, top)
+  ctx.rotate(fabric.util.degreesToRadians(fabricObject.angle))
+
+  ctx.beginPath()
+  ctx.moveTo(-width / 2 + r, -height / 2)
+  ctx.lineTo(width / 2 - r, -height / 2)
+  ctx.quadraticCurveTo(width / 2, -height / 2, width / 2, -height / 2 + r)
+  ctx.lineTo(width / 2, height / 2 - r)
+  ctx.quadraticCurveTo(width / 2, height / 2, width / 2 - r, height / 2)
+  ctx.lineTo(-width / 2 + r, height / 2)
+  ctx.quadraticCurveTo(-width / 2, height / 2, -width / 2, height / 2 - r)
+  ctx.lineTo(-width / 2, -height / 2 + r)
+  ctx.quadraticCurveTo(-width / 2, -height / 2, -width / 2 + r, -height / 2)
+  ctx.closePath()
+
+  const method = fabricObject.transparentCorners ? 'stroke' : 'fill'
+  ;(ctx as any)[method]()
+  if (!fabricObject.transparentCorners) ctx.stroke()
+  ctx.restore()
+}
+
+;(fabric.Object.prototype as any).controls.mt.render = pillControl
+;(fabric.Object.prototype as any).controls.mb.render = pillControl
+;(fabric.Object.prototype as any).controls.ml.render = pillControl
+;(fabric.Object.prototype as any).controls.mr.render = pillControl
+;(fabric.Object.prototype as any).controls.mtr.render =
+  fabric.controlsUtils.renderCircleControl
 
 
 /* ------------------------------------------------------------------ *
@@ -432,7 +481,8 @@ const startCrop = (img: fabric.Image) => {
 
   const frame = new fabric.Group([
     new fabric.Rect({ left:0, top:0, width:frameW, height:frameH,
-                      fill:'rgba(0,0,0,0)', selectable:false }),
+                      fill:'rgba(0,0,0,0)', selectable:false,
+                      stroke:SEL_COLOR, strokeWidth:1/SCALE, strokeUniform:true }),
     /* four white L-corners */
     corner(0,0, 14/SCALE,0),  corner(0,0, 0,14/SCALE),
     corner(frameW,0, frameW-14/SCALE,0), corner(frameW,0, frameW,14/SCALE),
@@ -448,6 +498,7 @@ const startCrop = (img: fabric.Image) => {
     left:frameLeft, top:frameTop, originX:'left', originY:'top',
     selectable:false, evented:false,
   });
+  (frame as any)._cropGroup = true
   cropGroupRef.current = frame;
   fc.add(frame);
 
@@ -535,9 +586,9 @@ const commitCrop = () => {
 const hoverHL = new fabric.Rect({
   originX:'left', originY:'top', strokeUniform:true,
   fill:'transparent',
-  stroke:'#a78bfa',               // lighter purple
+  stroke:SEL_COLOR,
   strokeWidth:1 / SCALE,
-  strokeDashArray:dash(4),
+  strokeDashArray:[],
   selectable:false, evented:false, visible:false,
   excludeFromExport:true,
 })
