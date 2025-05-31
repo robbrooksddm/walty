@@ -1,5 +1,5 @@
 /**********************************************************************
- * TextToolbar.tsx – rich-text controls + Undo · Redo · Save          *
+ * TextToolbar.tsx – rich-text controls                               *
  * keeps focus after every style change (no flicker)                  *
  *********************************************************************/
 'use client'
@@ -15,15 +15,12 @@ interface Props{
   canvas   : fabric.Canvas|null
   addText  : () => void
   addImage : (file:File)=>void
-  onUndo   : () => void
-  onRedo   : () => void
-  onSave   : () => void|Promise<void>
   mode     : Mode
   saving   : boolean
 }
 
 export default function TextToolbar(props:Props){
-  const {canvas:fc,addText,addImage,onUndo,onRedo,onSave,mode,saving}=props
+  const {canvas:fc,addText,addImage,mode,saving}=props
 
   /* re-render when Fabric selection changes */
   const [_,force] = useState({})
@@ -156,15 +153,6 @@ export default function TextToolbar(props:Props){
         </div>
       )}
 
-      {/* ───────── ② COMMANDS ───────── */}
-      <div className="absolute right-4 top-2 flex gap-4 pointer-events-auto">
-        <button onClick={onUndo} className="command-btn">↶ Undo</button>
-        <button onClick={onRedo} className="command-btn">↷ Redo</button>
-        <button onClick={onSave} disabled={saving}
-                className={`command-btn font-semibold ${saving?'opacity-50 cursor-not-allowed':'text-blue-600'}`}>
-          {saving ? '⏳ Saving…' : '💾 Save'}
-        </button>
-      </div>
     </div>
   )
 }
@@ -173,6 +161,6 @@ export default function TextToolbar(props:Props){
 if(typeof window!=='undefined' && !document.getElementById('toolbar-css')){
   const shared='border px-2 py-[2px] rounded hover:bg-gray-100 disabled:opacity-40'
   const style=document.createElement('style'); style.id='toolbar-css'
-  style.innerHTML=`.toolbar-btn{${shared}} .command-btn{${shared}}`
+  style.innerHTML=`.toolbar-btn{${shared}}`
   document.head.appendChild(style)
 }
