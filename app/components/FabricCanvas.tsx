@@ -441,7 +441,10 @@ const startCrop = (img: fabric.Image) => {
     new fabric.Line([0,frameH*2/3, frameW,frameH*2/3], gridStroke),
   ],{
     left:frameLeft, top:frameTop, originX:'left', originY:'top',
-    selectable:false, evented:false,
+    selectable:true, evented:true,
+    lockMovementX:true, lockMovementY:true,
+    lockRotation:true, hasRotatingPoint:false,
+    lockScalingFlip:true,
   });
   (frame as any)._cropGroup = true
   cropGroupRef.current = frame;
@@ -465,10 +468,40 @@ const startCrop = (img: fabric.Image) => {
     updateMaskAround(frame);
   };
 
+  const clampFrame = () => {
+    const imgLeft = img.left!;
+    const imgTop  = img.top!;
+    const imgW    = img.getScaledWidth();
+    const imgH    = img.getScaledHeight();
+
+    let left   = frame.left!;
+    let top    = frame.top!;
+    let width  = frame.width!*frame.scaleX!;
+    let height = frame.height!*frame.scaleY!;
+
+    if (left < imgLeft) { width -= imgLeft - left; left = imgLeft; }
+    if (top  < imgTop)  { height-= imgTop  - top;  top  = imgTop;  }
+    if (left + width > imgLeft + imgW)  width = imgLeft + imgW - left;
+    if (top  + height> imgTop  + imgH)  height= imgTop  + imgH - top;
+
+    width  = Math.max(1, width);
+    height = Math.max(1, height);
+
+    frame.set({
+      left,
+      top,
+      scaleX: width  / frame.width!,
+      scaleY: height / frame.height!,
+    }).setCoords();
+
+    updateMaskAround(frame);
+  };
+
   img.set({ selectable:true, evented:true });
-  fc.setActiveObject(img);
+  fc.setActiveObject(frame);
   updateMaskAround(frame);
   img.on('moving', clamp).on('scaling', clamp);
+  frame.on('scaling', clampFrame);
 };
 
 /* ---------- cancelCrop (unchanged) ---------------------------- */
