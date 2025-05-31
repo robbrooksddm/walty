@@ -433,10 +433,8 @@ const startCrop = (img: fabric.Image) => {
     cropW = Math.max(1, Math.min(origW - cropX, cropW))
     cropH = Math.max(1, Math.min(origH - cropY, cropH))
 
-    const left = st.left + (cropX - st.cropX) * st.scaleX
-    const top  = st.top  + (cropY - st.cropY) * st.scaleY
-
-    g.set({ left, top })
+    // keep the underlying image stationary
+    g.set({ left: st.left, top: st.top })
 
     pic.set({ left: st.left, top: st.top, cropX, cropY, width: cropW, height: cropH })
     pic.setCoords()
