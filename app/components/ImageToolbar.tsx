@@ -8,11 +8,12 @@
 
 "use client";
 
-import { useEffect, useState, forwardRef } from "react";
+import { useEffect, useState } from "react";
 import { fabric } from "fabric";
 import { useEditor } from "./EditorStore";
 import ToolFlipImage     from "./toolbar/ToolFlipImage";
 import ToolOpacitySlider from "./toolbar/ToolOpacitySlider";
+import IconButton        from "./toolbar/IconButton";
 
 /* lucide-react icons */
 import {
@@ -33,54 +34,7 @@ import {
   AlignToPageHorizontal,
 } from "./toolbar/AlignToPage";
 
-/* ───────────────────────── Icon button ─── */
-interface IconBtnProps {
-  Icon: React.ElementType;
-  label: string;          // tooltip
-  caption?: string;       // text under icon
-  onClick: () => void;
-  active?: boolean;
-  disabled?: boolean;
-}
 
-const IconButton = forwardRef<HTMLButtonElement, IconBtnProps>(
-  (
-    {
-      Icon,
-      label,
-      caption = label.split(" ")[0],
-      onClick,
-      active,
-      disabled,
-    },
-    ref
-  ) => (
-    <button
-      ref={ref}
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex flex-col items-center justify-center w-12 p-2 gap-0.5
-                  rounded focus:outline-none focus:ring-2 focus:ring-[--walty-orange] focus:ring-offset-1
-                  hover:bg-[--walty-orange]/10 disabled:opacity-40
-                  ${active ? "bg-[--walty-orange]/10" : ""}`}
-    >
-      <Icon
-        className={`w-6 h-6 stroke-[--walty-teal] transition-colors
-                    ${active ? "stroke-[--walty-orange]" : "hover:stroke-[--walty-orange]"}`}
-      />
-      <span
-        className={`text-[11px] leading-none font-medium tracking-wide
-                    ${active ? "text-[--walty-orange]" : "text-[--walty-teal]"}`}
-      >
-        {caption}
-      </span>
-    </button>
-  )
-);
-IconButton.displayName = "IconButton";
 
 /* ───────────────────────── main toolbar component ─── */
 interface Props {

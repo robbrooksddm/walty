@@ -12,7 +12,9 @@ interface IconBtnProps {
 }
 
 /**
- * 44-px hit-area   ▪︎   icon + 10-px caption
+ * Toolbar icon button — 48 px square hit-area with 24 px icon
+ * and 11 px caption text. Forward-refs the underlying button so
+ * popovers can anchor to it.
  */
 const IconButton = forwardRef<HTMLButtonElement, IconBtnProps>(
   (
@@ -26,7 +28,7 @@ const IconButton = forwardRef<HTMLButtonElement, IconBtnProps>(
       title={label}
       onClick={onClick}
       disabled={disabled}
-      className={`flex flex-col items-center justify-center gap-0.5 w-12 p-2
+      className={`flex flex-col items-center justify-center w-12 p-2 gap-0.5
                   rounded focus:outline-none
                   focus:ring-2 focus:ring-[--walty-orange] focus:ring-offset-1
                   hover:bg-[--walty-orange]/10 disabled:opacity-40
@@ -34,13 +36,13 @@ const IconButton = forwardRef<HTMLButtonElement, IconBtnProps>(
     >
       {/* icon */}
       <Icon
-        className={`w-5 h-5 stroke-[--walty-teal] transition-colors
+        className={`w-6 h-6 stroke-[--walty-teal] transition-colors
                     ${active ? "stroke-[--walty-orange]"
                               : "hover:stroke-[--walty-orange]"}`}
       />
       {/* caption */}
       <span
-        className={`text-[10px] leading-none font-medium
+        className={`text-[11px] leading-none font-medium tracking-wide
                     ${active ? "text-[--walty-orange]"
                               : "text-[--walty-teal]"}`}
       >
@@ -49,5 +51,6 @@ const IconButton = forwardRef<HTMLButtonElement, IconBtnProps>(
     </button>
   )
 );
+IconButton.displayName = "IconButton";
 
 export default IconButton;
