@@ -434,8 +434,8 @@ const startCrop = (img: fabric.Image) => {
       width : w,
       height: h,
       fill  : "rgba(0,0,0,0)",   // fully transparent
-      selectable: true,         // we still want ONLY the group selected
-      evented   : true,          // …but we do need pointer events!
+      selectable: false,        // allow events to pass through
+      evented   : false,
     });
 
   const grp = new fabric.Group([hit, ...corners, ...grid], {
@@ -477,11 +477,13 @@ const startCrop = (img: fabric.Image) => {
     cropW = Math.max(1, Math.min(origW - cropX, cropW));
     cropH = Math.max(1, Math.min(origH - cropY, cropH));
 
-    // keep overlay stationary
-    g.set({ left: st.left, top: st.top });
-
-    pic.set({ left: st.left, top: st.top });
+    // move image along with the overlay
+    pic.set({ left: g.left, top: g.top });
     pic.setCoords();
+
+    // remember new base position
+    st.left = g.left!;
+    st.top  = g.top!;
     updateMaskAround(g);
   };
   grp.on("moving", sync).on("scaling", sync);
