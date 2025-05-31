@@ -17,6 +17,7 @@ import LayerPanel                       from './LayerPanel'
 import FabricCanvas                      from './FabricCanvas'
 import TextToolbar                      from './TextToolbar'
 import ImageToolbar                     from './ImageToolbar'
+import EditorCommands                   from './EditorCommands'
 import SelfieDrawer                     from './SelfieDrawer'
 import type { TemplatePage }            from './FabricCanvas'
 
@@ -228,14 +229,12 @@ const handleSwap = (url: string) => {
 
       {/* main */}
      <div className="flex-1 flex flex-col">
+       <EditorCommands onUndo={undo} onRedo={redo} onSave={handleSave} saving={saving} />
      {activeType === 'text' && (
        <TextToolbar
          canvas={activeFc}
          addText={addText}
          addImage={addImage}
-         onUndo={undo}
-         onRedo={redo}
-         onSave={handleSave}
          mode={mode}
          saving={saving}
        />
@@ -243,9 +242,6 @@ const handleSwap = (url: string) => {
      {activeType === 'image' && (
        <ImageToolbar
          canvas={activeFc}
-         onUndo={undo}
-         onRedo={redo}
-         onSave={handleSave}
          saving={saving}
        />
      )}

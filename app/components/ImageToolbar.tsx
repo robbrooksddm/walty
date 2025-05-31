@@ -1,7 +1,7 @@
 /**
- * Walty‑branded image toolbar · single‑row layout (undo / redo / save float right)
+ * Walty‑branded image toolbar · single‑row layout
  * ————————————————————————————————————————
- * • Toolbar itself stays centred; Undo‑Redo‑Save live in a separate cluster at top‑right.
+ * • Toolbar itself stays centred.
  * • 48 × 48 px buttons, 24 px icons, 11 px captions.
  * • Uniform 24 px gap (`gap-6`) between buttons inside the bar.
  */
@@ -39,13 +39,10 @@ import {
 /* ───────────────────────── main toolbar component ─── */
 interface Props {
   canvas: fabric.Canvas | null;
-  onUndo: () => void;
-  onRedo: () => void;
-  onSave: () => void | Promise<void>;
   saving: boolean;
 }
 
-export default function ImageToolbar({ canvas: fc, onUndo, onRedo, onSave, saving }: Props) {
+export default function ImageToolbar({ canvas: fc, saving }: Props) {
   /* local state / editor wiring */
   const [, force]      = useState({});
   const reorder        = useEditor(s => s.reorder);
@@ -156,22 +153,6 @@ export default function ImageToolbar({ canvas: fc, onUndo, onRedo, onSave, savin
         <IconButton Icon={Trash2} label="Delete image" caption="Delete" onClick={deleteCurrent} />
       </div>
 
-      {/* undo / redo / save cluster */}
-      <div className="absolute right-4 top-2 flex gap-3 pointer-events-auto">
-        <IconButton Icon={RotateCcw} label="Undo" onClick={onUndo} />
-        <IconButton Icon={RotateCw} label="Redo" onClick={onRedo} />
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={saving}
-          className={`flex items-center gap-1 px-3 py-2 rounded font-semibold
-                      ${saving ? "opacity-50 cursor-not-allowed"
-                                : "text-[--walty-orange] hover:bg-[--walty-orange]/10"}`}
-        >
-          <Save className="w-5 h-5" />
-          {saving ? "Saving…" : "Save"}
-        </button>
-      </div>
     </div>
   );
 }
