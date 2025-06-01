@@ -315,6 +315,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
     clamp     : () => void
     clampFrame: () => void
     frameMove : () => void
+    drawCtrls : () => void
   }
   const cropHandlersRef = useRef<CropHandlers | null>(null)
   const cropGroupRef  = useRef<fabric.Group | null>(null)
@@ -355,7 +356,7 @@ const updateMaskAround = (frame: fabric.Group) => {
   const S  = maskRectsRef.current;
   const dim = () => new fabric.Rect({
     fill:'rgba(0,0,0,0.45)', selectable:false, evented:false,
-    excludeFromExport:true,
+    excludeFromExport:true, objectCaching:false,
   });
   if (S.length === 0) { S.push(dim(),dim(),dim(),dim()); S.forEach(r=>fc.add(r)); }
 
@@ -426,9 +427,10 @@ const startCrop = (img: fabric.Image) => {
   cropImgRef.current = img;
 
   img.set({
-    hasControls : false,
-    lockScalingX: true,
-    lockScalingY: true,
+    /* allow the photo itself to scale/move while cropping */
+    hasControls : true,
+    lockScalingX: false,
+    lockScalingY: false,
     lockRotation: true,
     lockScalingFlip: true,
   });
@@ -493,6 +495,7 @@ const startCrop = (img: fabric.Image) => {
   } as any;
   frame.cornerSize = 20 / SCALE;
   frame.setControlsVisibility({ mt:false, mb:false, ml:false, mr:false, mtr:false });
+  frame.objectCaching = false;
   (frame as any)._cropGroup = true
   cropGroupRef.current = frame;
   fc.add(frame);
@@ -545,10 +548,11 @@ const startCrop = (img: fabric.Image) => {
   img.set({ selectable:true, evented:true })
 
   /* ④ –– allow direct interaction with either element */
-  fc.setActiveObject(frame)
+  const sel = new fabric.ActiveSelection([img, frame], { canvas: fc, subTargetCheck:true } as any)
+  fc.setActiveObject(sel)
   updateMaskAround(frame)
 
-  const keepFrameActive = () => { fc.setActiveObject(frame); updateMaskAround(frame) }
+  const keepSelActive = () => { fc.setActiveObject(sel); updateMaskAround(frame) }
   const frameMove = () => {
     const dx = frame.left! - fixedLeft;
     const dy = frame.top!  - fixedTop;
@@ -558,13 +562,10 @@ const startCrop = (img: fabric.Image) => {
       clamp();
     }
   }
-  const imgDown   = () => fc.setActiveObject(img)
-  const imgUp     = keepFrameActive
-  const frameDown = (e: fabric.IEvent) => {
-    const corner = (e as any).transform?.corner
-    if (!corner) fc.setActiveObject(img)
-  }
-  const frameUp   = keepFrameActive
+  const imgDown   = keepSelActive
+  const imgUp     = keepSelActive
+  const frameDown = keepSelActive
+  const frameUp   = keepSelActive
 
   img.on('moving', clamp)
      .on('scaling', clamp)
@@ -575,7 +576,10 @@ const startCrop = (img: fabric.Image) => {
        .on('mouseup', frameUp)
        .on('moving', frameMove)
 
-  cropHandlersRef.current = { imgDown, imgUp, frameDown, frameUp, clamp, clampFrame, frameMove }
+  const drawCtrls = () => img.drawControls(fc.contextTop, { hasBorders:false })
+  fc.on('after:render', drawCtrls)
+
+  cropHandlersRef.current = { imgDown, imgUp, frameDown, frameUp, clamp, clampFrame, frameMove, drawCtrls }
 };
 
 /* ---------- cancelCrop (unchanged) ---------------------------- */
@@ -597,6 +601,7 @@ const cancelCrop = () => {
          .off('mouseup', handlers.frameUp)
          .off('moving', handlers.frameMove)
   }
+  if (handlers?.drawCtrls) fc.off('after:render', handlers.drawCtrls)
   cropHandlersRef.current = null
   fc.remove(cropGroupRef.current!); clearMask();
 
@@ -633,6 +638,7 @@ const commitCrop = () => {
        .off('mousedown', handlers?.frameDown)
        .off('mouseup', handlers?.frameUp)
        .off('moving', handlers?.frameMove)
+  if (handlers?.drawCtrls) fc.off('after:render', handlers.drawCtrls)
   cropHandlersRef.current = null
   fc.remove(frame); clearMask();
 
