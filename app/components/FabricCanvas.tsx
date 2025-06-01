@@ -515,13 +515,17 @@ const startCrop = (img: fabric.Image) => {
   };
 
   img.set({ selectable:true, evented:true });
-  fc.setActiveObject(frame);
-  updateMaskAround(frame);
-  const keepFrameActive = () => fc.setActiveObject(frame);
+
+  /* ④ –– allow direct interaction with either element */
+  const sel = new fabric.ActiveSelection([img, frame],
+    { canvas: fc, subTargetCheck: true } as any)
+  fc.setActiveObject(sel)
+  updateMaskAround(frame)
+
   img.on('moving', clamp)
      .on('scaling', clamp)
-     .on('mousedown', () => fc.setActiveObject(img))
-     .on('mouseup', keepFrameActive);
+  frame.on('mousedown', () => fc.setActiveObject(sel))
+  img.on('mousedown', () => fc.setActiveObject(sel))
 };
 
 /* ---------- cancelCrop (unchanged) ---------------------------- */
