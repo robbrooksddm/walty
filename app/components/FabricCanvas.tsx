@@ -948,7 +948,9 @@ img.on('mouseup', () => {
           img.setCoords()
           fc.requestRenderAll()
           document.dispatchEvent(
-            new CustomEvent('card-canvas-rendered', { detail: { pageIdx } })
+            new CustomEvent('card-canvas-rendered', {
+              detail: { pageIdx, canvas: fc },
+            })
           )
         }, opts)
         continue
@@ -983,7 +985,9 @@ img.on('mouseup', () => {
     fc.requestRenderAll();
     hydrating.current = false
     document.dispatchEvent(
-      new CustomEvent('card-canvas-rendered', { detail: { pageIdx } })
+      new CustomEvent('card-canvas-rendered', {
+        detail: { pageIdx, canvas: fc },
+      })
     )
   }, [page])
 
