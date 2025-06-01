@@ -99,7 +99,7 @@ export default function LayerPanel() {
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-20 h-full w-60 bg-[--walty-cream] shadow-lg transition-transform duration-300 ${
+      className={`fixed left-0 top-0 z-20 h-full w-60 bg-white shadow-lg transition-transform duration-300 ${
         open ? "translate-x-0" : "-translate-x-56"
       }`}
     >

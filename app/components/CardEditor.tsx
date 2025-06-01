@@ -207,7 +207,7 @@ const handleSwap = (url: string) => {
 
   /* ---------------- UI ------------------------------------------ */
   return (
-    <div className="flex h-screen relative">
+    <div className="flex h-screen relative bg-[--walty-cream]">
 
       {/* global overlays */}
       <CoachMark
