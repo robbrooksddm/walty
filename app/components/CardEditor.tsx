@@ -126,6 +126,12 @@ export default function CardEditor({
   }, [])
 
   useEffect(() => {
+    canvasMap.forEach((fc, idx) => {
+      if (fc && !thumbs[idx]) updateThumb(idx)
+    })
+  }, [canvasMap])
+
+  useEffect(() => {
     updateThumb(activeIdx)
   }, [pages, activeIdx])
 
