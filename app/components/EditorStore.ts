@@ -209,12 +209,11 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   /* live edits coming back from FabricCanvas ---------------------- */
   updateLayer: (pageIdx, idx, data) => {
-    const { pages, pushHistory } = get()
-    const nextPages = clone(pages)
-
-    Object.assign(nextPages[pageIdx].layers[idx] ?? {}, data)
-    set({ pages: nextPages })
-    pushHistory()
+    set(state => {
+      const pages = clone(state.pages)
+      Object.assign(pages[pageIdx].layers[idx] ?? {}, data)
+      return { pages }
+    })
   },
 
   /* drag-to-reorder in LayerPanel --------------------------------- */
