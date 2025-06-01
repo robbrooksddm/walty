@@ -117,8 +117,13 @@ export default function CardEditor({
   }
 
   useEffect(() => {
-    canvasMap.forEach((_, i) => updateThumb(i))
-  }, [canvasMap])
+    const handler = (e: Event) => {
+      const idx = (e as CustomEvent<{ pageIdx: number }>).detail?.pageIdx
+      if (typeof idx === 'number') updateThumb(idx)
+    }
+    document.addEventListener('card-canvas-rendered', handler)
+    return () => document.removeEventListener('card-canvas-rendered', handler)
+  }, [])
 
   useEffect(() => {
     updateThumb(activeIdx)
