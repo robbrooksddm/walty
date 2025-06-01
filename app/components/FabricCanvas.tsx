@@ -471,6 +471,9 @@ const startCrop = (img: fabric.Image) => {
   (frame as any)._cropGroup = true
   cropGroupRef.current = frame;
   fc.add(frame);
+  const sel = new fabric.ActiveSelection([img, frame], { canvas: fc } as any);
+  fc.setActiveObject(sel);
+  frame.bringToFront();
 
   /* clamp the crop frame so it never extends beyond the image */
   const clampFrame = () => {
@@ -519,9 +522,8 @@ const startCrop = (img: fabric.Image) => {
   };
 
   img.set({ selectable:true, evented:true });
-  fc.setActiveObject(frame);
   updateMaskAround(frame);
-  const keepFrameActive = () => fc.setActiveObject(frame);
+  const keepFrameActive = () => fc.setActiveObject(sel);
   img.on('moving', clamp)
      .on('scaling', clamp)
      .on('mouseup', keepFrameActive);
