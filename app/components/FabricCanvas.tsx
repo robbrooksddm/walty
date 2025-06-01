@@ -499,6 +499,9 @@ const startCrop = (img: fabric.Image) => {
 
   /* clamp the crop frame so it never extends beyond the image */
   const clampFrame = () => {
+    // first ensure the image always covers the current frame size
+    clamp();
+
     const iw = img.getScaledWidth();
     const ih = img.getScaledHeight();
     const minL = img.left!;
@@ -517,7 +520,6 @@ const startCrop = (img: fabric.Image) => {
       frame.scaleY = (maxB - frame.top!) / frame.height!;
 
     frame.setCoords();
-    clamp();
     updateMaskAround(frame);
   };
   frame.on('scaling', () => { clampFrame(); fixedLeft = frame.left!; fixedTop = frame.top!; });
