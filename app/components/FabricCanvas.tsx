@@ -822,7 +822,10 @@ document.addEventListener('start-crop', cropListener)
     if (isEditing.current || (fc as any)._editingRef?.current) return
 
     hydrating.current = true
-    fc.clear(); hoverRef.current && fc.add(hoverRef.current)
+    fc.clear();
+    fc.setBackgroundColor('#fff', undefined, {dirty: true});
+    addBackdrop(fc);
+    hoverRef.current && fc.add(hoverRef.current)
 
     /* bottom ➜ top keeps original z-order */
     for (let idx = page.layers.length - 1; idx >= 0; idx--) {
