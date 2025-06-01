@@ -982,7 +982,7 @@ img.on('mouseup', () => {
       ref={canvasRef}
       width={PREVIEW_W}
       height={PREVIEW_H}
-      className="border w-full h-auto max-w-[420px]"
+      className="border w-full h-auto max-w-[420px] bg-white shadow"
     />
   )
 }
