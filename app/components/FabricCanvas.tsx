@@ -313,7 +313,6 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
     frameDown : (e: fabric.IEvent) => void
     clamp     : () => void
     clampFrame: () => void
-    frameMove : () => void
     renderCropControls: () => void
   }
   const cropHandlersRef = useRef<CropHandlers | null>(null)
@@ -433,6 +432,7 @@ const startCrop = (img: fabric.Image) => {
     lockScalingY: false,
     lockRotation: true,
     lockScalingFlip: true,
+    objectCaching: false,
   });
 
   /* ② –– draw the persistent crop-window *where the old crop was* */
@@ -493,6 +493,7 @@ const startCrop = (img: fabric.Image) => {
       actionHandler:(fabric as any).controlsUtils.scalingEqually,
       render:blank }),
   } as any;
+  frame.objectCaching = false
   frame.cornerSize = 20 / SCALE;
   frame.setControlsVisibility({ mt:false, mb:false, ml:false, mr:false, mtr:false });
   (frame as any)._cropGroup = true
@@ -501,7 +502,8 @@ const startCrop = (img: fabric.Image) => {
 
   const renderCropControls = () => {
     if (croppingRef.current && cropGroupRef.current) {
-      cropGroupRef.current.drawControls((fc as any).contextTop);
+      cropGroupRef.current.drawControls((fc as any).contextTop)
+      cropImgRef.current?.drawControls((fc as any).contextTop)
     }
   }
   fc.on('after:render', renderCropControls);
@@ -555,22 +557,41 @@ const startCrop = (img: fabric.Image) => {
   fc.setActiveObject(frame)
   updateMaskAround(frame)
 
-  const frameMove = () => {
-    const dx = frame.left! - fixedLeft;
-    const dy = frame.top!  - fixedTop;
-    if (dx || dy) {
-      img.set({ left:(img.left ?? 0)+dx, top:(img.top ?? 0)+dy }).setCoords();
-      frame.set({ left:fixedLeft, top:fixedTop }).setCoords();
-      clamp();
-    }
+  let dragData: { x:number; y:number; left:number; top:number } | null = null
+  const frameDrag = (e: fabric.IEvent) => {
+    if (!dragData) return
+    const p = e.absolutePointer!
+    img.set({
+      left: dragData.left + p.x - dragData.x,
+      top : dragData.top  + p.y - dragData.y,
+    }).setCoords()
+    clamp()
+    fc.requestRenderAll()
+  }
+  const frameUp = () => {
+    dragData = null
+    fc.off('mouse:move', frameDrag)
+    fc.off('mouse:up', frameUp)
+    fc.requestRenderAll()
   }
   const imgDown   = () => fc.setActiveObject(img)
   const imgUp     = () => {}
   const frameDown = (e: fabric.IEvent) => {
     const corner = (e as any).transform?.corner
-    if (!corner) fc.setActiveObject(img)
+    if (corner) {
+      fc.setActiveObject(frame)
+    } else {
+      fc.setActiveObject(img)
+      dragData = {
+        x: e.absolutePointer!.x,
+        y: e.absolutePointer!.y,
+        left: img.left ?? 0,
+        top : img.top  ?? 0,
+      }
+      fc.on('mouse:move', frameDrag)
+      fc.on('mouse:up', frameUp)
+    }
   }
-  const frameUp   = () => {}
 
   img.on('moving', clamp)
      .on('scaling', clamp)
@@ -579,7 +600,6 @@ const startCrop = (img: fabric.Image) => {
 
   frame.on('mousedown', frameDown)
        .on('mouseup', frameUp)
-       .on('moving', frameMove)
 
   cropHandlersRef.current = {
     imgDown,
@@ -587,7 +607,6 @@ const startCrop = (img: fabric.Image) => {
     frameDown,
     clamp,
     clampFrame,
-    frameMove,
     renderCropControls,
   }
 };
@@ -608,23 +627,25 @@ const cancelCrop = () => {
   if (frame && handlers) {
     frame.off('scaling', handlers.clampFrame)
          .off('mousedown', handlers.frameDown)
-         .off('moving', handlers.frameMove)
   }
+  fc.off('mouse:move', frameDrag)
+  fc.off('mouse:up', frameUp)
   if (handlers) fc.off('after:render', handlers.renderCropControls)
   cropHandlersRef.current = null
   fc.remove(cropGroupRef.current!); clearMask();
 
   if (img && st) {
-    img.set({
-      left:st.left, top:st.top,
-      cropX:st.cropX, cropY:st.cropY,
-      width:st.cropW, height:st.cropH,
-      scaleX:st.scaleX, scaleY:st.scaleY,
-      hasControls:st.hasControls,
-      lockScalingX:st.lockScalingX,
-      lockScalingY:st.lockScalingY,
-      lockRotation:st.lockRotation,
-    }).setCoords();
+      img.set({
+        left:st.left, top:st.top,
+        cropX:st.cropX, cropY:st.cropY,
+        width:st.cropW, height:st.cropH,
+        scaleX:st.scaleX, scaleY:st.scaleY,
+        hasControls:st.hasControls,
+        lockScalingX:st.lockScalingX,
+        lockScalingY:st.lockScalingY,
+        lockRotation:st.lockRotation,
+        objectCaching:true,
+      }).setCoords();
   }
   cropGroupRef.current=cropImgRef.current=cropStartRef.current=null;
   croppingRef.current=false; onCroppingChange?.(false);
@@ -645,7 +666,8 @@ const commitCrop = () => {
      .off('mouseup', handlers?.imgUp)
   frame.off('scaling', handlers?.clampFrame)
        .off('mousedown', handlers?.frameDown)
-       .off('moving', handlers?.frameMove)
+  fc.off('mouse:move', frameDrag)
+  fc.off('mouse:up', frameUp)
   if (handlers) fc.off('after:render', handlers.renderCropControls)
   cropHandlersRef.current = null
   fc.remove(frame); clearMask();
@@ -656,14 +678,15 @@ const commitCrop = () => {
   const cropW =  frame.width!*frame.scaleX!*invSX;
   const cropH =  frame.height!*frame.scaleY!*invSY;
 
-  img.set({
-    left:frame.left, top:frame.top,
-    cropX, cropY, width:cropW, height:cropH,
-    hasControls:st.hasControls,
-    lockScalingX:st.lockScalingX,
-    lockScalingY:st.lockScalingY,
-    lockRotation:st.lockRotation,
-  }).setCoords();
+    img.set({
+      left:frame.left, top:frame.top,
+      cropX, cropY, width:cropW, height:cropH,
+      hasControls:st.hasControls,
+      lockScalingX:st.lockScalingX,
+      lockScalingY:st.lockScalingY,
+      lockRotation:st.lockRotation,
+      objectCaching:true,
+    }).setCoords();
 
   cropGroupRef.current=cropImgRef.current=cropStartRef.current=null;
   croppingRef.current=false; onCroppingChange?.(false);
