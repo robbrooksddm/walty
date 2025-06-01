@@ -101,9 +101,8 @@ export default function CardEditor({
   const activeFc = canvasMap[activeIdx]
 
   const [thumbs, setThumbs] = useState<string[]>(['', '', '', ''])
-  const updateThumb = (idx: number) => {
-    const fc = canvasMap[idx]
-    if (!fc) return
+
+  const updateThumbFromCanvas = (idx: number, fc: fabric.Canvas) => {
     try {
       fc.renderAll()
       const url = fc.toDataURL({ format: 'jpeg', quality: 0.8 })
@@ -117,10 +116,15 @@ export default function CardEditor({
     }
   }
 
+  const updateThumb = (idx: number) => {
+    const fc = canvasMap[idx]
+    if (fc) updateThumbFromCanvas(idx, fc)
+  }
+
   useLayoutEffect(() => {
     const handler = (e: Event) => {
-      const idx = (e as CustomEvent<{ pageIdx: number }>).detail?.pageIdx
-      if (typeof idx === 'number') updateThumb(idx)
+      const detail = (e as CustomEvent<{ pageIdx: number; canvas: fabric.Canvas }>).detail
+      if (detail.canvas) updateThumbFromCanvas(detail.pageIdx, detail.canvas)
     }
     document.addEventListener('card-canvas-rendered', handler)
     return () => document.removeEventListener('card-canvas-rendered', handler)
@@ -128,7 +132,7 @@ export default function CardEditor({
 
   useEffect(() => {
     canvasMap.forEach((fc, idx) => {
-      if (fc && !thumbs[idx]) updateThumb(idx)
+      if (fc && !thumbs[idx]) updateThumbFromCanvas(idx, fc)
     })
   }, [canvasMap])
 
