@@ -291,8 +291,8 @@ const addBackdrop = (fc: fabric.Canvas) => {
   })
   ;(bg as any)._backdrop = true   // flag so we don’t add twice
 
-  bg.sendToBack()
   fc.add(bg)
+  bg.sendToBack()
 }
 
 /* ---------- component ------------------------------------------- */
@@ -982,7 +982,7 @@ img.on('mouseup', () => {
       ref={canvasRef}
       width={PREVIEW_W}
       height={PREVIEW_H}
-      className="border w-full h-auto max-w-[420px] shadow"
+      className="border w-full h-auto max-w-[420px] shadow bg-white"
     />
   )
 }
