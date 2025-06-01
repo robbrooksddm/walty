@@ -159,7 +159,7 @@ export default function TextToolbar (props: Props) {
         <div
           className="
             pointer-events-auto flex flex-nowrap items-center gap-4
-            bg-[--walty-cream]/95 backdrop-blur shadow-lg rounded-xl
+            bg-white shadow-lg rounded-xl
             border border-[rgba(0,91,85,.2)] px-4 py-2
             max-w-none w-[calc(100%-2rem)]]"
         >
