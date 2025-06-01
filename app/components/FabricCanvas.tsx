@@ -303,7 +303,6 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const maskRectsRef = useRef<fabric.Rect[]>([]);
   const hoverRef     = useRef<fabric.Rect | null>(null)
-  const cropMaskRef  = useRef<fabric.Rect | null>(null)
   const hydrating    = useRef(false)
   const isEditing    = useRef(false)
 
@@ -493,6 +492,7 @@ const startCrop = (img: fabric.Image) => {
       frame.scaleY = (maxB - frame.top!) / frame.height!;
 
     frame.setCoords();
+    clamp();
     updateMaskAround(frame);
   };
   frame.on('scaling', clampFrame);
@@ -525,7 +525,13 @@ const startCrop = (img: fabric.Image) => {
 
   const onDown = (e: fabric.IEvent) => {
     const sub = (e.subTargets && e.subTargets[0]) as fabric.Object | undefined
-    if (sub && (sub === img || sub === frame)) fc.setActiveObject(sub)
+    const corner = (e as any).transform?.corner
+    if (!sub) return
+    if (sub === frame && !corner) {
+      fc.setActiveObject(img)
+    } else if (sub === img || sub === frame) {
+      fc.setActiveObject(sub)
+    }
   }
   const onUp = () => {
     fc.setActiveObject(sel)
@@ -872,21 +878,17 @@ document.addEventListener('start-crop', cropListener)
 }, [])
 /* ---------- END mount once ----------------------------------- */
 
-  /* ---------- crop overlay toggle ------------------------------ */
+  /* ---------- crop mode toggle ------------------------------ */
   useEffect(() => {
-    const fc   = fcRef.current
-    const mask = cropMaskRef.current
-    if (!fc || !mask) return
+    const fc = fcRef.current
+    if (!fc) return
 
-    if (isCropping) {
-      mask.visible = true
-      const idx = fc.getObjects().findIndex(o => (o as any)._cropGroup)
-      if (idx > -1) fc.insertAt(mask, idx, false)
-      else mask.bringToFront()
-    } else {
-      mask.visible = false
+    if (isCropping && !croppingRef.current) {
+      const act = fc.getActiveObject() as fabric.Object | undefined
+      if (act && (act as any).type === 'image') {
+        document.dispatchEvent(new Event('start-crop'))
+      }
     }
-    fc.requestRenderAll()
   }, [isCropping])
 
 
