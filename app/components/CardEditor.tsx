@@ -105,6 +105,7 @@ export default function CardEditor({
     const fc = canvasMap[idx]
     if (!fc) return
     try {
+      fc.renderAll()
       const url = fc.toDataURL({ format: 'jpeg', quality: 0.8 })
       setThumbs(prev => {
         const next = [...prev]

@@ -945,6 +945,10 @@ img.on('mouseup', () => {
             (o as any).layerIdx !== undefined && (o as any).layerIdx < idx)
           fc.insertAt(img, pos === -1 ? fc.getObjects().length : pos, false)
           img.setCoords()
+          fc.requestRenderAll()
+          document.dispatchEvent(
+            new CustomEvent('card-canvas-rendered', { detail: { pageIdx } })
+          )
         }, opts)
         continue
       }
