@@ -284,15 +284,15 @@ const addBackdrop = (fc: fabric.Canvas) => {
     top    : 0,
     width  : PAGE_W,
     height : PAGE_H,
-    fill   : '#ffffff',         // ← solid white
+    fill   : '#F7F3EC',         // ← walty‑cream
     selectable       : false,
     evented          : false,
     excludeFromExport: true,
   })
   ;(bg as any)._backdrop = true   // flag so we don’t add twice
 
-  bg.sendToBack()
   fc.add(bg)
+  bg.sendToBack()
 }
 
 /* ---------- component ------------------------------------------- */
