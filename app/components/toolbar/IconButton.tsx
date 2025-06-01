@@ -1,56 +1,63 @@
-// IconButton.tsx
-"use client";
-import { forwardRef } from "react";
+// components/toolbar/IconButton.tsx
+'use client'
+
+import { forwardRef } from 'react'
 
 interface IconBtnProps {
-  Icon:  React.ElementType;
-  label: string;           // full tooltip / aria label
-  caption?: string;        // 1-2-word text under the icon (defaults to first word of label)
-  onClick: () => void;
-  active?: boolean;
-  disabled?: boolean;
+  Icon        : React.ElementType
+  label       : string
+  caption?    : string
+  onClick     : () => void
+  active?     : boolean
+  disabled?   : boolean
+  hideCaption?: boolean
+  size?       : 'lg' | 'sm'        // ← NEW (default "lg")
 }
 
-/**
- * Toolbar icon button — 48 px square hit-area with 24 px icon
- * and 11 px caption text. Forward-refs the underlying button so
- * popovers can anchor to it.
- */
 const IconButton = forwardRef<HTMLButtonElement, IconBtnProps>(
   (
-    { Icon, label, caption = label.split(" ")[0], onClick, active, disabled },
-    ref
-  ) => (
-    <button
-      ref={ref}
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex flex-col items-center justify-center w-12 p-2 gap-0.5
-                  rounded focus:outline-none
-                  focus:ring-2 focus:ring-[--walty-orange] focus:ring-offset-1
-                  hover:bg-[--walty-orange]/10 disabled:opacity-40
-                  ${active ? "bg-[--walty-orange]/10" : ""}`}
-    >
-      {/* icon */}
-      <Icon
-        className={`w-6 h-6 stroke-[--walty-teal] transition-colors
-                    ${active ? "stroke-[--walty-orange]"
-                              : "hover:stroke-[--walty-orange]"}`}
-      />
-      {/* caption */}
-      <span
-        className={`text-[11px] leading-none font-medium tracking-wide
-                    ${active ? "text-[--walty-orange]"
-                              : "text-[--walty-teal]"}`}
-      >
-        {caption}
-      </span>
-    </button>
-  )
-);
-IconButton.displayName = "IconButton";
+    {
+      Icon,
+      label,
+      caption     = label.split(' ')[0],
+      onClick,
+      active      = false,
+      disabled    = false,
+      hideCaption = false,
+      size        = 'lg',
+    },
+    ref,
+  ) => {
+    const isSm   = size === 'sm'
+    const btnCls = isSm ? 'h-10 w-10' : 'h-12 w-12'   // 40 px vs 48 px
+    const icnCls = isSm ? 'h-5 w-5'  : 'h-6 w-6'      // 20 px vs 24 px
+    const txtCls = isSm ? 'text-[10px]' : 'text-[11px]'
 
-export default IconButton;
+    return (
+      <button
+        ref={ref}
+        type="button"
+        aria-label={label}
+        title={label}
+        onClick={onClick}
+        disabled={disabled}
+        className={`
+          flex flex-col items-center justify-center gap-0.5
+          ${btnCls} rounded-lg transition
+          ${active ? 'bg-[--walty-orange]/10 text-[--walty-orange]' : 'text-[--walty-teal]'}
+          enabled:hover:bg-[--walty-orange]/10 enabled:hover:text-[--walty-orange]    
+          disabled:opacity-40
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50
+        `}
+      >
+        <Icon className={`${icnCls} stroke-[2] ${active ? 'stroke-[--walty-orange]' : 'enabled:hover:stroke-[--walty-orange]'}`} />
+        {!hideCaption && (
+          <span className={`${txtCls} leading-none`}>{caption}</span>
+        )}
+      </button>
+    )
+  },
+)
+
+IconButton.displayName = 'IconButton'
+export default IconButton
