@@ -42,7 +42,7 @@ html {
 }
 
 /* Thumbnail + toolbar */
-.thumb        { @apply border-gray-300 bg-white text-xs w-24 h-32 p-1; }
+.thumb        { @apply border-gray-300 bg-white text-xs w-[140px] h-[210px] p-1; }
 .thumb-active { @apply ring-2 ring-blue-600; }
 .toolbar      { @apply bg-white/90 backdrop-blur shadow text-gray-900; }
 

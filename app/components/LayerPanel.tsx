@@ -63,9 +63,20 @@ function Row({ id, idx }: { id: string; idx: number }) {
 
       {/* name */}
       <span className="flex-1 truncate text-walty-teal">
-        {layer.type === "text"
-          ? (layer.text ?? "text").slice(0, 20)
-          : "Image"}
+        {layer.type === "text" ? (
+          (layer.text ?? "text").slice(0, 20)
+        ) : (
+          <img
+            src={
+              layer.srcUrl ||
+              (typeof layer.src === "string" ? layer.src : undefined)
+            }
+            alt="layer"
+            width={48}
+            height={48}
+            className="inline-block h-12 w-12 object-cover rounded"
+          />
+        )}
       </span>
 
       {/* delete */}
