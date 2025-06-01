@@ -315,6 +315,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
     clamp     : () => void
     clampFrame: () => void
     frameMove : () => void
+    drawCtrls : () => void
   }
   const cropHandlersRef = useRef<CropHandlers | null>(null)
   const cropGroupRef  = useRef<fabric.Group | null>(null)
@@ -426,9 +427,10 @@ const startCrop = (img: fabric.Image) => {
   cropImgRef.current = img;
 
   img.set({
-    hasControls : false,
-    lockScalingX: true,
-    lockScalingY: true,
+    /* allow the photo itself to scale/move while cropping */
+    hasControls : true,
+    lockScalingX: false,
+    lockScalingY: false,
     lockRotation: true,
     lockScalingFlip: true,
   });
@@ -575,7 +577,12 @@ const startCrop = (img: fabric.Image) => {
        .on('mouseup', frameUp)
        .on('moving', frameMove)
 
-  cropHandlersRef.current = { imgDown, imgUp, frameDown, frameUp, clamp, clampFrame, frameMove }
+  const drawCtrls = () => {
+    img.drawControls((fc as any).contextTop)
+  }
+  fc.on('after:render', drawCtrls)
+
+  cropHandlersRef.current = { imgDown, imgUp, frameDown, frameUp, clamp, clampFrame, frameMove, drawCtrls }
 };
 
 /* ---------- cancelCrop (unchanged) ---------------------------- */
@@ -597,6 +604,7 @@ const cancelCrop = () => {
          .off('mouseup', handlers.frameUp)
          .off('moving', handlers.frameMove)
   }
+  if (handlers) fc.off('after:render', handlers.drawCtrls)
   cropHandlersRef.current = null
   fc.remove(cropGroupRef.current!); clearMask();
 
@@ -633,6 +641,7 @@ const commitCrop = () => {
        .off('mousedown', handlers?.frameDown)
        .off('mouseup', handlers?.frameUp)
        .off('moving', handlers?.frameMove)
+  if (handlers) fc.off('after:render', handlers.drawCtrls)
   cropHandlersRef.current = null
   fc.remove(frame); clearMask();
 
