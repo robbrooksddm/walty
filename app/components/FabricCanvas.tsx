@@ -442,7 +442,7 @@ const startCrop = (img: fabric.Image) => {
   ],{
     left:frameLeft, top:frameTop, originX:'left', originY:'top',
     selectable:true, evented:true,
-    lockMovementX:true, lockMovementY:true, lockRotation:true,
+    lockMovementX:false, lockMovementY:false, lockRotation:true,
     lockScalingFlip:true,
     transparentCorners:false, hasBorders:false,
     hasControls:true,
@@ -494,7 +494,11 @@ const startCrop = (img: fabric.Image) => {
     frame.setCoords();
     updateMaskAround(frame);
   };
-  frame.on('scaling', clampFrame);
+  frame.on('scaling', () => {
+    clampFrame();
+    lastL = frame.left!;
+    lastT = frame.top!;
+  });
 
   /* ③ –– keep the bitmap covering the frame at all times */
   const clamp = () => {
@@ -520,16 +524,27 @@ const startCrop = (img: fabric.Image) => {
   const keepFrameActive = () => fc.setActiveObject(frame);
   img.on('moving', clamp)
      .on('scaling', clamp)
-     .on('mousedown', () => fc.setActiveObject(img))
      .on('mouseup', keepFrameActive);
+
+  /* drag the crop frame to reposition the image without moving the frame */
+  let lastL = frame.left!;
+  let lastT = frame.top!;
+  frame.on('moving', () => {
+    const dx = frame.left! - lastL;
+    const dy = frame.top! - lastT;
+    frame.set({ left:lastL, top:lastT }).setCoords();
+    img.set({ left:(img.left ?? 0) + dx, top:(img.top ?? 0) + dy });
+    clamp();
+  });
 };
 
-/* ---------- cancelCrop (unchanged) ---------------------------- */
+/* ---------- cancelCrop ---------------------------------------- */
 const cancelCrop = () => {
   if (!croppingRef.current) return;
   const img = cropImgRef.current, st = cropStartRef.current as CropSnap | null;
   img?.off('moving').off('scaling')
-     .off('mousedown').off('mouseup');
+     .off('mouseup');
+  cropGroupRef.current?.off('moving');
   fc.remove(cropGroupRef.current!); clearMask();
 
   if (img && st) {
@@ -553,7 +568,8 @@ const commitCrop = () => {
   const st    = cropStartRef.current as CropSnap;
 
   img.off('moving').off('scaling')
-     .off('mousedown').off('mouseup');
+     .off('mouseup');
+  frame.off('moving');
   fc.remove(frame); clearMask();
 
   const invSX = 1/(img.scaleX??1), invSY = 1/(img.scaleY??1);
