@@ -38,9 +38,15 @@ body {
 html { @apply bg-white text-gray-900; }
 
 /* Thumbnail + toolbar */
-.thumb        { @apply border-gray-300 bg-white text-xs w-[140px] h-[197px] p-1; }
-.thumb img    { background-color:#fff; }
-.thumb-active { @apply ring-2 ring-blue-600; }
+.thumb {
+  @apply relative flex h-[84px] w-[60px] flex-shrink-0 items-center justify-center rounded border border-walty-teal/40 bg-white px-2 py-1 text-[0.875rem] text-walty-teal/90 hover:border-walty-teal;
+}
+.thumb img {
+  @apply h-full w-full rounded object-cover;
+}
+.thumb-active {
+  @apply border-walty-orange bg-walty-orange/20;
+}
 .toolbar      { @apply bg-white/90 backdrop-blur shadow text-gray-900; }
 
 /* === AI placeholder ghost ===================================== */

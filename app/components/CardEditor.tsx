@@ -8,6 +8,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useLayoutEffect } from 'react'
+import { GripVertical }                   from 'lucide-react'
 import { fabric }                       from 'fabric'
 
 import { useEditor }                    from './EditorStore'
@@ -349,14 +350,14 @@ const handleSwap = (url: string) => {
         </div>
 
         {/* thumbnails */}
-        <div className="flex justify-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 text-xs">
+        <div className="scrollbar-hidden flex h-[112px] items-center overflow-x-auto gap-3 px-4 py-3 bg-[--walty-cream] text-walty-teal shadow-[0_-2px_4px_rgba(0,0,0,0.08)]">
           {(['FRONT', 'INNER-L', 'INNER-R', 'BACK'] as const).map((lbl, i) => (
             <button
               key={lbl}
-              className={`thumb ${
-                (section === 'front'  && i === 0) ||
+              className={`thumb group ${
+                (section === 'front' && i === 0) ||
                 (section === 'inside' && (i === 1 || i === 2)) ||
-                (section === 'back'   && i === 3)
+                (section === 'back' && i === 3)
                   ? 'thumb-active'
                   : ''
               }`}
@@ -364,14 +365,11 @@ const handleSwap = (url: string) => {
                 setSection(i === 0 ? 'front' : i === 3 ? 'back' : 'inside')
               }
             >
+              <GripVertical className="absolute right-1 top-1 h-6 w-6 stroke-[1.5] text-walty-teal opacity-0 transition-opacity group-hover:opacity-100" />
               {thumbs[i] ? (
-                <img
-                  src={thumbs[i]}
-                  alt={lbl}
-                  className="h-full w-full object-cover"
-                />
+                <img src={thumbs[i]} alt={lbl} className="h-full w-full object-cover rounded" />
               ) : (
-                lbl
+                <span className="truncate">{lbl}</span>
               )}
             </button>
           ))}
