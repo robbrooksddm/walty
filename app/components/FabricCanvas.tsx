@@ -356,6 +356,7 @@ const updateMaskAround = (frame: fabric.Group) => {
   const dim = () => new fabric.Rect({
     fill:'rgba(0,0,0,0.45)', selectable:false, evented:false,
     excludeFromExport:true,
+    objectCaching:false,
   });
   if (S.length === 0) { S.push(dim(),dim(),dim(),dim()); S.forEach(r=>fc.add(r)); }
 
@@ -418,7 +419,7 @@ const startCrop = (img: fabric.Image) => {
     cropH : natH,
     scaleX: img.scaleX ?? 1,
     scaleY: img.scaleY ?? 1,
-    hasControls : img.hasControls,
+    hasControls : img.hasControls ?? false,
     lockScalingX: (img as any).lockScalingX ?? false,
     lockScalingY: (img as any).lockScalingY ?? false,
     lockRotation: (img as any).lockRotation ?? false,
@@ -426,9 +427,10 @@ const startCrop = (img: fabric.Image) => {
   cropImgRef.current = img;
 
   img.set({
-    hasControls : false,
-    lockScalingX: true,
-    lockScalingY: true,
+    /* allow the photo itself to scale/move while cropping */
+    hasControls : true,
+    lockScalingX: false,
+    lockScalingY: false,
     lockRotation: true,
     lockScalingFlip: true,
   });
@@ -475,20 +477,20 @@ const startCrop = (img: fabric.Image) => {
   const blank = () => {};
   frame.controls = {
     tl: new fabric.Control({ x:-0.5, y:-0.5,
-      cursorStyleHandler:fabric.controlsUtils.scaleCursorStyleHandler,
-      actionHandler:fabric.controlsUtils.scalingEqually,
+      cursorStyleHandler:(fabric as any).controlsUtils.scaleCursorStyleHandler,
+      actionHandler:(fabric as any).controlsUtils.scalingEqually,
       render:blank }),
     tr: new fabric.Control({ x:0.5, y:-0.5,
-      cursorStyleHandler:fabric.controlsUtils.scaleCursorStyleHandler,
-      actionHandler:fabric.controlsUtils.scalingEqually,
+      cursorStyleHandler:(fabric as any).controlsUtils.scaleCursorStyleHandler,
+      actionHandler:(fabric as any).controlsUtils.scalingEqually,
       render:blank }),
     bl: new fabric.Control({ x:-0.5, y:0.5,
-      cursorStyleHandler:fabric.controlsUtils.scaleCursorStyleHandler,
-      actionHandler:fabric.controlsUtils.scalingEqually,
+      cursorStyleHandler:(fabric as any).controlsUtils.scaleCursorStyleHandler,
+      actionHandler:(fabric as any).controlsUtils.scalingEqually,
       render:blank }),
     br: new fabric.Control({ x:0.5, y:0.5,
-      cursorStyleHandler:fabric.controlsUtils.scaleCursorStyleHandler,
-      actionHandler:fabric.controlsUtils.scalingEqually,
+      cursorStyleHandler:(fabric as any).controlsUtils.scaleCursorStyleHandler,
+      actionHandler:(fabric as any).controlsUtils.scalingEqually,
       render:blank }),
   } as any;
   frame.cornerSize = 20 / SCALE;
@@ -499,8 +501,6 @@ const startCrop = (img: fabric.Image) => {
 
   /* clamp the crop frame so it never extends beyond the image */
   const clampFrame = () => {
-    // first ensure the image always covers the current frame size
-    clamp();
 
     const iw = img.getScaledWidth();
     const ih = img.getScaledHeight();
