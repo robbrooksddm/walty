@@ -311,10 +311,10 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
     imgDown   : (e: fabric.IEvent) => void
     imgUp     : (e: fabric.IEvent) => void
     frameDown : (e: fabric.IEvent) => void
-    frameUp   : (e: fabric.IEvent) => void
     clamp     : () => void
     clampFrame: () => void
     frameMove : () => void
+    renderCropControls: () => void
   }
   const cropHandlersRef = useRef<CropHandlers | null>(null)
   const cropGroupRef  = useRef<fabric.Group | null>(null)
@@ -499,6 +499,13 @@ const startCrop = (img: fabric.Image) => {
   cropGroupRef.current = frame;
   fc.add(frame);
 
+  const renderCropControls = () => {
+    if (croppingRef.current && cropGroupRef.current) {
+      cropGroupRef.current.drawControls((fc as any).contextTop);
+    }
+  }
+  fc.on('after:render', renderCropControls);
+
   /* clamp the crop frame so it never extends beyond the image */
   const clampFrame = () => {
 
@@ -548,7 +555,6 @@ const startCrop = (img: fabric.Image) => {
   fc.setActiveObject(frame)
   updateMaskAround(frame)
 
-  const keepFrameActive = () => { fc.setActiveObject(frame); updateMaskAround(frame) }
   const frameMove = () => {
     const dx = frame.left! - fixedLeft;
     const dy = frame.top!  - fixedTop;
@@ -559,12 +565,12 @@ const startCrop = (img: fabric.Image) => {
     }
   }
   const imgDown   = () => fc.setActiveObject(img)
-  const imgUp     = keepFrameActive
+  const imgUp     = () => {}
   const frameDown = (e: fabric.IEvent) => {
     const corner = (e as any).transform?.corner
     if (!corner) fc.setActiveObject(img)
   }
-  const frameUp   = keepFrameActive
+  const frameUp   = () => {}
 
   img.on('moving', clamp)
      .on('scaling', clamp)
@@ -575,7 +581,15 @@ const startCrop = (img: fabric.Image) => {
        .on('mouseup', frameUp)
        .on('moving', frameMove)
 
-  cropHandlersRef.current = { imgDown, imgUp, frameDown, frameUp, clamp, clampFrame, frameMove }
+  cropHandlersRef.current = {
+    imgDown,
+    imgUp,
+    frameDown,
+    clamp,
+    clampFrame,
+    frameMove,
+    renderCropControls,
+  }
 };
 
 /* ---------- cancelCrop (unchanged) ---------------------------- */
@@ -594,9 +608,9 @@ const cancelCrop = () => {
   if (frame && handlers) {
     frame.off('scaling', handlers.clampFrame)
          .off('mousedown', handlers.frameDown)
-         .off('mouseup', handlers.frameUp)
          .off('moving', handlers.frameMove)
   }
+  if (handlers) fc.off('after:render', handlers.renderCropControls)
   cropHandlersRef.current = null
   fc.remove(cropGroupRef.current!); clearMask();
 
@@ -631,8 +645,8 @@ const commitCrop = () => {
      .off('mouseup', handlers?.imgUp)
   frame.off('scaling', handlers?.clampFrame)
        .off('mousedown', handlers?.frameDown)
-       .off('mouseup', handlers?.frameUp)
        .off('moving', handlers?.frameMove)
+  if (handlers) fc.off('after:render', handlers.renderCropControls)
   cropHandlersRef.current = null
   fc.remove(frame); clearMask();
 
