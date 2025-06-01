@@ -1,139 +1,248 @@
 /**********************************************************************
  * TextToolbar.tsx – rich-text controls                               *
- * keeps focus after every style change (no flicker)                  *
+ * – Single-row Walty pill (matches Image toolbar)                    *
+ * – Captions kept on every icon except font & size controls          *
  *********************************************************************/
 'use client'
 
 import { useEffect, useState } from 'react'
 import { fabric }              from 'fabric'
 import { getActiveTextbox }    from './FabricCanvas'
+import { useEditor }           from './EditorStore'
+
+/* UI building blocks */
 import IconButton              from './toolbar/IconButton'
+import { FontFamilySelect }    from './toolbar/FontFamilySelect'
+import { FontSizeStepper }     from './toolbar/FontSizeStepper'
 import ToolTextOpacitySlider   from './toolbar/ToolTextOpacitySlider'
+
+/* lucide-react icons */
 import {
-  Type,
-  Bold,
-  Italic,
-  Underline,
-  CaseUpper,
-  CaseLower,
-  CaseSensitive,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  AlignJustify,
+  Bold, Italic, Underline,
+  CaseUpper, CaseLower, CaseSensitive,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify,
+  Lock, Unlock, ArrowDownToLine, ArrowUpToLine,
 } from 'lucide-react'
 
-type Mode = 'staff'|'customer'
-const fonts = ['Arial','Georgia','monospace','Dingos Stamp']
+/* helper icons already used in Image toolbar */
+import {
+  AlignToPageVertical,
+  AlignToPageHorizontal,
+} from './toolbar/AlignToPage'
 
-interface Props{
-  canvas   : fabric.Canvas|null
-  addText  : () => void
-  addImage : (file:File)=>void
+type Mode = 'staff' | 'customer'
+const fonts = ['Arial', 'Georgia', 'monospace', 'Dingos Stamp']
+
+interface Props {
+  canvas   : fabric.Canvas | null
+  addText  : () => void          // kept in props, just not shown in UI
+  addImage : (file: File) => void
   mode     : Mode
   saving   : boolean
 }
 
-export default function TextToolbar(props:Props){
-  const {canvas:fc,addText,addImage,mode,saving}=props
+export default function TextToolbar (props: Props) {
+  const { canvas: fc, mode } = props
 
-  /* re-render when Fabric selection changes */
-  const [_,force] = useState({})
-  useEffect(()=>{
-    if(!fc) return
-    const tick=()=>force({})
-    fc.on('selection:created',tick)
-      .on('selection:updated',tick)
-      .on('selection:cleared',tick)
-    return()=>{fc.off('selection:created',tick)
-                .off('selection:updated',tick)
-                .off('selection:cleared',tick)}
-  },[fc])
+  /* ------------------------------------------------------------------ */
+  /* 1.  Re-render whenever Fabric selection changes                    */
+  /* ------------------------------------------------------------------ */
+  const [_, force] = useState({})
+  useEffect(() => {
+    if (!fc) return
+    const tick = () => force({})
+    fc.on('selection:created', tick)
+      .on('selection:updated', tick)
+      .on('selection:cleared', tick)
+    return () => {
+      fc.off('selection:created', tick)
+        .off('selection:updated', tick)
+        .off('selection:cleared', tick)
+    }
+  }, [fc])
 
-  const tb = fc ? getActiveTextbox(fc) : null
+  if (!fc) return null
+  const tb = getActiveTextbox(fc)
+
+  /* ------------------------------------------------------------------ */
+  /* 2.  Store access for layer order & locking                         */
+  /* ------------------------------------------------------------------ */
+  const reorder     = useEditor(s => s.reorder)
+  const updateLayer = useEditor(s => s.updateLayer)
+  const activePage  = useEditor(s => s.activePage)
+  const layerCount  = useEditor(
+    s => s.pages[s.activePage]?.layers.length || 0,
+  )
+
+  /* ------------------------------------------------------------------ */
+  /* 3.  Case-cycle & align-cycle helpers                               */
+  /* ------------------------------------------------------------------ */
   const [caseState, setCaseState] =
     useState<'upper' | 'title' | 'lower'>('upper')
+
   const alignOrder = ['left', 'center', 'right', 'justify'] as const
-  const alignSymbols: Record<string, string> = {
-    left: '←',
-    center: '↔︎',
-    right: '→',
-    justify: '⎯',
-  }
   const cycleAlign = () => {
     if (!tb) return
     const current = (tb.textAlign ?? 'left') as typeof alignOrder[number]
-    const idx = alignOrder.indexOf(current)
-    const next = alignOrder[(idx + 1) % alignOrder.length]
+    const idx     = alignOrder.indexOf(current)
+    const next    = alignOrder[(idx + 1) % alignOrder.length]
     mutate({ textAlign: next as any })
   }
-  if(!fc) return null
 
-  /** mutate helper – apply Fabric props, keep focus, fire modified */
-  const mutate = (p:Partial<fabric.Textbox>)=>{
-    if(!tb) return
+  /* ------------------------------------------------------------------ */
+  /* 4.  Centre-on-page maths (copied from Image toolbar)               */
+  /* ------------------------------------------------------------------ */
+  const zoom = fc.viewportTransform?.[0] ?? 1
+  const fcH  = (fc.getHeight() ?? 0) / zoom
+  const fcW  = (fc.getWidth()  ?? 0) / zoom
+
+  const cycleVertical = () => {
+    if (!tb) return
+    const { top, height } = tb.getBoundingRect(true, true)
+    const pos = [0, fcH / 2 - height / 2, fcH - height]
+    mutate({ top: pos[(pos.findIndex(p => Math.abs(top - p) < 1) + 1) % 3] })
+  }
+
+  const cycleHorizontal = () => {
+    if (!tb) return
+    const { left, width } = tb.getBoundingRect(true, true)
+    const pos = [0, fcW / 2 - width / 2, fcW - width]
+    mutate({ left: pos[(pos.findIndex(p => Math.abs(left - p) < 1) + 1) % 3] })
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 5.  Lock / unlock & layer-order helpers                            */
+  /* ------------------------------------------------------------------ */
+  const locked = Boolean((tb as any)?.locked)
+  const toggleLock = () => {
+    if (!tb) return
+    const next = !locked
+    ;(tb as any).locked = next
+    tb.set({
+      lockMovementX: next,
+      lockMovementY: next,
+      lockScalingX : next,
+      lockScalingY : next,
+      lockRotation : next,
+    })
+    fc.requestRenderAll()
+    updateLayer(activePage, (tb as any).layerIdx, { locked: next })
+  }
+
+  const sendBackward = () => {
+    const idx = (tb as any).layerIdx ?? 0
+    if (idx < layerCount - 1) reorder(idx, idx + 1)
+  }
+  const bringForward = () => {
+    const idx = (tb as any).layerIdx ?? 0
+    if (idx > 0 && idx <= layerCount - 1) reorder(idx, idx - 1)
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 6.  mutate helper – keeps focus & fires Fabric events              */
+  /* ------------------------------------------------------------------ */
+  const mutate = (p: Partial<fabric.Textbox>) => {
+    if (!tb) return
     tb.set(p); tb.setCoords()
     fc.setActiveObject(tb); fc.requestRenderAll()
-    tb.fire('modified'); fc.fire('object:modified',{target:tb})
+    tb.fire('modified'); fc.fire('object:modified', { target: tb })
     force({})
   }
 
-  /* ---------------------------------------------------------------- */
+  /* ------------------------------------------------------------------ */
+  /* 7.  Render                                                         */
+  /* ------------------------------------------------------------------ */
   return (
     <div className="fixed inset-x-0 top-2 z-30 flex justify-center pointer-events-none select-none">
 
-      {/* ───────── ① MAIN TOOLBAR (staff only) ───────── */}
-      {mode==='staff' && (
+      {mode === 'staff' && (
         <div
-          className="pointer-events-auto flex flex-wrap items-center gap-6
-                     bg-[--walty-cream]/95 backdrop-blur shadow-lg rounded-xl
-                     border border-[rgba(0,91,85,.2)] px-4 py-3
-                     max-w-[720px] w-[calc(100%-6rem)]"
+          className="
+            pointer-events-auto flex flex-nowrap items-center gap-4
+            bg-[--walty-cream]/95 backdrop-blur shadow-lg rounded-xl
+            border border-[rgba(0,91,85,.2)] px-4 py-2
+            max-w-none w-[calc(100%-2rem)]]"
         >
+          {/* ───────── Font family & size (no captions) ───────── */}
+          <FontFamilySelect
+            disabled={!tb}
+            value={tb?.fontFamily ?? 'Arial'}
+            onChange={(v: string) => mutate({ fontFamily: v })}
+          />
+          <FontSizeStepper
+            disabled={!tb}
+            value={tb?.fontSize ?? 12}
+            onChange={(v: number) => mutate({ fontSize: v })}
+          />
 
-          {/* Add text */}
-          <IconButton Icon={Type} label="Add text" caption="Text" onClick={addText} />
+          {/* colour swatch */}
+          <input
+            disabled={!tb}
+            type="color"
+            value={tb ? (tb.fill as string) : '#000000'}
+            onChange={e => mutate({ fill: e.target.value })}
+            className="h-10 w-10 border rounded disabled:opacity-40"
+          />
 
+          {/* centre on page */}
+          <IconButton 
+            Icon={AlignToPageVertical}
+            label="Center vertical"
+            caption="Center Y"
+            onClick={cycleVertical}
+            disabled={!tb}
+          />
+          <IconButton 
+            Icon={AlignToPageHorizontal}
+            label="Center horizontal"
+            caption="Center X"
+            onClick={cycleHorizontal}
+            disabled={!tb}
+          />
 
-          {/* font family */}
-          <select disabled={!tb} value={tb?.fontFamily ?? fonts[0]}
-                  onChange={e=>mutate({fontFamily:e.target.value})}
-                  className="border p-1 rounded min-w-[8rem] disabled:opacity-40">
-            {fonts.map(f=><option key={f}>{f}</option>)}
-          </select>
+          {/* lock / unlock */}
+          <IconButton 
+            Icon={locked ? Lock : Unlock}
+            label={locked ? 'Unlock layer' : 'Lock layer'}
+            active={locked}
+            onClick={toggleLock}
+            disabled={!tb}
+          />
 
-          {/* font size */}
-          <div className="flex items-center">
-            <button disabled={!tb} onClick={()=>mutate({fontSize:Math.max(10,(tb!.fontSize??12)-4)})}
-                    className="toolbar-btn rounded-l">−</button>
-            <input disabled={!tb} type="number" value={tb?.fontSize ?? ''}
-                   onChange={e=>mutate({fontSize:+e.target.value})}
-                   className="w-14 border-t border-b p-1 text-center disabled:opacity-40"/>
-            <button disabled={!tb} onClick={()=>mutate({fontSize:(tb!.fontSize??12)+4})}
-                    className="toolbar-btn rounded-r">+</button>
-          </div>
-
-          {/* colour */}
-          <input disabled={!tb} type="color" value={tb ? tb.fill as string : '#000000'}
-                 onChange={e=>mutate({fill:e.target.value})}
-                 className="disabled:opacity-40 h-8 w-8 border p-0"/>
+          {/* send backward / bring forward */}
+          <IconButton 
+            Icon={ArrowDownToLine}
+            label="Send backward"
+            caption="Send ↓"
+            onClick={sendBackward}
+            disabled={!tb}
+          />
+          <IconButton 
+            Icon={ArrowUpToLine}
+            label="Bring forward"
+            caption="Bring ↑"
+            onClick={bringForward}
+            disabled={!tb}
+          />
 
           {/* B / I / U */}
-          <IconButton
+          <IconButton 
             Icon={Bold}
             label="Bold"
-            onClick={() => mutate({ fontWeight: tb!.fontWeight === 'bold' ? 'normal' : 'bold' })}
+            onClick={() =>
+              mutate({ fontWeight: tb!.fontWeight === 'bold' ? 'normal' : 'bold' })}
             active={tb?.fontWeight === 'bold'}
             disabled={!tb}
           />
-          <IconButton
+          <IconButton 
             Icon={Italic}
             label="Italic"
-            onClick={() => mutate({ fontStyle: tb!.fontStyle === 'italic' ? 'normal' : 'italic' })}
+            onClick={() =>
+              mutate({ fontStyle: tb!.fontStyle === 'italic' ? 'normal' : 'italic' })}
             active={tb?.fontStyle === 'italic'}
             disabled={!tb}
           />
-          <IconButton
+          <IconButton 
             Icon={Underline}
             label="Underline"
             onClick={() => mutate({ underline: !tb!.underline })}
@@ -141,28 +250,35 @@ export default function TextToolbar(props:Props){
             disabled={!tb}
           />
 
-          {/* text case cycle */}
-          <IconButton
-            Icon={caseState === 'upper' ? CaseUpper : caseState === 'title' ? CaseSensitive : CaseLower}
+          {/* text-case cycle */}
+          <IconButton 
+            Icon={
+              caseState === 'upper'
+                ? CaseUpper
+                : caseState === 'title'
+                  ? CaseSensitive
+                  : CaseLower
+            }
             label="Change case"
+            caption="Case"
             onClick={() => {
-              if (!tb) return;
+              if (!tb) return
               if (caseState === 'upper') {
-                mutate({ text: tb!.text!.toUpperCase() });
-                setCaseState('title');
+                mutate({ text: tb.text!.toUpperCase() })
+                setCaseState('title')
               } else if (caseState === 'title') {
-                mutate({ text: tb!.text!.replace(/\b\w/g, c => c.toUpperCase()) });
-                setCaseState('lower');
+                mutate({ text: tb.text!.replace(/\b\w/g, c => c.toUpperCase()) })
+                setCaseState('lower')
               } else {
-                mutate({ text: tb!.text!.toLowerCase() });
-                setCaseState('upper');
+                mutate({ text: tb.text!.toLowerCase() })
+                setCaseState('upper')
               }
             }}
             disabled={!tb}
           />
 
-          {/* align */}
-          <IconButton
+          {/* align cycle */}
+          <IconButton 
             Icon={
               (tb?.textAlign ?? 'left') === 'left'
                 ? AlignLeft
@@ -177,7 +293,7 @@ export default function TextToolbar(props:Props){
             disabled={!tb}
           />
 
-          {/* line-height */}
+          {/* line-height input */}
           <input
             disabled={!tb}
             type="number"
@@ -186,11 +302,17 @@ export default function TextToolbar(props:Props){
             max={3}
             value={tb?.lineHeight ?? ''}
             onChange={e => mutate({ lineHeight: +e.target.value })}
-            className="w-16 border p-1 rounded disabled:opacity-40"
+            title="Line height"
+            className="
+              w-16 h-12 px-2 border rounded disabled:opacity-40
+              focus-visible:outline-none focus-visible:ring-2
+              focus-visible:ring-teal-400/50
+            "
           />
 
-          {/* opacity */}
+          {/* opacity slider */}
           <ToolTextOpacitySlider tb={tb} mutate={mutate} />
+
         </div>
       )}
 
