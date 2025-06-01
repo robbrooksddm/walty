@@ -207,7 +207,7 @@ const handleSwap = (url: string) => {
 
   /* ---------------- UI ------------------------------------------ */
   return (
-    <div className="flex h-screen relative bg-[--walty-cream]">
+    <div className="flex h-screen relative bg-white">
 
       {/* global overlays */}
       <CoachMark
@@ -264,7 +264,7 @@ const handleSwap = (url: string) => {
         </nav>
 
         {/* canvases */}
-        <div className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6">
+        <div className="flex-1 flex justify-center items-start overflow-auto bg-white pt-6 gap-6">
           {/* front */}
           <div className={section === 'front' ? box : 'hidden'}>
             <FabricCanvas
