@@ -308,6 +308,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const isEditing    = useRef(false)
 
   const croppingRef   = useRef(false)
+  const cropHandlersRef = useRef<{ down: (e: fabric.IEvent) => void; up: (e: fabric.IEvent) => void } | null>(null)
   const cropGroupRef  = useRef<fabric.Group | null>(null)
   const cropImgRef    = useRef<fabric.Image | null>(null)
   const cropStartRef  = useRef<{
@@ -522,18 +523,33 @@ const startCrop = (img: fabric.Image) => {
   fc.setActiveObject(sel)
   updateMaskAround(frame)
 
+  const onDown = (e: fabric.IEvent) => {
+    const sub = (e.subTargets && e.subTargets[0]) as fabric.Object | undefined
+    if (sub && (sub === img || sub === frame)) fc.setActiveObject(sub)
+  }
+  const onUp = () => {
+    fc.setActiveObject(sel)
+    updateMaskAround(frame)
+  }
+  fc.on('mouse:down:before', onDown)
+  fc.on('mouse:up', onUp)
+  cropHandlersRef.current = { down: onDown, up: onUp }
+
   img.on('moving', clamp)
      .on('scaling', clamp)
-  frame.on('mousedown', () => fc.setActiveObject(sel))
-  img.on('mousedown', () => fc.setActiveObject(sel))
 };
 
 /* ---------- cancelCrop (unchanged) ---------------------------- */
 const cancelCrop = () => {
   if (!croppingRef.current) return;
   const img = cropImgRef.current, st = cropStartRef.current as CropSnap | null;
-  img?.off('moving').off('scaling')
-     .off('mousedown').off('mouseup');
+  img?.off('moving').off('scaling');
+  const handlers = cropHandlersRef.current
+  if (handlers) {
+    fc.off('mouse:down:before', handlers.down)
+    fc.off('mouse:up', handlers.up)
+    cropHandlersRef.current = null
+  }
   fc.remove(cropGroupRef.current!); clearMask();
 
   if (img && st) {
@@ -556,8 +572,13 @@ const commitCrop = () => {
   const frame = cropGroupRef.current!;
   const st    = cropStartRef.current as CropSnap;
 
-  img.off('moving').off('scaling')
-     .off('mousedown').off('mouseup');
+  img.off('moving').off('scaling');
+  const handlers = cropHandlersRef.current
+  if (handlers) {
+    fc.off('mouse:down:before', handlers.down)
+    fc.off('mouse:up', handlers.up)
+    cropHandlersRef.current = null
+  }
   fc.remove(frame); clearMask();
 
   const invSX = 1/(img.scaleX??1), invSY = 1/(img.scaleY??1);
