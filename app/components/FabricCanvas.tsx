@@ -426,9 +426,10 @@ const startCrop = (img: fabric.Image) => {
   cropImgRef.current = img;
 
   img.set({
-    hasControls : false,
-    lockScalingX: true,
-    lockScalingY: true,
+    /* allow the photo itself to scale/move while cropping */
+    hasControls : true,
+    lockScalingX: false,
+    lockScalingY: false,
     lockRotation: true,
     lockScalingFlip: true,
   });
