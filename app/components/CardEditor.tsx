@@ -100,6 +100,26 @@ export default function CardEditor({
     setCanvasMap(list => { const next = [...list]; next[idx] = fc; return next })
   const activeFc = canvasMap[activeIdx]
 
+  const [thumbs, setThumbs] = useState<string[]>(['', '', '', ''])
+  const updateThumb = (idx: number) => {
+    const fc = canvasMap[idx]
+    if (!fc) return
+    try {
+      const url = fc.toDataURL({ format: 'jpeg', quality: 0.8 })
+      setThumbs(prev => {
+        const next = [...prev]
+        next[idx] = url
+        return next
+      })
+    } catch (err) {
+      console.error('thumb failed', err)
+    }
+  }
+
+  useEffect(() => {
+    canvasMap.forEach((_, i) => updateThumb(i))
+  }, [pages, canvasMap])
+
   const [activeType, setActiveType] = useState<'text' | 'image' | null>(null)
   useEffect(() => {
     const fc = activeFc
@@ -324,7 +344,15 @@ const handleSwap = (url: string) => {
                 setSection(i === 0 ? 'front' : i === 3 ? 'back' : 'inside')
               }
             >
-              {lbl}
+              {thumbs[i] ? (
+                <img
+                  src={thumbs[i]}
+                  alt={lbl}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                lbl
+              )}
             </button>
           ))}
         </div>
