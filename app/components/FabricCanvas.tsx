@@ -355,7 +355,7 @@ const updateMaskAround = (frame: fabric.Group) => {
   const S  = maskRectsRef.current;
   const dim = () => new fabric.Rect({
     fill:'rgba(0,0,0,0.45)', selectable:false, evented:false,
-    excludeFromExport:true,
+    excludeFromExport:true, objectCaching:false,
   });
   if (S.length === 0) { S.push(dim(),dim(),dim(),dim()); S.forEach(r=>fc.add(r)); }
 
@@ -418,7 +418,7 @@ const startCrop = (img: fabric.Image) => {
     cropH : natH,
     scaleX: img.scaleX ?? 1,
     scaleY: img.scaleY ?? 1,
-    hasControls : img.hasControls,
+    hasControls : img.hasControls ?? false,
     lockScalingX: (img as any).lockScalingX ?? false,
     lockScalingY: (img as any).lockScalingY ?? false,
     lockRotation: (img as any).lockRotation ?? false,
@@ -426,9 +426,10 @@ const startCrop = (img: fabric.Image) => {
   cropImgRef.current = img;
 
   img.set({
-    hasControls : false,
-    lockScalingX: true,
-    lockScalingY: true,
+    /* allow the photo itself to scale/move while cropping */
+    hasControls : true,
+    lockScalingX: false,
+    lockScalingY: false,
     lockRotation: true,
     lockScalingFlip: true,
   });
@@ -475,20 +476,20 @@ const startCrop = (img: fabric.Image) => {
   const blank = () => {};
   frame.controls = {
     tl: new fabric.Control({ x:-0.5, y:-0.5,
-      cursorStyleHandler:fabric.controlsUtils.scaleCursorStyleHandler,
-      actionHandler:fabric.controlsUtils.scalingEqually,
+      cursorStyleHandler:(fabric as any).controlsUtils.scaleCursorStyleHandler,
+      actionHandler:(fabric as any).controlsUtils.scalingEqually,
       render:blank }),
     tr: new fabric.Control({ x:0.5, y:-0.5,
-      cursorStyleHandler:fabric.controlsUtils.scaleCursorStyleHandler,
-      actionHandler:fabric.controlsUtils.scalingEqually,
+      cursorStyleHandler:(fabric as any).controlsUtils.scaleCursorStyleHandler,
+      actionHandler:(fabric as any).controlsUtils.scalingEqually,
       render:blank }),
     bl: new fabric.Control({ x:-0.5, y:0.5,
-      cursorStyleHandler:fabric.controlsUtils.scaleCursorStyleHandler,
-      actionHandler:fabric.controlsUtils.scalingEqually,
+      cursorStyleHandler:(fabric as any).controlsUtils.scaleCursorStyleHandler,
+      actionHandler:(fabric as any).controlsUtils.scalingEqually,
       render:blank }),
     br: new fabric.Control({ x:0.5, y:0.5,
-      cursorStyleHandler:fabric.controlsUtils.scaleCursorStyleHandler,
-      actionHandler:fabric.controlsUtils.scalingEqually,
+      cursorStyleHandler:(fabric as any).controlsUtils.scaleCursorStyleHandler,
+      actionHandler:(fabric as any).controlsUtils.scalingEqually,
       render:blank }),
   } as any;
   frame.cornerSize = 20 / SCALE;
@@ -499,8 +500,6 @@ const startCrop = (img: fabric.Image) => {
 
   /* clamp the crop frame so it never extends beyond the image */
   const clampFrame = () => {
-    // first ensure the image always covers the current frame size
-    clamp();
 
     const iw = img.getScaledWidth();
     const ih = img.getScaledHeight();
@@ -575,7 +574,13 @@ const startCrop = (img: fabric.Image) => {
        .on('mouseup', frameUp)
        .on('moving', frameMove)
 
-  cropHandlersRef.current = { imgDown, imgUp, frameDown, frameUp, clamp, clampFrame, frameMove }
+  const drawCtrls = () => {
+    const ctx = (fc as any).contextTop as CanvasRenderingContext2D | undefined
+    if (ctx) (img as any)._renderControls(ctx)
+  }
+  fc.on('after:render', drawCtrls)
+
+  cropHandlersRef.current = { imgDown, imgUp, frameDown, frameUp, clamp, clampFrame, frameMove, drawCtrls }
 };
 
 /* ---------- cancelCrop (unchanged) ---------------------------- */
@@ -597,6 +602,7 @@ const cancelCrop = () => {
          .off('mouseup', handlers.frameUp)
          .off('moving', handlers.frameMove)
   }
+  if (handlers) fc.off('after:render', handlers.drawCtrls)
   cropHandlersRef.current = null
   fc.remove(cropGroupRef.current!); clearMask();
 
@@ -633,6 +639,7 @@ const commitCrop = () => {
        .off('mousedown', handlers?.frameDown)
        .off('mouseup', handlers?.frameUp)
        .off('moving', handlers?.frameMove)
+  if (handlers) fc.off('after:render', handlers.drawCtrls)
   cropHandlersRef.current = null
   fc.remove(frame); clearMask();
 
