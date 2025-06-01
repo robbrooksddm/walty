@@ -559,7 +559,7 @@ const startCrop = (img: fabric.Image) => {
     }
   }
   const imgDown   = () => fc.setActiveObject(img)
-  const imgUp     = keepFrameActive
+  const imgUp     = () => {/* keep whichever object user selected */}
   const frameDown = (e: fabric.IEvent) => {
     const corner = (e as any).transform?.corner
     if (!corner) fc.setActiveObject(img)
