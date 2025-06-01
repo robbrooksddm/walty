@@ -973,7 +973,11 @@ img.on('mouseup', () => {
 
     addGuides(fc)
     hoverRef.current?.bringToFront()
-    fc.requestRenderAll(); hydrating.current = false
+    fc.requestRenderAll();
+    hydrating.current = false
+    document.dispatchEvent(
+      new CustomEvent('card-canvas-rendered', { detail: { pageIdx } })
+    )
   }, [page])
 
   /* ---------- render ----------------------------------------- */
