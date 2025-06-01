@@ -291,8 +291,8 @@ const addBackdrop = (fc: fabric.Canvas) => {
   })
   ;(bg as any)._backdrop = true   // flag so we don’t add twice
 
-  bg.sendToBack()
   fc.add(bg)
+  bg.sendToBack()
 }
 
 /* ---------- component ------------------------------------------- */
