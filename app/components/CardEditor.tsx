@@ -7,7 +7,7 @@
  *********************************************************************/
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useLayoutEffect } from 'react'
 import { fabric }                       from 'fabric'
 
 import { useEditor }                    from './EditorStore'
@@ -117,7 +117,7 @@ export default function CardEditor({
     }
   }
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const handler = (e: Event) => {
       const idx = (e as CustomEvent<{ pageIdx: number }>).detail?.pageIdx
       if (typeof idx === 'number') updateThumb(idx)
