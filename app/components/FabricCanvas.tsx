@@ -441,11 +441,37 @@ const startCrop = (img: fabric.Image) => {
     new fabric.Line([0,frameH*2/3, frameW,frameH*2/3], gridStroke),
   ],{
     left:frameLeft, top:frameTop, originX:'left', originY:'top',
-    selectable:false, evented:false,
+    selectable:true, evented:true,
+    lockMovementX:true, lockMovementY:true, lockRotation:true,
+    transparentCorners:false, hasBorders:false,
   });
   (frame as any)._cropGroup = true
   cropGroupRef.current = frame;
   fc.add(frame);
+
+  /* clamp the crop frame so it never extends beyond the image */
+  const clampFrame = () => {
+    const iw = img.getScaledWidth();
+    const ih = img.getScaledHeight();
+    const minL = img.left!;
+    const minT = img.top!;
+    const maxR = minL + iw;
+    const maxB = minT + ih;
+
+    if (frame.left! < minL) frame.left = minL;
+    if (frame.top!  < minT) frame.top  = minT;
+
+    const fw = frame.width! * frame.scaleX!;
+    const fh = frame.height! * frame.scaleY!;
+    if (frame.left! + fw > maxR)
+      frame.scaleX = (maxR - frame.left!) / frame.width!;
+    if (frame.top! + fh > maxB)
+      frame.scaleY = (maxB - frame.top!) / frame.height!;
+
+    frame.setCoords();
+    updateMaskAround(frame);
+  };
+  frame.on('scaling', clampFrame);
 
   /* ③ –– keep the bitmap covering the frame at all times */
   const clamp = () => {
@@ -466,7 +492,7 @@ const startCrop = (img: fabric.Image) => {
   };
 
   img.set({ selectable:true, evented:true });
-  fc.setActiveObject(img);
+  fc.setActiveObject(frame);
   updateMaskAround(frame);
   img.on('moving', clamp).on('scaling', clamp);
 };
