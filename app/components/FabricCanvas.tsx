@@ -447,10 +447,27 @@ const startCrop = (img: fabric.Image) => {
     transparentCorners:false, hasBorders:false,
     hasControls:true,
   });
-  frame.setControlsVisibility({
-    mt:false, mb:false, ml:false, mr:false, mtr:false,
-    tl:true, tr:true, bl:true, br:true,
-  });
+  const blank = () => {};
+  frame.controls = {
+    tl: new fabric.Control({ x:-0.5, y:-0.5,
+      cursorStyleHandler:fabric.controlsUtils.scaleCursorStyleHandler,
+      actionHandler:fabric.controlsUtils.scalingEqually,
+      render:blank }),
+    tr: new fabric.Control({ x:0.5, y:-0.5,
+      cursorStyleHandler:fabric.controlsUtils.scaleCursorStyleHandler,
+      actionHandler:fabric.controlsUtils.scalingEqually,
+      render:blank }),
+    bl: new fabric.Control({ x:-0.5, y:0.5,
+      cursorStyleHandler:fabric.controlsUtils.scaleCursorStyleHandler,
+      actionHandler:fabric.controlsUtils.scalingEqually,
+      render:blank }),
+    br: new fabric.Control({ x:0.5, y:0.5,
+      cursorStyleHandler:fabric.controlsUtils.scaleCursorStyleHandler,
+      actionHandler:fabric.controlsUtils.scalingEqually,
+      render:blank }),
+  } as any;
+  frame.cornerSize = 20 / SCALE;
+  frame.setControlsVisibility({ mt:false, mb:false, ml:false, mr:false, mtr:false });
   (frame as any)._cropGroup = true
   cropGroupRef.current = frame;
   fc.add(frame);
@@ -500,14 +517,19 @@ const startCrop = (img: fabric.Image) => {
   img.set({ selectable:true, evented:true });
   fc.setActiveObject(frame);
   updateMaskAround(frame);
-  img.on('moving', clamp).on('scaling', clamp);
+  const keepFrameActive = () => fc.setActiveObject(frame);
+  img.on('moving', clamp)
+     .on('scaling', clamp)
+     .on('mousedown', () => fc.setActiveObject(img))
+     .on('mouseup', keepFrameActive);
 };
 
 /* ---------- cancelCrop (unchanged) ---------------------------- */
 const cancelCrop = () => {
   if (!croppingRef.current) return;
   const img = cropImgRef.current, st = cropStartRef.current as CropSnap | null;
-  img?.off('moving').off('scaling');
+  img?.off('moving').off('scaling')
+     .off('mousedown').off('mouseup');
   fc.remove(cropGroupRef.current!); clearMask();
 
   if (img && st) {
@@ -530,7 +552,8 @@ const commitCrop = () => {
   const frame = cropGroupRef.current!;
   const st    = cropStartRef.current as CropSnap;
 
-  img.off('moving').off('scaling');
+  img.off('moving').off('scaling')
+     .off('mousedown').off('mouseup');
   fc.remove(frame); clearMask();
 
   const invSX = 1/(img.scaleX??1), invSY = 1/(img.scaleY??1);
