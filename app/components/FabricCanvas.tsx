@@ -274,26 +274,6 @@ const addGuides = (fc: fabric.Canvas) => {
   ].forEach(l => fc.add(l))
 }
 
-/* ---------- white backdrop -------------------------------------- */
-const addBackdrop = (fc: fabric.Canvas) => {
-  // only add it once
-  if (fc.getObjects().some(o => (o as any)._backdrop)) return
-
-  const bg = new fabric.Rect({
-    left   : 0,
-    top    : 0,
-    width  : PAGE_W,
-    height : PAGE_H,
-    fill   : '#ffffff',         // ← solid white
-    selectable       : false,
-    evented          : false,
-    excludeFromExport: true,
-  })
-  ;(bg as any)._backdrop = true   // flag so we don’t add twice
-
-  bg.sendToBack()
-  fc.add(bg)
-}
 
 /* ---------- component ------------------------------------------- */
 interface Props {
@@ -336,7 +316,6 @@ const fc = new fabric.Canvas(canvasRef.current!, {
   height                : PAGE_H,
   preserveObjectStacking: true,
 });
-addBackdrop(fc);
 
 /* keep the preview at 420 px wide */
 fc.setViewportTransform([SCALE, 0, 0, SCALE, 0, 0]);
@@ -982,7 +961,7 @@ img.on('mouseup', () => {
       ref={canvasRef}
       width={PREVIEW_W}
       height={PREVIEW_H}
-      className="border w-full h-auto max-w-[420px] shadow"
+      className="border w-full h-auto max-w-[420px] shadow bg-white"
     />
   )
 }
