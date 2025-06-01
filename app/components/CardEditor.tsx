@@ -94,15 +94,18 @@ export default function CardEditor({
   useEffect(() => { setActive(activeIdx) }, [activeIdx, setActive])
 
   /* 4 ─ Fabric canvases ------------------------------------------ */
+  const canvasMapRef = useRef<(fabric.Canvas | null)[]>([null, null, null, null])
   const [canvasMap, setCanvasMap] =
     useState<(fabric.Canvas | null)[]>([null, null, null, null])
-  const onReady = (idx: number, fc: fabric.Canvas | null) =>
+  const onReady = (idx: number, fc: fabric.Canvas | null) => {
+    canvasMapRef.current[idx] = fc
     setCanvasMap(list => { const next = [...list]; next[idx] = fc; return next })
+  }
   const activeFc = canvasMap[activeIdx]
 
   const [thumbs, setThumbs] = useState<string[]>(['', '', '', ''])
   const updateThumb = (idx: number) => {
-    const fc = canvasMap[idx]
+    const fc = canvasMapRef.current[idx]
     if (!fc) return
     try {
       fc.renderAll()
