@@ -138,7 +138,7 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
       {/* main bar */}
       <div
         className="pointer-events-auto flex flex-nowrap items-center gap-6
-                   bg-[--walty-cream]/95 backdrop-blur shadow-lg rounded-xl
+                   bg-white shadow-lg rounded-xl
                    border border-[rgba(0,91,85,.2)] px-4 py-3 max-w-[720px] w-[calc(100%-6rem)]"
       >
         <IconButton Icon={Crop} label="Crop" onClick={() => document.dispatchEvent(new Event("start-crop"))} />

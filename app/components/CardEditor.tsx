@@ -207,7 +207,7 @@ const handleSwap = (url: string) => {
 
   /* ---------------- UI ------------------------------------------ */
   return (
-    <div className="flex h-screen relative">
+    <div className="flex h-screen relative bg-[--walty-cream]">
 
       {/* global overlays */}
       <CoachMark
@@ -264,7 +264,7 @@ const handleSwap = (url: string) => {
         </nav>
 
         {/* canvases */}
-        <div className="flex-1 flex justify-center items-start overflow-auto bg-gray-100 dark:bg-gray-900 pt-6 gap-6">
+        <div className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6">
           {/* front */}
           <div className={section === 'front' ? box : 'hidden'}>
             <FabricCanvas
@@ -309,7 +309,7 @@ const handleSwap = (url: string) => {
         </div>
 
         {/* thumbnails */}
-        <div className="flex justify-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 text-xs">
+        <div className="flex justify-center gap-2 p-3 bg-white shadow text-xs">
           {(['FRONT', 'INNER-L', 'INNER-R', 'BACK'] as const).map((lbl, i) => (
             <button
               key={lbl}
