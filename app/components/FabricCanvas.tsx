@@ -314,6 +314,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
     frameUp   : (e: fabric.IEvent) => void
     clamp     : () => void
     clampFrame: () => void
+    frameMove : () => void
   }
   const cropHandlersRef = useRef<CropHandlers | null>(null)
   const cropGroupRef  = useRef<fabric.Group | null>(null)
@@ -437,6 +438,8 @@ const startCrop = (img: fabric.Image) => {
   const frameTop  = (img.top  ?? 0) + prevCropY * (img.scaleY ?? 1);
   const frameW    =  prevCropW * (img.scaleX ?? 1);
   const frameH    =  prevCropH * (img.scaleY ?? 1);
+  let fixedLeft   = frameLeft;
+  let fixedTop    = frameTop;
 
   const corner = (x1:number,y1:number,x2:number,y2:number)=>
     new fabric.Line([x1,y1,x2,y2],
@@ -464,7 +467,7 @@ const startCrop = (img: fabric.Image) => {
   ],{
     left:frameLeft, top:frameTop, originX:'left', originY:'top',
     selectable:true, evented:true,
-    lockMovementX:true, lockMovementY:true, lockRotation:true,
+    lockMovementX:false, lockMovementY:false, lockRotation:true,
     lockScalingFlip:true,
     transparentCorners:false, hasBorders:false,
     hasControls:true,
@@ -517,7 +520,7 @@ const startCrop = (img: fabric.Image) => {
     clamp();
     updateMaskAround(frame);
   };
-  frame.on('scaling', clampFrame);
+  frame.on('scaling', () => { clampFrame(); fixedLeft = frame.left!; fixedTop = frame.top!; });
 
   /* ③ –– keep the bitmap covering the frame at all times */
   const clamp = () => {
@@ -544,6 +547,15 @@ const startCrop = (img: fabric.Image) => {
   updateMaskAround(frame)
 
   const keepFrameActive = () => { fc.setActiveObject(frame); updateMaskAround(frame) }
+  const frameMove = () => {
+    const dx = frame.left! - fixedLeft;
+    const dy = frame.top!  - fixedTop;
+    if (dx || dy) {
+      img.set({ left:(img.left ?? 0)+dx, top:(img.top ?? 0)+dy }).setCoords();
+      frame.set({ left:fixedLeft, top:fixedTop }).setCoords();
+      clamp();
+    }
+  }
   const imgDown   = () => fc.setActiveObject(img)
   const imgUp     = keepFrameActive
   const frameDown = (e: fabric.IEvent) => {
@@ -559,8 +571,9 @@ const startCrop = (img: fabric.Image) => {
 
   frame.on('mousedown', frameDown)
        .on('mouseup', frameUp)
+       .on('moving', frameMove)
 
-  cropHandlersRef.current = { imgDown, imgUp, frameDown, frameUp, clamp, clampFrame }
+  cropHandlersRef.current = { imgDown, imgUp, frameDown, frameUp, clamp, clampFrame, frameMove }
 };
 
 /* ---------- cancelCrop (unchanged) ---------------------------- */
@@ -580,6 +593,7 @@ const cancelCrop = () => {
     frame.off('scaling', handlers.clampFrame)
          .off('mousedown', handlers.frameDown)
          .off('mouseup', handlers.frameUp)
+         .off('moving', handlers.frameMove)
   }
   cropHandlersRef.current = null
   fc.remove(cropGroupRef.current!); clearMask();
@@ -616,6 +630,7 @@ const commitCrop = () => {
   frame.off('scaling', handlers?.clampFrame)
        .off('mousedown', handlers?.frameDown)
        .off('mouseup', handlers?.frameUp)
+       .off('moving', handlers?.frameMove)
   cropHandlersRef.current = null
   fc.remove(frame); clearMask();
 
