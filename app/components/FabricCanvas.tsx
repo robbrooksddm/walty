@@ -291,8 +291,8 @@ const addBackdrop = (fc: fabric.Canvas) => {
   })
   ;(bg as any)._backdrop = true   // flag so we don’t add twice
 
-  bg.sendToBack()
-  fc.add(bg)
+    fc.add(bg)
+    bg.sendToBack()
 }
 
 /* ---------- component ------------------------------------------- */
@@ -822,7 +822,9 @@ document.addEventListener('start-crop', cropListener)
     if (isEditing.current || (fc as any)._editingRef?.current) return
 
     hydrating.current = true
-    fc.clear(); hoverRef.current && fc.add(hoverRef.current)
+    fc.clear();
+    fc.setBackgroundColor('#fff', fc.renderAll.bind(fc));
+    hoverRef.current && fc.add(hoverRef.current)
 
     /* bottom ➜ top keeps original z-order */
     for (let idx = page.layers.length - 1; idx >= 0; idx--) {
