@@ -247,7 +247,7 @@ const handleSwap = (url: string) => {
 
   /* ---------------- UI ------------------------------------------ */
   return (
-    <div className="flex h-screen relative bg-[--walty-cream]">
+    <div className="flex h-screen relative bg-[--walty-cream] lg:max-w-6xl mx-auto">
 
       {/* global overlays */}
       <CoachMark
@@ -264,11 +264,13 @@ const handleSwap = (url: string) => {
         placeholderId={aiPlaceholderId}   /* ← NEW prop */
       />
 
-      {/* sidebar */}
-      <LayerPanel />
+{/* sidebar */}
+<div className="relative z-30 w-64 flex-shrink-0">
+  <LayerPanel />
+</div>
 
       {/* main */}
-     <div className="flex-1 flex flex-col">
+      <div className="flex flex-col mx-auto max-w-[840px] shrink-0">
        <EditorCommands onUndo={undo} onRedo={redo} onSave={handleSave} saving={saving} />
      {activeType === 'text' && (
        <TextToolbar
@@ -349,7 +351,13 @@ const handleSwap = (url: string) => {
         </div>
 
         {/* thumbnails */}
-        <div className="flex justify-center gap-2 p-3 bg-white shadow text-xs">
+        <div className="
+   thumbnail-bar sticky bottom-0 z-20
+   flex justify-center gap-2
+    px-3 py-2
+    bg-[--walty-cream]       /* opaque backdrop so canvases don’t show through */
+    text-xs
+  ">
           {(['FRONT', 'INNER-L', 'INNER-R', 'BACK'] as const).map((lbl, i) => (
             <button
               key={lbl}
