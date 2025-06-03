@@ -42,10 +42,13 @@ html {
 }
 
 /* Thumbnail + toolbar */
-.thumb        { @apply border-gray-300 bg-white text-xs w-[140px] h-[197px] p-1; }
-.thumb img    { background-color:#fff; }
-.thumb-active { @apply ring-2 ring-blue-600; }
-.toolbar      { @apply bg-white/90 backdrop-blur shadow text-gray-900; }
+.thumb        { @apply border-gray-300 text-xs w-[70px] h-[98px] rounded-md shadow-lg overflow-hidden
+  flex-shrink-0; }
+.thumb img    { background-color:#fff; @apply rounded-md; }
+
+
+.thumb-active { @apply ring-4 ring-blue-600; }
+.toolbar      { @apply bg-transparent backdrop-blur shadow text-gray-900; }
 
 /* === AI placeholder ghost ===================================== */
 @layer utilities {
