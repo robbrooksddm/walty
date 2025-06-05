@@ -270,7 +270,7 @@ const handleSwap = (url: string) => {
 </div>
 
       {/* main */}
-      <div className="flex flex-col mx-auto max-w-[840px] shrink-0">
+      <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[840px]">
        <EditorCommands onUndo={undo} onRedo={redo} onSave={handleSave} saving={saving} />
      {activeType === 'text' && (
        <TextToolbar
