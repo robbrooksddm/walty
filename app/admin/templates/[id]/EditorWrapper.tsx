@@ -22,13 +22,13 @@ export default function EditorWrapper({templateId, initialPages}: Props) {
   const [error, setErr] = useState<string | null>(null)
 
   /** CardEditor → onSave */
-  const handleSave = async (pages: TemplatePage[]) => {
+  const handleSave = async (pages: TemplatePage[], coverImageId?: string) => {
     try {
       setErr(null)
       const res = await fetch(`/api/templates/${templateId}`, {
         method : 'PATCH',            // or POST – both accepted
         headers: {'content-type': 'application/json'},
-        body   : JSON.stringify({pages}),
+        body   : JSON.stringify({ pages, coverImage: coverImageId }),
       })
 
       if (!res.ok) {
