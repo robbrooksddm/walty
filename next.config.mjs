@@ -12,6 +12,16 @@ const nextConfig = {
     )
     return config
   },
+
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'cdn.sanity.io',
+        pathname: '/images/**',
+      },
+    ],
+  },
 }
 
 export default nextConfig

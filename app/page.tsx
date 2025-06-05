@@ -3,13 +3,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { Pencil, Truck, Star } from "lucide-react";
 import { recoleta } from "@/lib/fonts"; // ① <— brings in your local Recoleta
+import { sanityFetch } from "@/lib/sanityClient";
+import { urlFor } from "@/sanity/lib/image";
 
-export default function HomePage() {
+export default async function HomePage() {
   /* Brand palette */
   const cream  = "#F7F3EC";
   const teal   = "#005B55";
   const orange = "#C64A19";
   const brown  = "#3E2C20";
+
+  const templates = await sanityFetch<{
+    _id: string
+    title: string
+    slug: {current: string}
+    coverImage?: any
+  }[]>(`*[_type=="cardTemplate" && isLive==true]{_id,title,slug,coverImage}`)
 
   return (
     <main
@@ -83,18 +92,18 @@ export default function HomePage() {
         </h2>
 
         <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
-          {[
-            "super","arch","floral","rainbow","burst",
-            "cats","thanks","landscape","grad",
-          ].map((slug) => (
-            <Image
-              key={slug}
-              src={`/images/templates/${slug}.jpg`}
-              alt={`${slug} card template`}
-              width={480}
-              height={640}
-              className="rounded-lg shadow-md hover:shadow-lg transition"
-            />
+          {templates.map((tpl) => (
+            <Link key={tpl._id} href={`/cards/${tpl.slug.current}/customise`}>
+              {tpl.coverImage && (
+                <Image
+                  src={urlFor(tpl.coverImage).width(480).height(640).url()}
+                  alt={tpl.title}
+                  width={480}
+                  height={640}
+                  className="rounded-lg shadow-md hover:shadow-lg transition"
+                />
+              )}
+            </Link>
           ))}
         </div>
       </section>

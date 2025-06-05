@@ -14,6 +14,6 @@
        (window as any).tplPages = tpl.pages;
      }
    
-     // 3️⃣ pass mode="staff" so the editor shows all controls
-     return <CardEditor initialPages={tpl.pages} mode="staff" />;
+     // 3️⃣ use customer mode so shoppers get the streamlined editor
+     return <CardEditor initialPages={tpl.pages} mode="customer" />;
    }
