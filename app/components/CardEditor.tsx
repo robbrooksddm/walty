@@ -7,7 +7,7 @@
  *********************************************************************/
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useLayoutEffect } from 'react'
 import { fabric }                       from 'fabric'
 
 import { useEditor }                    from './EditorStore'
@@ -99,6 +99,46 @@ export default function CardEditor({
   const onReady = (idx: number, fc: fabric.Canvas | null) =>
     setCanvasMap(list => { const next = [...list]; next[idx] = fc; return next })
   const activeFc = canvasMap[activeIdx]
+
+  const [thumbs, setThumbs] = useState<string[]>(['', '', '', ''])
+
+  const updateThumbFromCanvas = (idx: number, fc: fabric.Canvas) => {
+    try {
+      fc.renderAll()
+      const url = fc.toDataURL({ format: 'jpeg', quality: 0.8 })
+      setThumbs(prev => {
+        const next = [...prev]
+        next[idx] = url
+        return next
+      })
+    } catch (err) {
+      console.error('thumb failed', err)
+    }
+  }
+
+  const updateThumb = (idx: number) => {
+    const fc = canvasMap[idx]
+    if (fc) updateThumbFromCanvas(idx, fc)
+  }
+
+  useLayoutEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ pageIdx: number; canvas: fabric.Canvas }>).detail
+      if (detail.canvas) updateThumbFromCanvas(detail.pageIdx, detail.canvas)
+    }
+    document.addEventListener('card-canvas-rendered', handler)
+    return () => document.removeEventListener('card-canvas-rendered', handler)
+  }, [])
+
+  useEffect(() => {
+    canvasMap.forEach((fc, idx) => {
+      if (fc && !thumbs[idx]) updateThumbFromCanvas(idx, fc)
+    })
+  }, [canvasMap])
+
+  useEffect(() => {
+    updateThumb(activeIdx)
+  }, [pages, activeIdx])
 
   const [activeType, setActiveType] = useState<'text' | 'image' | null>(null)
   useEffect(() => {
@@ -207,7 +247,7 @@ const handleSwap = (url: string) => {
 
   /* ---------------- UI ------------------------------------------ */
   return (
-    <div className="flex h-screen relative">
+    <div className="flex h-screen relative bg-[--walty-cream] lg:max-w-6xl mx-auto">
 
       {/* global overlays */}
       <CoachMark
@@ -224,11 +264,13 @@ const handleSwap = (url: string) => {
         placeholderId={aiPlaceholderId}   /* ← NEW prop */
       />
 
-      {/* sidebar */}
-      <LayerPanel />
+{/* sidebar */}
+<div className="relative z-30 w-64 flex-shrink-0">
+  <LayerPanel />
+</div>
 
       {/* main */}
-     <div className="flex-1 flex flex-col">
+      <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[840px]">
        <EditorCommands onUndo={undo} onRedo={redo} onSave={handleSave} saving={saving} />
      {activeType === 'text' && (
        <TextToolbar
@@ -264,7 +306,7 @@ const handleSwap = (url: string) => {
         </nav>
 
         {/* canvases */}
-        <div className="flex-1 flex justify-center items-start overflow-auto bg-gray-100 dark:bg-gray-900 pt-6 gap-6">
+        <div className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6">
           {/* front */}
           <div className={section === 'front' ? box : 'hidden'}>
             <FabricCanvas
@@ -309,7 +351,13 @@ const handleSwap = (url: string) => {
         </div>
 
         {/* thumbnails */}
-        <div className="flex justify-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 text-xs">
+        <div className="
+   thumbnail-bar sticky bottom-0 z-20
+   flex justify-center gap-2
+    px-3 py-2
+    bg-[--walty-cream]       /* opaque backdrop so canvases don’t show through */
+    text-xs
+  ">
           {(['FRONT', 'INNER-L', 'INNER-R', 'BACK'] as const).map((lbl, i) => (
             <button
               key={lbl}
@@ -324,7 +372,15 @@ const handleSwap = (url: string) => {
                 setSection(i === 0 ? 'front' : i === 3 ? 'back' : 'inside')
               }
             >
-              {lbl}
+              {thumbs[i] ? (
+                <img
+                  src={thumbs[i]}
+                  alt={lbl}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                lbl
+              )}
             </button>
           ))}
         </div>

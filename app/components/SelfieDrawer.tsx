@@ -195,7 +195,7 @@ export default function SelfieDrawer ({
         >
           <div className="ml-auto w-[340px] max-w-full h-full bg-white shadow-xl flex flex-col">
             {/* header */}
-            <div className="flex items-center justify-between bg-gray-800 text-white px-4 py-3">
+            <div className="flex items-center justify-between bg-white shadow px-4 py-3">
               <h2 className="text-sm font-medium">
                 {phase === 'generating' ? 'Generating your images' : 'Selfie Drawer'}
               </h2>

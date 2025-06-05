@@ -63,9 +63,20 @@ function Row({ id, idx }: { id: string; idx: number }) {
 
       {/* name */}
       <span className="flex-1 truncate text-walty-teal">
-        {layer.type === "text"
-          ? (layer.text ?? "text").slice(0, 20)
-          : "Image"}
+        {layer.type === "text" ? (
+          (layer.text ?? "text").slice(0, 20)
+        ) : (
+          <img
+            src={
+              layer.srcUrl ||
+              (typeof layer.src === "string" ? layer.src : undefined)
+            }
+            alt="layer"
+            width={48}
+            height={48}
+            className="inline-block h-12 w-12 object-cover rounded"
+          />
+        )}
       </span>
 
       {/* delete */}
@@ -99,7 +110,7 @@ export default function LayerPanel() {
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-20 h-full w-60 bg-[--walty-cream] shadow-lg transition-transform duration-300 ${
+      className={`fixed left-0 top-0 z-20 h-full w-60 bg-white shadow-lg transition-transform duration-300 ${
         open ? "translate-x-0" : "-translate-x-56"
       }`}
     >

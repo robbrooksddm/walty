@@ -8,7 +8,8 @@
 
 /* ❶  Design tokens (light‑mode only) */
 :root {
-  --background: #ffffff;
+  /* Global background tone */
+  --background: var(--walty-cream);
   --foreground: #171717;
   --walty-cream : #F7F3EC;
   --walty-teal  : #005B55;
@@ -35,12 +36,19 @@ body {
    Tailwind utility tweaks (light‑mode only)
 ──────────────────────────────────────────────────────────────── */
 
-html { @apply bg-white text-gray-900; }
+html {
+  background: var(--background);
+  @apply text-gray-900;
+}
 
 /* Thumbnail + toolbar */
-.thumb        { @apply border-gray-300 bg-white text-xs w-24 h-32 p-1; }
-.thumb-active { @apply ring-2 ring-blue-600; }
-.toolbar      { @apply bg-white/90 backdrop-blur shadow text-gray-900; }
+.thumb        { @apply border-gray-300 text-xs w-[70px] h-[98px] rounded-md shadow-lg overflow-hidden
+  flex-shrink-0; }
+.thumb img    { background-color:#fff; @apply rounded-md; }
+
+
+.thumb-active { @apply ring-4 ring-blue-600; }
+.toolbar      { @apply bg-transparent backdrop-blur shadow text-gray-900; }
 
 /* === AI placeholder ghost ===================================== */
 @layer utilities {
