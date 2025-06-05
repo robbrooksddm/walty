@@ -2,8 +2,8 @@
  * cards/[slug]/customise/page.tsx
  *********************************************************************/
 
-import { templates } from "@/data/templates";
 import CustomiseClient from "./CustomiseClient";
+import { getTemplatePages } from '@/app/library/getTemplatePages'
 
 // Path: app/cards/[slug]/customise/page.tsx
 // This is a **server component**. In Next 15 `params` is a Promise, so we need to
@@ -17,11 +17,8 @@ export default async function CustomisePage({
   // 🡇 open the "params" gift‑box and pull out slug
   const { slug } = await params;
 
-  const tpl = templates.find((t) => t.slug === slug);
-  if (!tpl) return <p>Template not found</p>;
+  const { pages } = await getTemplatePages(slug)
+  console.log('SERVER tpl.pages =', pages)
 
-  console.log("SERVER tpl.pages =", tpl.pages);
-  
-  /* pass the template down as a plain prop */
-  return <CustomiseClient tpl={tpl} />;
+  return <CustomiseClient tpl={{ pages }} />;
 }

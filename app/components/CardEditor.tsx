@@ -25,7 +25,10 @@ import type { TemplatePage }            from './FabricCanvas'
 type Section = 'front' | 'inside' | 'back'
 type PageIdx = 0 | 1 | 2 | 3
 type Mode    = 'staff' | 'customer'
-export type SaveFn = (pages: TemplatePage[]) => void | Promise<void>
+export type SaveFn = (
+  pages: TemplatePage[],
+  coverImageId?: string,
+) => void | Promise<void>
 
 const EMPTY: TemplatePage[] = [
   { name: 'front'  , layers: [] },
@@ -171,7 +174,27 @@ export default function CardEditor({
   const handleSave = async () => {
     if (!onSave) return
     setSaving(true)
-    try { await onSave(pages) }
+    try {
+      let coverImageId: string | undefined
+      const fc = canvasMap[0]
+      if (fc) {
+        try {
+          const dataUrl = fc.toDataURL({ format: 'jpeg', quality: 0.8 })
+          const res = await fetch(dataUrl)
+          const blob = await res.blob()
+          const form = new FormData()
+          form.append('file', new File([blob], 'cover.jpg', { type: blob.type }))
+          const up = await fetch('/api/upload', { method: 'POST', body: form })
+          if (up.ok) {
+            const json = await up.json()
+            coverImageId = json.assetId
+          }
+        } catch (err) {
+          console.error('cover upload failed', err)
+        }
+      }
+      await onSave(pages, coverImageId)
+    }
     finally { setSaving(false) }
   }
 

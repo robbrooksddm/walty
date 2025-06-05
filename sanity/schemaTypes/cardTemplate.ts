@@ -187,6 +187,14 @@ export default defineType({
       validation: r => r.max(300),
     }),
 
+    defineField({
+      name: 'coverImage',
+      type: 'image',
+      title: 'Cover image',
+      group: 'store',
+      options: { hotspot: true },
+    }),
+
     /* category facets */
     defineField({
       name: 'occasion',

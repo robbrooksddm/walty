@@ -33,7 +33,10 @@ export async function PATCH(
 ) {
   try {
     /* ---------- 1 ▸ validate body ----------------------------- */
-    const { pages } = (await req.json()) as { pages: any }
+    const { pages, coverImage } = (await req.json()) as {
+      pages: any
+      coverImage?: string
+    }
     if (!Array.isArray(pages) || pages.length !== 4) {
       return NextResponse.json(
         { error: '`pages` must be an array with exactly four items' },
@@ -67,6 +70,12 @@ export async function PATCH(
         p.set({
           pages: sanePages,
           json : JSON.stringify(pages), // raw mirror – round-trip safety-net
+          ...(coverImage && {
+            coverImage: {
+              _type: 'image',
+              asset: { _type: 'reference', _ref: coverImage },
+            },
+          }),
         }),
       )
       .commit({ autoGenerateArrayKeys: true })
