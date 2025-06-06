@@ -326,6 +326,9 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
     index:number;
   } | null>(null)
 
+  let frameDrag: (e: fabric.IEvent) => void
+  let frameUp: () => void
+
   const setPageLayers = useEditor(s => s.setPageLayers)
   const updateLayer   = useEditor(s => s.updateLayer)
 
@@ -383,7 +386,7 @@ class CombinedCropGroup extends fabric.Group {
     (this as any).type = 'combinedCropGroup';
   }
   _setObjectScale(obj: fabric.Object) {
-    super._setObjectScale(obj as any);
+    (fabric.Group.prototype as any)._setObjectScale.call(this, obj);
     const [image, frame] = this._objects as [fabric.Image, fabric.Group];
     if (obj === frame) {
       const minSX = (frame.width! * frame.scaleX!) / image.width!;
@@ -534,7 +537,7 @@ const startCrop = (img: fabric.Image) => {
 
   const renderCropControls = () => {
     if (croppingRef.current && cropGroupRef.current) {
-      fc.clearContext(fc.contextTop)
+      fc.clearContext((fc as any).contextTop)
       cropGroupRef.current.drawControls((fc as any).contextTop)
       cropImgRef.current?.drawControls((fc as any).contextTop)
     }
@@ -591,7 +594,7 @@ const startCrop = (img: fabric.Image) => {
   updateMaskAround(frame)
 
   let dragData: { x:number; y:number; left:number; top:number } | null = null
-  const frameDrag = (e: fabric.IEvent) => {
+  frameDrag = (e: fabric.IEvent) => {
     if (!dragData) return
     const p = e.absolutePointer!
     img.set({
@@ -601,7 +604,7 @@ const startCrop = (img: fabric.Image) => {
     clamp()
     fc.requestRenderAll()
   }
-  const frameUp = () => {
+  frameUp = () => {
     dragData = null
     frame.lockMovementX = false
     frame.lockMovementY = false
@@ -673,7 +676,7 @@ const cancelCrop = () => {
   cropHandlersRef.current = null
   if (group) {
     fc.remove(group)
-    fc.insertAt(img, st?.index ?? fc.getObjects().length, false)
+    fc.insertAt(img as unknown as fabric.Object, st?.index ?? fc.getObjects().length, false)
   }
   clearMask()
 
@@ -697,7 +700,8 @@ const cancelCrop = () => {
   }
   cropGroupRef.current=cropImgRef.current=cropStartRef.current=null;
   croppingRef.current=false; onCroppingChange?.(false);
-  fc.setActiveObject(img ?? null)
+  if (img) fc.setActiveObject(img)
+  else fc.discardActiveObject()
   fc.requestRenderAll();
 };
 
@@ -723,7 +727,7 @@ const commitCrop = () => {
   if (handlers) fc.off('after:render', handlers.renderCropControls)
   cropHandlersRef.current = null
   fc.remove(group)
-  fc.insertAt(img, st.index, false)
+  fc.insertAt(img as unknown as fabric.Object, st.index, false)
   clearMask()
 
   cropDisabledRef.current.forEach(o => { o.selectable = true; o.evented = true })
