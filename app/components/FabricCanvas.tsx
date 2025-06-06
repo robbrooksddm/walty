@@ -353,7 +353,11 @@ fc.setHeight(PREVIEW_H);
 
 /* ─────────────── MASK helpers (unchanged, just renamed) ──────── */
 const updateMaskAround = (frame: fabric.Group) => {
-  const fx = frame.left!, fy = frame.top!;
+  const group = cropGroupRef.current;
+  const gx = group?.left ?? 0;
+  const gy = group?.top ?? 0;
+  const fx = gx + frame.left!;
+  const fy = gy + frame.top!;
   const fw = frame.width!*frame.scaleX!, fh = frame.height!*frame.scaleY!;
 
   const S  = maskRectsRef.current;
@@ -423,10 +427,18 @@ class CombinedCropGroup extends fabric.Group {
   }
 
   updateBounds() {
+    const dx = this.frame.left ?? 0;
+    const dy = this.frame.top ?? 0;
+    if (dx || dy) {
+      this.img.left = (this.img.left ?? 0) + dx;
+      this.img.top  = (this.img.top  ?? 0) + dy;
+      this.frame.left = 0;
+      this.frame.top  = 0;
+      this.left = (this.left ?? 0) + dx;
+      this.top  = (this.top  ?? 0) + dy;
+    }
     (this as any)._calcBounds();
     (this as any)._updateObjectsCoords();
-    this.left = this.frame.left!;
-    this.top = this.frame.top!;
     this.setCoords();
   }
 
@@ -510,6 +522,12 @@ const startCrop = (img: fabric.Image) => {
   /* ② –– draw the persistent crop-window *where the old crop was* */
   const frameLeft = (img.left ?? 0) + prevCropX * (img.scaleX ?? 1);
   const frameTop  = (img.top  ?? 0) + prevCropY * (img.scaleY ?? 1);
+  const gx = frameLeft;
+  const gy = frameTop;
+
+  // re-anchor children so group coordinates start at the crop corner
+  img.left = (img.left ?? 0) - gx;
+  img.top  = (img.top  ?? 0) - gy;
   const frameW    =  prevCropW * (img.scaleX ?? 1);
   const frameH    =  prevCropH * (img.scaleY ?? 1);
   let fixedLeft   = frameLeft;
@@ -539,7 +557,7 @@ const startCrop = (img: fabric.Image) => {
     new fabric.Line([0,frameH/3, frameW,frameH/3], gridStroke),
     new fabric.Line([0,frameH*2/3, frameW,frameH*2/3], gridStroke),
   ],{
-    left:frameLeft, top:frameTop, originX:'left', originY:'top',
+    left:0, top:0, originX:'left', originY:'top',
     selectable:true, evented:true,
     lockMovementX:false, lockMovementY:false, lockRotation:true,
     lockScalingFlip:true,
@@ -569,6 +587,7 @@ const startCrop = (img: fabric.Image) => {
   frame.setControlsVisibility({ mt:false, mb:false, ml:false, mr:false, mtr:false });
   (frame as any)._cropFrame = true
   const group = new CombinedCropGroup(img, frame)
+  group.set({ originX:'left', originY:'top', left: gx, top: gy })
   cropGroupRef.current = group
   const idxPos = fc.getObjects().indexOf(img)
   fc.remove(img)
@@ -727,6 +746,10 @@ const cancelCrop = () => {
   if (handlers) fc.off('after:render', handlers.renderCropControls)
   cropHandlersRef.current = null
   if (group) {
+    const gx = group.left ?? 0
+    const gy = group.top ?? 0
+    img.left = (img.left ?? 0) + gx
+    img.top  = (img.top  ?? 0) + gy
     fc.remove(group)
     fc.insertAt(img as unknown as fabric.Object, st?.index ?? fc.getObjects().length, false)
   }
@@ -778,6 +801,12 @@ const commitCrop = () => {
   frame.lockMovementY = false
   if (handlers) fc.off('after:render', handlers.renderCropControls)
   cropHandlersRef.current = null
+  const gx = group.left ?? 0
+  const gy = group.top ?? 0
+  img.left = (img.left ?? 0) + gx
+  img.top  = (img.top  ?? 0) + gy
+  frame.left += gx
+  frame.top  += gy
   fc.remove(group)
   fc.insertAt(img as unknown as fabric.Object, st.index, false)
   clearMask()
