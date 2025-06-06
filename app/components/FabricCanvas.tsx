@@ -46,8 +46,8 @@ class CombinedCropGroup extends fabric.Group {
   _calcBounds(onlyWH?: boolean) {
     const aX: number[] = []
     const aY: number[] = []
-    const c = this.frame.calcACoords()
-    ;['tl','tr','br','bl'].forEach(p => {
+    const c = (this.frame as any).calcACoords()
+    ;['tl', 'tr', 'br', 'bl'].forEach((p) => {
       aX.push(c[p].x)
       aY.push(c[p].y)
     })
@@ -333,6 +333,8 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
     imgDown   : (e: fabric.IEvent) => void
     imgUp     : (e: fabric.IEvent) => void
     frameDown : (e: fabric.IEvent) => void
+    frameDrag : (e: fabric.IEvent) => void
+    frameUp   : () => void
     clamp     : () => void
     clampFrame: () => void
     renderCropControls: () => void
@@ -542,7 +544,7 @@ const startCrop = (img: fabric.Image) => {
 
   const renderCropControls = () => {
     if (croppingRef.current && cropGroupRef.current) {
-      fc.clearContext(fc.contextTop)
+      fc.clearContext((fc as any).contextTop)
       cropGroupRef.current.frame.drawControls((fc as any).contextTop)
       cropImgRef.current?.drawControls((fc as any).contextTop)
     }
@@ -657,6 +659,8 @@ const startCrop = (img: fabric.Image) => {
     imgDown,
     imgUp,
     frameDown,
+    frameDrag,
+    frameUp,
     clamp,
     clampFrame,
     renderCropControls,
@@ -681,8 +685,10 @@ const cancelCrop = () => {
     frame?.off('scaling', handlers.clampFrame)
     frame?.off('mousedown', handlers.frameDown)
   }
-  fc.off('mouse:move', frameDrag)
-  fc.off('mouse:up', frameUp)
+  if (handlers) {
+    fc.off('mouse:move', handlers.frameDrag)
+    fc.off('mouse:up', handlers.frameUp)
+  }
   if (frame) {
     frame.lockMovementX = false
     frame.lockMovementY = false
@@ -730,8 +736,10 @@ const commitCrop = () => {
      .off('mouseup', handlers?.imgUp)
   frame.off('scaling', handlers?.clampFrame)
        .off('mousedown', handlers?.frameDown)
-  fc.off('mouse:move', frameDrag)
-  fc.off('mouse:up', frameUp)
+  if (handlers) {
+    fc.off('mouse:move', handlers.frameDrag)
+    fc.off('mouse:up', handlers.frameUp)
+  }
   frame.lockMovementX = false
   frame.lockMovementY = false
   if (handlers) fc.off('after:render', handlers.renderCropControls)
