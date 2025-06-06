@@ -372,6 +372,7 @@ const updateMaskAround = (frame: fabric.Group) => {
   S.forEach(r=>r.setCoords());
 
   frame.bringToFront();
+  cropGroupRef.current?.bringToFront();
   fc.requestRenderAll();
 };
 const clearMask = () => {
@@ -381,18 +382,65 @@ const clearMask = () => {
 
 /* ─────────────── wrapper class – groups image + frame ─────────────── */
 class CombinedCropGroup extends fabric.Group {
+  img: fabric.Image
+  frame: fabric.Group
   constructor(img: fabric.Image, frame: fabric.Group) {
-    super([img, frame], { subTargetCheck: true });
-    (this as any).type = 'combinedCropGroup';
+    super([img, frame], {
+      originX: 'left',
+      originY: 'top',
+      subTargetCheck: true,
+      selectable: true,
+    });
+    (this as any).type = 'cropBundle';
+    this.img = img;
+    this.frame = frame;
+    this.hasBorders = false;
+
+    const blank = () => {};
+    const scaleAction = (
+      eventData: MouseEvent,
+      transform: any,
+      x: number,
+      y: number
+    ) => {
+      const fr = this.frame;
+      (fabric as any).controlsUtils.scalingEqually(eventData, { ...transform, target: fr }, x, y);
+      this._setObjectScale(fr);
+      this.updateBounds();
+      return true;
+    };
+    const ctrl = (x: number, y: number) =>
+      new fabric.Control({
+        x,
+        y,
+        cursorStyleHandler: (fabric as any).controlsUtils.scaleCursorStyleHandler,
+        actionHandler: scaleAction,
+        render: blank,
+      });
+    this.controls = { tl: ctrl(-0.5, -0.5), tr: ctrl(0.5, -0.5), bl: ctrl(-0.5, 0.5), br: ctrl(0.5, 0.5) } as any;
+    this.cornerSize = 5 / SCALE;
+    this.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false, mtr: false });
   }
+
+  updateBounds() {
+    (this as any)._calcBounds();
+    (this as any)._updateObjectsCoords();
+    this.left = this.frame.left!;
+    this.top = this.frame.top!;
+    this.setCoords();
+  }
+
   _setObjectScale(obj: fabric.Object) {
     (fabric.Group.prototype as any)._setObjectScale.call(this, obj);
-    const [image, frame] = this._objects as [fabric.Image, fabric.Group];
+    const image = this.img;
+    const frame = this.frame;
     if (obj === frame) {
       const minSX = (frame.width! * frame.scaleX!) / image.width!;
       const minSY = (frame.height! * frame.scaleY!) / image.height!;
       if (image.scaleX! < minSX) image.scaleX = minSX;
       if (image.scaleY! < minSY) image.scaleY = minSY;
+      frame.setCoords();
+      this.updateBounds();
     }
   }
 }
@@ -525,6 +573,8 @@ const startCrop = (img: fabric.Image) => {
   const idxPos = fc.getObjects().indexOf(img)
   fc.remove(img)
   fc.insertAt(group, idxPos, false)
+  group.bringToFront()
+  group.updateBounds()
 
   cropDisabledRef.current = []
   fc.getObjects().forEach(o => {
@@ -565,6 +615,7 @@ const startCrop = (img: fabric.Image) => {
       frame.scaleY = (maxB - frame.top!) / frame.height!;
 
     frame.setCoords();
+    group.updateBounds();
     updateMaskAround(frame);
   };
   frame.on('scaling', () => { clampFrame(); fixedLeft = frame.left!; fixedTop = frame.top!; });
@@ -583,7 +634,7 @@ const startCrop = (img: fabric.Image) => {
       left : Math.min(fx, Math.max(fx+fw-iw, img.left!)),
       top  : Math.min(fy, Math.max(fy+fh-ih, img.top!)),
     }).setCoords();
-
+    group.updateBounds();
     updateMaskAround(frame);
   };
 
@@ -602,6 +653,7 @@ const startCrop = (img: fabric.Image) => {
       top : dragData.top  + p.y - dragData.y,
     }).setCoords()
     clamp()
+    group.updateBounds()
     fc.requestRenderAll()
   }
   frameUp = () => {
