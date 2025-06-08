@@ -590,13 +590,13 @@ export class CropTool {
       })
       .on('scaled', () => {
         imgEdge = {};
-        this.clamp();                 // final clamp at end of gesture
+        this.frameScaling = false;   // OFF at end of gesture
+        this.clamp(true);            // final clamp at end of gesture
         this.img!.setCoords();
         // restore both handle sets now that the gesture is finished
         this.img!.hasControls = true;
         if (this.frame) this.frame.hasControls = true;
         updateMasks();
-        this.frameScaling = false;   // OFF at end of gesture
         this.fc.requestRenderAll();
       });
   }
