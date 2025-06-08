@@ -24,6 +24,7 @@
     /* ————————————————— path aliases ———————————— */
     "baseUrl": ".",
     "paths": {
+      "@app/lib/*": ["app/lib/*"],
       /* app-relative imports */
       "@/*": ["./*"],
 
@@ -50,4 +51,5 @@
   ],
 
   "exclude": ["node_modules"]
+  
 }

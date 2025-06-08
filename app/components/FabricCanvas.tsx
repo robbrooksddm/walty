@@ -12,6 +12,8 @@ import { useEffect, useRef } from 'react'
 import { fabric }            from 'fabric'
 import { useEditor }         from './EditorStore'
 import { fromSanity }        from '@/app/library/layerAdapters'
+import '@/lib/fabricDefaults'
+import { SEL_COLOR } from '@/lib/fabricDefaults';
 
 /* ---------- size helpers ---------------------------------------- */
 const DPI       = 300
@@ -31,15 +33,7 @@ const PAD  = 4 / SCALE;
 /** turn  gap (px) → a dashed-array scaled to canvas units */
 const dash = (gap: number) => [gap / SCALE, (gap - 2) / SCALE];
 
-/* ---------- Fabric tweak: bigger handles ------------------------ */
-const SEL_COLOR = '#8b5cf6'                      // same purple you use
 
-;(fabric.Object.prototype as any).cornerSize      = Math.round(4 / SCALE)
-;(fabric.Object.prototype as any).touchCornerSize = Math.round(4 / SCALE)
-;(fabric.Object.prototype as any).borderColor       = SEL_COLOR
-;(fabric.Object.prototype as any).borderDashArray   = [6 / SCALE, 4 / SCALE]
-;(fabric.Object.prototype as any).borderScaleFactor = 1     // 1-pixel stroke
-;(fabric.Object.prototype as any).cornerStrokeColor = SEL_COLOR
 
 
 /* ------------------------------------------------------------------ *
@@ -309,17 +303,28 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const maskRectsRef = useRef<fabric.Rect[]>([]);
   const hoverRef     = useRef<fabric.Rect | null>(null)
-  const cropMaskRef  = useRef<fabric.Rect | null>(null)
   const hydrating    = useRef(false)
   const isEditing    = useRef(false)
 
   const croppingRef   = useRef(false)
+  interface CropHandlers {
+    imgDown   : (e: fabric.IEvent) => void
+    imgUp     : (e: fabric.IEvent) => void
+    frameDown : (e: fabric.IEvent) => void
+    clamp     : () => void
+    clampFrame: () => void
+    renderCropControls: () => void
+  }
+  const cropHandlersRef = useRef<CropHandlers | null>(null)
   const cropGroupRef  = useRef<fabric.Group | null>(null)
   const cropImgRef    = useRef<fabric.Image | null>(null)
   const cropStartRef  = useRef<{
     left:number; top:number; cropX:number; cropY:number;
-    cropW:number; cropH:number; scaleX:number; scaleY:number
+    cropW:number; cropH:number; scaleX:number; scaleY:number;
+    hasControls:boolean; lockScalingX:boolean; lockScalingY:boolean; lockRotation:boolean
   } | null>(null)
+
+
 
   const setPageLayers = useEditor(s => s.setPageLayers)
   const updateLayer   = useEditor(s => s.updateLayer)
@@ -352,6 +357,7 @@ const updateMaskAround = (frame: fabric.Group) => {
   const dim = () => new fabric.Rect({
     fill:'rgba(0,0,0,0.45)', selectable:false, evented:false,
     excludeFromExport:true,
+    objectCaching:false,
   });
   if (S.length === 0) { S.push(dim(),dim(),dim(),dim()); S.forEach(r=>fc.add(r)); }
 
@@ -375,6 +381,7 @@ interface CropSnap {
   left:number; top:number;
   cropX:number; cropY:number; cropW:number; cropH:number;
   scaleX:number; scaleY:number;
+  hasControls:boolean; lockScalingX:boolean; lockScalingY:boolean; lockRotation:boolean;
 }
 
 const startCrop = (img: fabric.Image) => {
@@ -413,14 +420,29 @@ const startCrop = (img: fabric.Image) => {
     cropH : natH,
     scaleX: img.scaleX ?? 1,
     scaleY: img.scaleY ?? 1,
+    hasControls : img.hasControls ?? false,
+    lockScalingX: (img as any).lockScalingX ?? false,
+    lockScalingY: (img as any).lockScalingY ?? false,
+    lockRotation: (img as any).lockRotation ?? false,
   };
   cropImgRef.current = img;
+
+  img.set({
+    /* allow the photo itself to scale/move while cropping */
+    hasControls : true,
+    lockScalingX: false,
+    lockScalingY: false,
+    lockRotation: true,
+    lockScalingFlip: true,
+  });
 
   /* ② –– draw the persistent crop-window *where the old crop was* */
   const frameLeft = (img.left ?? 0) + prevCropX * (img.scaleX ?? 1);
   const frameTop  = (img.top  ?? 0) + prevCropY * (img.scaleY ?? 1);
   const frameW    =  prevCropW * (img.scaleX ?? 1);
   const frameH    =  prevCropH * (img.scaleY ?? 1);
+  let fixedLeft   = frameLeft;
+  let fixedTop    = frameTop;
 
   const corner = (x1:number,y1:number,x2:number,y2:number)=>
     new fabric.Line([x1,y1,x2,y2],
@@ -432,7 +454,8 @@ const startCrop = (img: fabric.Image) => {
 
   const frame = new fabric.Group([
     new fabric.Rect({ left:0, top:0, width:frameW, height:frameH,
-                      fill:'rgba(0,0,0,0)', selectable:false }),
+                      fill:'rgba(0,0,0,0)', selectable:false,
+                      stroke:SEL_COLOR, strokeWidth:1/SCALE, strokeUniform:true }),
     /* four white L-corners */
     corner(0,0, 14/SCALE,0),  corner(0,0, 0,14/SCALE),
     corner(frameW,0, frameW-14/SCALE,0), corner(frameW,0, frameW,14/SCALE),
@@ -446,10 +469,76 @@ const startCrop = (img: fabric.Image) => {
     new fabric.Line([0,frameH*2/3, frameW,frameH*2/3], gridStroke),
   ],{
     left:frameLeft, top:frameTop, originX:'left', originY:'top',
-    selectable:false, evented:false,
+    selectable:true, evented:true,
+    lockMovementX:false, lockMovementY:false, lockRotation:true,
+    lockScalingFlip:true,
+    transparentCorners:false, hasBorders:false,
+    hasControls:true,
   });
+  const blank = () => {};
+  frame.controls = {
+    tl: new fabric.Control({ x:-0.5, y:-0.5,
+      cursorStyleHandler:(fabric as any).controlsUtils.scaleCursorStyleHandler,
+      actionHandler:(fabric as any).controlsUtils.scalingEqually,
+      render:blank }),
+    tr: new fabric.Control({ x:0.5, y:-0.5,
+      cursorStyleHandler:(fabric as any).controlsUtils.scaleCursorStyleHandler,
+      actionHandler:(fabric as any).controlsUtils.scalingEqually,
+      render:blank }),
+    bl: new fabric.Control({ x:-0.5, y:0.5,
+      cursorStyleHandler:(fabric as any).controlsUtils.scaleCursorStyleHandler,
+      actionHandler:(fabric as any).controlsUtils.scalingEqually,
+      render:blank }),
+    br: new fabric.Control({ x:0.5, y:0.5,
+      cursorStyleHandler:(fabric as any).controlsUtils.scaleCursorStyleHandler,
+      actionHandler:(fabric as any).controlsUtils.scalingEqually,
+      render:blank }),
+  } as any;
+  frame.cornerSize = 5 / SCALE;  // smaller hit box
+  frame.setControlsVisibility({ mt:false, mb:false, ml:false, mr:false, mtr:false });
+  (frame as any)._cropGroup = true
   cropGroupRef.current = frame;
   fc.add(frame);
+  // Make the crop window active so its handles work on first drag
+  fc.setActiveObject(frame);
+
+  // show handles for *both* children
+  img.hasBorders   = img.hasControls   = true
+  frame.hasBorders = false             // thin outline only
+  frame.hasControls = true
+
+  // force‑draw both control sets every frame and clear the overlay to avoid artefacts
+  fc.on('after:render', () => {
+    const ctxTop = (fc as any).contextTop;
+    fc.clearContext(ctxTop);                 // wipe previous handles
+    frame.drawControls(ctxTop);
+    img.drawControls(ctxTop);
+  });
+
+  /* clamp the crop frame so it never extends beyond the image */
+  const clampFrame = () => {
+
+    const iw = img.getScaledWidth();
+    const ih = img.getScaledHeight();
+    const minL = img.left!;
+    const minT = img.top!;
+    const maxR = minL + iw;
+    const maxB = minT + ih;
+
+    if (frame.left! < minL) frame.left = minL;
+    if (frame.top!  < minT) frame.top  = minT;
+
+    const fw = frame.width! * frame.scaleX!;
+    const fh = frame.height! * frame.scaleY!;
+    if (frame.left! + fw > maxR)
+      frame.scaleX = (maxR - frame.left!) / frame.width!;
+    if (frame.top! + fh > maxB)
+      frame.scaleY = (maxB - frame.top!) / frame.height!;
+
+    frame.setCoords();
+    updateMaskAround(frame);
+  };
+  frame.on('scaling', () => { clampFrame(); fixedLeft = frame.left!; fixedTop = frame.top!; });
 
   /* ③ –– keep the bitmap covering the frame at all times */
   const clamp = () => {
@@ -469,17 +558,44 @@ const startCrop = (img: fabric.Image) => {
     updateMaskAround(frame);
   };
 
-  img.set({ selectable:true, evented:true });
-  fc.setActiveObject(img);
-  updateMaskAround(frame);
-  img.on('moving', clamp).on('scaling', clamp);
+  img.set({ selectable:true, evented:true })
+
+  /* ④ –– allow direct interaction with either element */
+  updateMaskAround(frame)
+
+  img.on('moving', clamp)
+     .on('scaling', clamp)
+  frame.on('scaling', clampFrame)
+
+  cropHandlersRef.current = {
+    imgDown: () => {},
+    imgUp: () => {},
+    frameDown: () => {},
+    clamp,
+    clampFrame,
+    renderCropControls: () => {},
+  }
 };
 
 /* ---------- cancelCrop (unchanged) ---------------------------- */
 const cancelCrop = () => {
   if (!croppingRef.current) return;
-  const img = cropImgRef.current, st = cropStartRef.current as CropSnap | null;
-  img?.off('moving').off('scaling');
+  const img = cropImgRef.current
+  const frame = cropGroupRef.current
+  const st = cropStartRef.current as CropSnap | null
+  const handlers = cropHandlersRef.current
+  if (img && handlers) {
+    img.off('moving', handlers.clamp)
+       .off('scaling', handlers.clamp)
+  }
+  if (frame && handlers) {
+    frame.off('scaling', handlers.clampFrame)
+  }
+  if (frame) {
+    frame.lockMovementX = false
+    frame.lockMovementY = false
+  }
+  cropHandlersRef.current = null
   fc.remove(cropGroupRef.current!); clearMask();
 
   if (img && st) {
@@ -488,6 +604,10 @@ const cancelCrop = () => {
       cropX:st.cropX, cropY:st.cropY,
       width:st.cropW, height:st.cropH,
       scaleX:st.scaleX, scaleY:st.scaleY,
+      hasControls:st.hasControls,
+      lockScalingX:st.lockScalingX,
+      lockScalingY:st.lockScalingY,
+      lockRotation:st.lockRotation,
     }).setCoords();
   }
   cropGroupRef.current=cropImgRef.current=cropStartRef.current=null;
@@ -502,7 +622,13 @@ const commitCrop = () => {
   const frame = cropGroupRef.current!;
   const st    = cropStartRef.current as CropSnap;
 
-  img.off('moving').off('scaling');
+  const handlers = cropHandlersRef.current
+  img.off('moving', handlers?.clamp)
+     .off('scaling', handlers?.clamp)
+  frame.off('scaling', handlers?.clampFrame)
+  frame.lockMovementX = false
+  frame.lockMovementY = false
+  cropHandlersRef.current = null
   fc.remove(frame); clearMask();
 
   const invSX = 1/(img.scaleX??1), invSY = 1/(img.scaleY??1);
@@ -514,11 +640,15 @@ const commitCrop = () => {
   img.set({
     left:frame.left, top:frame.top,
     cropX, cropY, width:cropW, height:cropH,
+    hasControls:st.hasControls,
+    lockScalingX:st.lockScalingX,
+    lockScalingY:st.lockScalingY,
+    lockRotation:st.lockRotation,
   }).setCoords();
 
   cropGroupRef.current=cropImgRef.current=cropStartRef.current=null;
   croppingRef.current=false; onCroppingChange?.(false);
-  fc.setActiveObject(img); fc.requestRenderAll();
+  fc.requestRenderAll();
 
   /* sync → store */
   if ((img as any).layerIdx!==undefined) {
@@ -535,9 +665,9 @@ const commitCrop = () => {
 const hoverHL = new fabric.Rect({
   originX:'left', originY:'top', strokeUniform:true,
   fill:'transparent',
-  stroke:'#a78bfa',               // lighter purple
+  stroke:SEL_COLOR,
   strokeWidth:1 / SCALE,
-  strokeDashArray:dash(4),
+  strokeDashArray:[],
   selectable:false, evented:false, visible:false,
   excludeFromExport:true,
 })
@@ -796,21 +926,17 @@ document.addEventListener('start-crop', cropListener)
 }, [])
 /* ---------- END mount once ----------------------------------- */
 
-  /* ---------- crop overlay toggle ------------------------------ */
+  /* ---------- crop mode toggle ------------------------------ */
   useEffect(() => {
-    const fc   = fcRef.current
-    const mask = cropMaskRef.current
-    if (!fc || !mask) return
+    const fc = fcRef.current
+    if (!fc) return
 
-    if (isCropping) {
-      mask.visible = true
-      const idx = fc.getObjects().findIndex(o => (o as any)._cropGroup)
-      if (idx > -1) fc.insertAt(mask, idx, false)
-      else mask.bringToFront()
-    } else {
-      mask.visible = false
+    if (isCropping && !croppingRef.current) {
+      const act = fc.getActiveObject() as fabric.Object | undefined
+      if (act && (act as any).type === 'image') {
+        document.dispatchEvent(new Event('start-crop'))
+      }
     }
-    fc.requestRenderAll()
   }, [isCropping])
 
 
