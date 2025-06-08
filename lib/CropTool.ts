@@ -62,6 +62,7 @@ export class CropTool {
                   h: imgEl.naturalHeight || img.height! }
     const { cropX=0, cropY=0, width=nat.w, height=nat.h } = img
 
+    const prevLockUniScaling = img.lockUniScaling;
     img.set({
       left  : (img.left ?? 0) - cropX * (img.scaleX ?? 1),
       top   : (img.top  ?? 0) - cropY * (img.scaleY ?? 1),
@@ -71,10 +72,12 @@ export class CropTool {
       cropY : 0,
       lockRotation   : true,
       lockScalingFlip: true,
+      lockUniScaling : true,
       hasControls    : true,
       selectable     : true,
       evented        : true,
     }).setCoords()
+    this.cleanup.push(() => { img.lockUniScaling = prevLockUniScaling })
     /* hide the rotate ("mtr") and side controls while cropping */
     img.setControlsVisibility({
       mtr: false,          // hide rotation
@@ -586,8 +589,9 @@ export class CropTool {
     const { img, frame } = this
     const minSX = frame.width!*frame.scaleX! / img.width!
     const minSY = frame.height!*frame.scaleY! / img.height!
-    img.scaleX = Math.max(img.scaleX ?? 1, minSX)
-    img.scaleY = Math.max(img.scaleY ?? 1, minSY)
+    const currentScale = Math.max(img.scaleX ?? 1, img.scaleY ?? 1)
+    const minScale = Math.max(currentScale, minSX, minSY)
+    img.scaleX = img.scaleY = minScale
 
     const fx=frame.left!, fy=frame.top!
     const fw=frame.width!*frame.scaleX!, fh=frame.height!*frame.scaleY!
