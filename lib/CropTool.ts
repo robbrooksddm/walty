@@ -37,6 +37,15 @@ export class CropTool {
 
     this.isActive = true
     this.img      = img
+    // allow freeform scaling of the crop window
+    const prevUniformScaling = this.fc.uniformScaling
+    const prevUniScaleKey    = this.fc.uniScaleKey
+    this.fc.uniformScaling = false
+    this.fc.uniScaleKey    = 'none'
+    this.cleanup.push(() => {
+      this.fc.uniformScaling = prevUniformScaling
+      this.fc.uniScaleKey    = prevUniScaleKey
+    })
     // manual drag state
     let isDraggingImage = false;
     let dragOrig   = { x: 0, y: 0 };   // pointer world‑coords at drag start
