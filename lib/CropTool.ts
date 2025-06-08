@@ -545,8 +545,8 @@ export class CropTool {
         this.fc.requestRenderAll();
       })
       .on('scaling', () => {
-        // clamp scale but keep the image centre fixed mid-gesture
-        this.clamp(true, false);
+        // clamp scale so the photo never shrinks past the crop window
+        this.clamp(true);            // reposition image during the gesture
         updateMasks();
         this.frameScaling = true;    // ON while photo itself is scaling
         this.fc.requestRenderAll();
@@ -593,9 +593,13 @@ export class CropTool {
     const { img, frame } = this
     const minSX = frame.width!*frame.scaleX! / img.width!
     const minSY = frame.height!*frame.scaleY! / img.height!
-    const currentScale = Math.max(img.scaleX ?? 1, img.scaleY ?? 1)
-    const minScale = Math.max(currentScale, minSX, minSY)
-    img.scaleX = img.scaleY = minScale
+    const minScale = Math.max(minSX, minSY)
+
+    if ((img.scaleX ?? 1) < minScale) {
+      img.scaleX = img.scaleY = minScale
+    } else if (img.lockUniScaling) {
+      img.scaleY = img.scaleX
+    }
 
     if (reposition) {
       const fx=frame.left!, fy=frame.top!
