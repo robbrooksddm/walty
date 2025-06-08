@@ -55,8 +55,6 @@ export class CropTool {
 
     // which edges stay locked while the user scales the frame
     let anchorEdge: { left?: number; top?: number; right?: number; bottom?: number } = {};
-    // which edges stay locked while the user scales the bitmap
-    let imgEdge: { left?: number; top?: number; right?: number; bottom?: number } = {};
 
     /* ① expand bitmap to its natural size (keep on‑screen scale) */
     const imgEl  = img.getElement() as HTMLImageElement
@@ -65,7 +63,6 @@ export class CropTool {
     const { cropX=0, cropY=0, width=nat.w, height=nat.h } = img
 
     const prevLockUniScaling = img.lockUniScaling;
-    const prevCenteredScaling = img.centeredScaling;
     img.set({
       left  : (img.left ?? 0) - cropX * (img.scaleX ?? 1),
       top   : (img.top  ?? 0) - cropY * (img.scaleY ?? 1),
@@ -76,14 +73,12 @@ export class CropTool {
       lockRotation   : true,
       lockScalingFlip: true,
       lockUniScaling : true,
-      centeredScaling: true,
       hasControls    : true,
       selectable     : true,
       evented        : true,
     }).setCoords()
     this.cleanup.push(() => {
-      img.lockUniScaling  = prevLockUniScaling
-      img.centeredScaling = prevCenteredScaling
+      img.lockUniScaling = prevLockUniScaling
     })
     /* hide the rotate ("mtr") and side controls while cropping */
     img.setControlsVisibility({
@@ -308,33 +303,6 @@ export class CropTool {
         if (this.img) {
           this.img.lockMovementX = true;
           this.img.lockMovementY = true;
-        }
-      } else if (t === this.img && (e as any).transform?.action === 'scale') {
-        const c = (e as any).transform.corner as string | undefined;
-        const i = this.img!;
-        const left   = i.left!;
-        const top    = i.top!;
-        const right  = left + i.getScaledWidth();
-        const bottom = top  + i.getScaledHeight();
-
-        imgEdge = {};
-        switch (c) {
-          case 'br':
-            imgEdge.left = left;
-            imgEdge.top  = top;
-            break;
-          case 'tl':
-            imgEdge.right  = right;
-            imgEdge.bottom = bottom;
-            break;
-          case 'tr':
-            imgEdge.left   = left;
-            imgEdge.bottom = bottom;
-            break;
-          case 'bl':
-            imgEdge.top   = top;
-            imgEdge.right = right;
-            break;
         }
       }
     };
@@ -573,32 +541,15 @@ export class CropTool {
         updateMasks();
         this.fc.requestRenderAll();
       })
-      .on('scaling', (e: fabric.IEvent) => {
-        // enforce limits but keep the opposite corner fixed while dragging
+      .on('scaling', () => {
+        // enforce limits without repositioning during drag
         this.clamp(true, false);
-        const i = this.img!;
-        const w = i.width!  * i.scaleX!;
-        const h = i.height! * i.scaleY!;
-        if (imgEdge.left   !== undefined) i.left = imgEdge.left;
-        if (imgEdge.top    !== undefined) i.top  = imgEdge.top;
-        if (imgEdge.right  !== undefined) i.left = imgEdge.right  - w;
-        if (imgEdge.bottom !== undefined) i.top  = imgEdge.bottom - h;
-
-        const t = (e as any).transform;
-        if (t) {
-          t.scaleX = i.scaleX!;
-          t.scaleY = i.scaleY!;
-          t.left   = i.left!;
-          t.top    = i.top!;
-        }
-
-        i.setCoords();
+        this.img!.setCoords();
         updateMasks();
         this.frameScaling = true;    // ON while photo itself is scaling
         this.fc.requestRenderAll();
       })
       .on('scaled', () => {
-        imgEdge = {};
         this.frameScaling = false;   // OFF at end of gesture
         this.clamp(true);            // final clamp at end of gesture
         this.img!.setCoords();
