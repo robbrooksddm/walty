@@ -63,6 +63,7 @@ export class CropTool {
     const { cropX=0, cropY=0, width=nat.w, height=nat.h } = img
 
     const prevLockUniScaling = img.lockUniScaling;
+    const prevCenteredScaling = img.centeredScaling;
     img.set({
       left  : (img.left ?? 0) - cropX * (img.scaleX ?? 1),
       top   : (img.top  ?? 0) - cropY * (img.scaleY ?? 1),
@@ -73,11 +74,15 @@ export class CropTool {
       lockRotation   : true,
       lockScalingFlip: true,
       lockUniScaling : true,
+      centeredScaling: true,
       hasControls    : true,
       selectable     : true,
       evented        : true,
     }).setCoords()
-    this.cleanup.push(() => { img.lockUniScaling = prevLockUniScaling })
+    this.cleanup.push(() => {
+      img.lockUniScaling  = prevLockUniScaling
+      img.centeredScaling = prevCenteredScaling
+    })
     /* hide the rotate ("mtr") and side controls while cropping */
     img.setControlsVisibility({
       mtr: false,          // hide rotation
@@ -540,9 +545,8 @@ export class CropTool {
         this.fc.requestRenderAll();
       })
       .on('scaling', () => {
-        // continuously clamp so the photo can't shrink inside the window
-        this.clamp(true);             // force clamp during interactive scale
-        this.img!.setCoords();
+        // clamp scale but keep the image centre fixed mid-gesture
+        this.clamp(true, false);
         updateMasks();
         this.frameScaling = true;    // ON while photo itself is scaling
         this.fc.requestRenderAll();
@@ -583,7 +587,7 @@ export class CropTool {
   }
 
   /* keep bitmap inside frame */
-  private clamp = (force = false) => {
+  private clamp = (force = false, reposition = true) => {
     if (!force && this.frameScaling) return;
     if (!this.img || !this.frame) return
     const { img, frame } = this
@@ -593,13 +597,17 @@ export class CropTool {
     const minScale = Math.max(currentScale, minSX, minSY)
     img.scaleX = img.scaleY = minScale
 
-    const fx=frame.left!, fy=frame.top!
-    const fw=frame.width!*frame.scaleX!, fh=frame.height!*frame.scaleY!
-    const iw=img.getScaledWidth(), ih=img.getScaledHeight()
-    img.set({
-      left: Math.min(fx, Math.max(fx+fw-iw, img.left!)),
-      top : Math.min(fy, Math.max(fy+fh-ih, img.top!)),
-    }).setCoords()
+    if (reposition) {
+      const fx=frame.left!, fy=frame.top!
+      const fw=frame.width!*frame.scaleX!, fh=frame.height!*frame.scaleY!
+      const iw=img.getScaledWidth(), ih=img.getScaledHeight()
+      img.set({
+        left: Math.min(fx, Math.max(fx+fw-iw, img.left!)),
+        top : Math.min(fy, Math.max(fy+fh-ih, img.top!)),
+      }).setCoords()
+    } else {
+      img.setCoords()
+    }
   }
 
   /* keep frame inside bitmap */
