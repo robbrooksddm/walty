@@ -66,7 +66,15 @@ export class CropTool {
       selectable     : true,
       evented        : true,
     }).setCoords()
-    img.hasBorders = false;              // hide default selection outline
+    /* hide the rotate ("mtr") and side controls while cropping */
+    img.setControlsVisibility({
+      mtr: false,          // hide rotation
+      ml : false, mr : false,      // hide middle-left / middle-right
+      mt : false, mb : false       // hide middle-top / middle-bottom
+    });
+    img.hasBorders  = true;            // always show border in crop mode
+    img.borderColor = this.SEL;        // same colour as crop window
+    img.borderDashArray = [];          // solid border
 
     /* ② persistent crop window */
     const fx = (img.left ?? 0) + cropX * (img.scaleX ?? 1)
@@ -112,9 +120,10 @@ export class CropTool {
       ctx.shadowColor = 'rgba(0,0,0,0.35)';          // subtle outline
       ctx.shadowBlur  = 3 / this.SCALE;
       ctx.beginPath();
-      ctx.moveTo(0,  sizePx * 0.8);
-      ctx.lineTo(0,  0);
-      ctx.lineTo(sizePx * 0.8, 0);
+      ctx.moveTo(0,  0);
+      ctx.lineTo(0,  sizePx * 0.8);    // vertical down from origin
+      ctx.moveTo(0,  0);
+      ctx.lineTo(sizePx * 0.8, 0);     // horizontal right
       ctx.stroke();
       ctx.restore();
     };
@@ -136,10 +145,10 @@ export class CropTool {
 
     // keep only the 4 corner controls; no sides, no rotation
     (this.frame as any).controls = {
-      tl: mkCorner(-0.5, -0.5,   0),              // top‑left
-      tr: mkCorner( 0.5, -0.5,  Math.PI / 2),     // top‑right
-      br: mkCorner( 0.5,  0.5,  Math.PI),         // bottom‑right
-      bl: mkCorner(-0.5,  0.5, -Math.PI / 2),     // bottom‑left
+      tl: mkCorner(-0.5, -0.5,  0),                // top‑left
+      tr: mkCorner( 0.5, -0.5,  Math.PI / 2),      // top‑right
+      br: mkCorner( 0.5,  0.5,  Math.PI),          // bottom‑right
+      bl: mkCorner(-0.5,  0.5, -Math.PI / 2),      // bottom‑left
     } as Record<string, fabric.Control>;
 
     /* ③ add both to canvas and keep z‑order intuitive              */
@@ -621,6 +630,16 @@ export class CropTool {
       //          a     b     c     d     e     f
       ctx.transform(vpt[0], vpt[1], vpt[2], vpt[3], vpt[4], vpt[5]);
     }      // draw in the same space as Fabric
+    /* ---- Persistent bitmap outline while cropping ---- */
+    if (this.isActive && this.img) {
+      const br = this.img.getBoundingRect(true, true);
+      ctx.save();
+      ctx.strokeStyle = this.SEL;
+      ctx.lineWidth   = 1 / this.SCALE;
+      ctx.setLineDash([]);                 // solid
+      ctx.strokeRect(br.left, br.top, br.width, br.height);
+      ctx.restore();
+    }
     if (this.img?.hasControls)   this.img.drawControls(ctx);
     if (this.frame?.hasControls) this.frame.drawControls(ctx);
     ctx.restore()
