@@ -225,7 +225,8 @@ export class CropTool {
   /* draw controls for both objects each frame */
   private renderBoth = () => {
     if (!this.img || !this.frame) return
-    const ctx = (this.fc as any).contextTop
+    const ctx = (this.fc as any).contextTop as CanvasRenderingContext2D | null;
+    if (!ctx) return;                       // safety‑check
     this.fc.clearContext(ctx)
 
     ctx.save()
