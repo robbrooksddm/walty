@@ -16,6 +16,7 @@ export class CropTool {
   private SEL     : string
   private img     : fabric.Image | null = null
   private frame   : fabric.Group | null = null
+  private masks   : fabric.Rect[] = [];      // 4‑piece dim overlay
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
 
@@ -35,6 +36,15 @@ export class CropTool {
 
     this.isActive = true
     this.img      = img
+    // manual drag state
+    let isDraggingImage = false;
+    let dragOrig   = { x: 0, y: 0 };   // pointer world‑coords at drag start
+    let imgOrigPos = { x: 0, y: 0 };   // img.left/top at drag start
+    let restoreFrameSelectable: boolean | undefined;
+    let restoreFrameEvented:    boolean | undefined;
+
+    // which edges stay locked while the user scales the frame
+    let anchorEdge: { left?: number; top?: number; right?: number; bottom?: number } = {};
 
     /* ① expand bitmap to its natural size (keep on‑screen scale) */
     const imgEl  = img.getElement() as HTMLImageElement
@@ -52,7 +62,10 @@ export class CropTool {
       lockRotation   : true,
       lockScalingFlip: true,
       hasControls    : true,
+      selectable     : true,
+      evented        : true,
     }).setCoords()
+    img.hasBorders = false;              // hide default selection outline
 
     /* ② persistent crop window */
     const fx = (img.left ?? 0) + cropX * (img.scaleX ?? 1)
@@ -65,24 +78,151 @@ export class CropTool {
 
     this.frame = new fabric.Group([
       new fabric.Rect({ left:0, top:0, width:fw, height:fh,
-                        fill:'rgba(0,0,0,0)',
-                        stroke:this.SEL, strokeWidth:1/this.SCALE,
-                        strokeUniform:true }),
-      new fabric.Line([fw/3,0, fw/3,fh], grid),
-      new fabric.Line([fw*2/3,0, fw*2/3,fh], grid),
-      new fabric.Line([0,fh/3, fw,fh/3], grid),
-      new fabric.Line([0,fh*2/3, fw,fh*2/3], grid),
+        fill:'',
+        perPixelTargetFind:false,   // relax pixel-perfect hit-testing
+        evented:false,
+        stroke:this.SEL, strokeWidth:1/this.SCALE,
+        strokeUniform:true }),
     ],{
       left:fx, top:fy, originX:'left', originY:'top',
-      selectable:true, lockRotation:true, lockScalingFlip:true,
-      hasBorders:false, transparentCorners:false,
+      selectable:true, evented:true,  lockRotation:true,   // controls work; interior clicks fall through
+      hasBorders:false, 
+      lockMovementX:true,  lockMovementY:true,   // window position stays fixed
+      lockScalingX:false, lockScalingY:false, 
+      //centeredScaling:true,            // scale outward from centre
+      transparentCorners:false,
+      subTargetCheck: true,          // let clicks inside the rectangle fall through
     })
-    this.frame.cornerSize = 6/this.SCALE
+    // ---- replace default controls with 4 small white “L” handles ----
+    const sizePx = 2 / this.SCALE;          // corner length (≈70 % smaller)
+
+    /** Draw a single L‑shape, rotated for each corner */
+    const drawL = (
+      ctx : CanvasRenderingContext2D,
+      left: number,
+      top : number,
+      rot : number,                                  // radians
+    ) => {
+      ctx.save();
+      ctx.translate(left, top);
+      ctx.rotate(rot);
+      ctx.lineWidth   = 0.5 / this.SCALE;
+      ctx.strokeStyle = '#ffffff';
+      ctx.shadowColor = 'rgba(0,0,0,0.35)';          // subtle outline
+      ctx.shadowBlur  = 3 / this.SCALE;
+      ctx.beginPath();
+      ctx.moveTo(0,  sizePx * 0.8);
+      ctx.lineTo(0,  0);
+      ctx.lineTo(sizePx * 0.8, 0);
+      ctx.stroke();
+      ctx.restore();
+    };
+
+    /** corner control factory with proper orientation */
+    const mkCorner = (x: number, y: number, rot: number) =>
+      new fabric.Control({
+        x, y,
+        offsetX: 0, offsetY: 0,
+        // enlarge hit‑box for easier grabbing
+        sizeX: 24 / this.SCALE,
+        sizeY: 24 / this.SCALE,
+        // use Fabric helpers (cast to `any` to silence TS)
+        cursorStyleHandler: (fabric as any).controlsUtils.scaleCursorStyleHandler,
+        actionHandler     : (fabric as any).controlsUtils.scalingEqually,
+        actionName        : 'scale',   // ensure Fabric treats this as scaling, not drag
+        render            : (ctx, left, top) => drawL(ctx, left, top, rot),
+      });
+
+    // keep only the 4 corner controls; no sides, no rotation
+    (this.frame as any).controls = {
+      tl: mkCorner(-0.5, -0.5,   0),              // top‑left
+      tr: mkCorner( 0.5, -0.5,  Math.PI / 2),     // top‑right
+      br: mkCorner( 0.5,  0.5,  Math.PI),         // bottom‑right
+      bl: mkCorner(-0.5,  0.5, -Math.PI / 2),     // bottom‑left
+    } as Record<string, fabric.Control>;
 
     /* ③ add both to canvas and keep z‑order intuitive              */
     this.fc.add(this.frame)
-    this.img.bringToFront()    // bitmap controls stay usable
-    this.frame.bringToFront()  // stroke always visible
+    /* 2‑b ─ dim everything outside the crop window -------------------- */
+    const mkMask = () => new fabric.Rect({
+      left: 0, top: 0, width: this.fc.width!, height: this.fc.height!,
+      fill: 'rgba(0,0,0,0.4)', selectable: false, evented: false,
+      originX: 'left',
+      originY: 'top',
+      excludeFromExport: true,
+    });
+    this.masks = [mkMask(), mkMask(), mkMask(), mkMask()];
+    this.masks.forEach(r => this.fc.add(r));
+    // make sure crop elements stay on top
+    this.frame.bringToFront();
+    const updateMasks = () => {
+      if (!this.frame) return;
+
+      /* -----------------------------------------------------------
+       * Coordinate spaces refresher
+       *   • Object positions (left/top) are in “world” coords.
+       *   • The viewport (what you actually see) is the rectangle
+       *     whose top‑left world‑coord is
+       *         viewLeft = -vpt[4] / vpt[0],
+       *         viewTop  = -vpt[5] / vpt[3].
+       *   • Its size in world units is canvasPx / zoom.
+       * ----------------------------------------------------------- */
+      const vpt = this.fc.viewportTransform || [1, 0, 0, 1, 0, 0];
+      const zoom = vpt[0] || 1;
+
+      const viewLeft = -vpt[4] / zoom;
+      const viewTop  = -vpt[5] / zoom;
+
+      const w = this.fc.getWidth()  / zoom;
+      const h = this.fc.getHeight() / zoom;
+
+      /* -----------------------------------------------------------
+       * Frame bounds in world (model) coordinates
+       *  – `left`/`top` are already world coords
+       *  – width/height must be multiplied by current scales
+       * ----------------------------------------------------------- */
+      const fL = this.frame.left!;
+      const fT = this.frame.top!;
+      const fW = this.frame.width!  * this.frame.scaleX!;
+      const fH = this.frame.height! * this.frame.scaleY!;
+      const fR = fL + fW;
+      const fB = fT + fH;
+
+      // Helper to clamp negative dims (Fabric ignores negative width/height)
+      const clamp = (x: number) => Math.max(0, x);
+
+      /* four stripes, clockwise from top */
+      this.masks[0].set({                      // top
+        left  : viewLeft,
+        top   : viewTop,
+        width : w,
+        height: clamp(fT - viewTop),
+      });
+
+      this.masks[1].set({                      // right
+        left  : fR,
+        top   : fT,
+        width : clamp(viewLeft + w - fR),
+        height: fH,
+      });
+
+      this.masks[2].set({                      // bottom
+        left  : viewLeft,
+        top   : fB,
+        width : w,
+        height: clamp(viewTop + h - fB),
+      });
+
+      this.masks[3].set({                      // left
+        left  : viewLeft,
+        top   : fT,
+        width : clamp(fL - viewLeft),
+        height: fH,
+      });
+
+      this.masks.forEach(m => m.setCoords());
+    };
+    updateMasks();
 
     this.fc.setActiveObject(this.frame)
 
@@ -91,48 +231,223 @@ export class CropTool {
      *  Whichever corner the user pressed (bitmap OR frame) becomes the
      *  active object, so the drag starts without an extra click.
      * ------------------------------------------------------------------ */
-    const onPointerDown = (ev: PointerEvent) => {
-      if (!this.isActive || !this.img || !this.frame) return;
+    /* ------- Canva‑style dynamic handle visibility --------------------
+       All handles are visible until the user grabs one.  While dragging,
+       only the active object (bitmap OR frame) shows its controls; the
+       moment the mouse is released we restore both sets.               */
+    const beforeHandler = (e: fabric.IEvent) => {
+      const t = (e as any).transform?.target as fabric.Object | undefined;
+      if (!t || (t !== this.img && t !== this.frame)) return;
 
-      // pointer → canvas coords
-      const pt = this.fc.getPointer(ev, false);
+      // Hide both sets first…
+      if (this.img)   this.img.hasControls = false;
+      if (this.frame) this.frame.hasControls = false;
 
-      // helper exists at runtime even if not in TS types
-      const findCorner = (fabric as any).controlsUtils?.findCorner;
-      if (!findCorner) return;
+      // …then re‑enable the one that is actually being transformed
+      t.hasControls = true;
 
-      const hitFrame = findCorner(this.frame, pt, 15 / this.SCALE);
-      const hitImg   = findCorner(this.img,   pt, 15 / this.SCALE);
+      // If the user begins scaling the crop frame, remember the
+      // *opposite* edges so they remain fixed during the drag.
+      if (t === this.frame && (e as any).transform?.action === 'scale') {
+        const c = (e as any).transform.corner;             // 'tl', 'tr', 'br', 'bl'
+        const f = this.frame!;
+        const left   = f.left!;
+        const top    = f.top!;
+        const right  = left + f.width!  * f.scaleX!;
+        const bottom = top  + f.height! * f.scaleY!;
 
-      if (hitFrame && this.fc.getActiveObject() !== this.frame) {
-        this.fc.setActiveObject(this.frame);
-      } else if (hitImg && this.fc.getActiveObject() !== this.img) {
-        this.fc.setActiveObject(this.img);
+        anchorEdge = {};               // reset
+        switch (c) {
+          case 'br':                   // dragging bottom‑right  → lock top & left
+            anchorEdge.left = left;
+            anchorEdge.top  = top;
+            break;
+          case 'tl':                   // dragging top‑left      → lock right & bottom
+            anchorEdge.right  = right;
+            anchorEdge.bottom = bottom;
+            break;
+          case 'tr':                   // dragging top‑right     → lock left & bottom
+            anchorEdge.left   = left;
+            anchorEdge.bottom = bottom;
+            break;
+          case 'bl':                   // dragging bottom‑left   → lock top & right
+            anchorEdge.top   = top;
+            anchorEdge.right = right;
+            break;
+        }
+        // 🔒 Freeze the photo's position so scaling the frame can't drag it.
+        if (this.img) {
+          this.img.lockMovementX = true;
+          this.img.lockMovementY = true;
+        }
       }
     };
 
-    // register before Fabric's own listener
-    const canvasEl = (this.fc as any).upperCanvasEl as HTMLCanvasElement;
-    canvasEl.addEventListener('pointerdown', onPointerDown, { capture: true });
+    const upHandler = () => {
+      if (this.frame) {
+        this.frame.bringToFront();
+      }
+      if (this.img)   {
+        this.img.hasControls = true;
+        this.img.setCoords();
+      }
+      if (this.frame) {
+        this.frame.hasControls = true;
+        this.frame.setCoords();
+      }
+      updateMasks();
+      // keep the mask in front of the photo for consistent dimming
+      this.masks.forEach(m => m.bringToFront?.());
+      this.frame?.bringToFront();
+      this.fc.requestRenderAll();            // refresh immediately
+    };
 
-    // remember so we can clean it up later
+    this.fc.on('before:transform', beforeHandler);
+    this.fc.on('mouse:up', upHandler);
+
+    // ----------------------------------------
+    // Pointer down: decide what the user wants
+    // ----------------------------------------
+    const downHandler = (e: fabric.IEvent) => {
+      if (!this.isActive || !this.img || !this.frame) return;
+
+      const target  = e.target as fabric.Object | undefined;
+      const pointer = this.fc.getPointer(e.e as any, false);
+
+      // Reliable corner hit‑test (e.corner isn’t yet set on mouse:down)
+      const findCorner = (fabric as any).controlsUtils?.findCorner;
+      let hitCorner  = findCorner
+        ? findCorner(this.frame, pointer, 30 / this.SCALE)   // 30 px tolerance
+        : (e as any).corner;                                 // fallback
+
+      // Fabric sometimes returns null before the first render; fall back to
+      // e.corner if it’s already set (e.g. during rapid double‑clicks)
+      if (!hitCorner && (e as any).corner) {
+        // normalise to 'tl' / 'tr' / 'bl' / 'br' just like findCorner()
+        hitCorner = (e as any).corner;
+      }
+
+      /* 1️⃣  Pointer landed on a corner control → let Fabric scale immediately */
+      if (hitCorner) {
+        if (this.fc.getActiveObject() !== this.frame) {
+          this.fc.setActiveObject(this.frame);        // be sure!
+        }
+        return;                                       // Fabric runs transform
+      }
+
+      /* 2️⃣  Clicked the frame’s interior (or directly on the bitmap) — start panning */
+      const hitImage = target === this.img;
+
+      /* Fallback: check pointer against the frame’s bounding box so an
+         interior click is recognised even when `containsPoint()` fails
+         (e.g. event target is null because the frame is non‑evented).  */
+      const br = this.frame.getBoundingRect(true, true);
+      const inBox = pointer.x >= br.left && pointer.x <= br.left + br.width &&
+                    pointer.y >= br.top  && pointer.y <= br.top  + br.height;
+
+      const insideWindow = !hitCorner && (hitImage || inBox);
+
+      if (insideWindow) {
+      // Temporarily turn off the frame so pointer events fall through to bitmap
+      restoreFrameSelectable = this.frame.selectable;
+      restoreFrameEvented    = this.frame.evented;
+      this.frame.selectable  = false;
+      this.frame.evented     = false;
+
+        isDraggingImage = true;
+        dragOrig.x     = pointer.x;
+        dragOrig.y     = pointer.y;
+        imgOrigPos.x   = this.img.left!;
+        imgOrigPos.y   = this.img.top!;
+
+        // Activate bitmap so arrow keys etc. reflect its state
+        if (this.fc.getActiveObject() !== this.img) {
+          this.fc.setActiveObject(this.img);
+        }
+
+        // Block Fabric from starting any transform on the frame
+        e.e?.preventDefault?.();
+        e.e?.stopPropagation?.();
+      }
+    };
+
+    // ------------------------------------------------
+    // Pointer move: if we’re in panning mode, relocate
+    // ------------------------------------------------
+    const moveHandler = (e: fabric.IEvent) => {
+      if (!isDraggingImage || !this.img) return;
+
+      const pointer = this.fc.getPointer(e.e as any, false);
+      const dx = pointer.x - dragOrig.x;
+      const dy = pointer.y - dragOrig.y;
+
+      this.img.set({ left: imgOrigPos.x + dx,
+                     top : imgOrigPos.y + dy });
+
+      this.clamp();                 // keep photo covering the window
+      this.img.setCoords();
+      updateMasks();
+      // keep dim overlay & frame visible over the photo
+      this.masks.forEach(m => m.bringToFront?.());
+      this.frame?.bringToFront();
+      this.fc.requestRenderAll();
+    };
+
+    // ----------------------------------------
+    // Pointer up: stop any manual image drag
+    // ----------------------------------------
+    const upStopDrag = () => {
+      // Restore frame interactivity after drag finishes
+      if (restoreFrameSelectable !== undefined) this.frame!.selectable = restoreFrameSelectable;
+      if (restoreFrameEvented    !== undefined) this.frame!.evented    = restoreFrameEvented;
+      restoreFrameSelectable = restoreFrameEvented = undefined;
+      isDraggingImage = false;
+    };
+
+    this.fc.on('mouse:down',  downHandler);
+    this.fc.on('mouse:move',  moveHandler);
+    this.fc.on('mouse:up',    upStopDrag);
+
+    this.cleanup.push(() => {
+      this.fc.off('mouse:down', downHandler);
+      this.fc.off('mouse:move', moveHandler);
+      this.fc.off('mouse:up',   upStopDrag);
+    });
+
+    // remember for teardown
+    this.cleanup.push(() => {
+      this.fc.off('before:transform', beforeHandler);
+      this.fc.off('mouse:up', upHandler);
+    });
+
+
+    /* ------------------------------------------------------------
+     *  Ensure corner data is up‑to‑date once a transform finishes.
+     *  Fabric fires `object:modified` after scaling/moving ends,
+     *  guaranteeing the object’s final scaleX/scaleY/left/top are
+     *  committed.  Calling `setCoords()` here realigns both the
+     *  object’s bounding box *and* its per‑corner control cache.
+     * ----------------------------------------------------------- */
+    const modifiedHandler = (e: fabric.IEvent) => {
+      const t = e.target as fabric.Object | undefined;
+      if (!t || (t !== this.img && t !== this.frame)) return;
+
+      t.setCoords();
+      if (t === this.img) this.clamp();          // keep entire photo filling the frame
+      if (this.img)   this.img.hasControls = true;
+      if (this.frame) this.frame.hasControls = true;
+      updateMasks();
+      this.fc.requestRenderAll();
+    };
+
+    this.fc.on('object:modified', modifiedHandler);
     this.cleanup.push(() =>
-      canvasEl.removeEventListener('pointerdown', onPointerDown, { capture: true } as any)
+      this.fc.off('object:modified', modifiedHandler)
     );
 
     /* ④ dual‑handle rendering + clamping */
     // draw both control sets every frame
     this.fc.on('after:render', this.renderBoth)
-
-    // Make sure the correct object has focus *before* Fabric computes
-    // the new transform.  This fires earlier than `mouse:down`.
-    this.fc.on('before:transform', (e: fabric.IEvent) => {
-      const t = (e as any).transform?.target as fabric.Object | undefined
-      if (!t) return
-      if (t !== this.img && t !== this.frame) return
-      if (this.fc.getActiveObject() === t) return
-      this.fc.setActiveObject(t)
-    })
 
     /* ------------------------------------------------------------------
      *  Whenever the user presses the mouse, ensure that whichever object
@@ -152,13 +467,67 @@ export class CropTool {
 
     /* keep FRAME inside bitmap and refresh its corner data */
     this.frame!
-      .on('moving',  () => { this.clampFrame(); this.frame!.setCoords() })
-      .on('scaling', () => { this.clampFrame(); this.frame!.setCoords() })
+      .on('moving', () => {
+        this.clampFrame();            // keep frame inside bitmap
+        this.frame!.setCoords();
+        updateMasks();
+        this.fc.requestRenderAll();
+      })
+      .on('scaling', () => {
+        // keep the pre‑determined opposite edges fixed
+        const f = this.frame!;
+        const w = f.width!  * f.scaleX!;
+        const h = f.height! * f.scaleY!;
+        if (anchorEdge.left   !== undefined) f.left = anchorEdge.left;
+        if (anchorEdge.top    !== undefined) f.top  = anchorEdge.top;
+        if (anchorEdge.right  !== undefined) f.left = anchorEdge.right  - w;
+        if (anchorEdge.bottom !== undefined) f.top  = anchorEdge.bottom - h;
+        this.clampFrame();            // keep window within bitmap limits
+        this.frame!.setCoords();
+        updateMasks();
+        this.fc.requestRenderAll();
+      })
+      .on('scaled', () => {
+        // 🔓 Re‑enable normal movement on the bitmap
+        if (this.img) {
+          this.img.lockMovementX = false;
+          this.img.lockMovementY = false;
+        }
+        this.clampFrame();            // enforce bounds once scale is done
+        this.frame!.setCoords();
+        // restore both handle sets
+        this.frame!.hasControls = true;
+        if (this.img) this.img.hasControls = true;
+        updateMasks();
+        this.fc.requestRenderAll();
+      });
 
-    // keep BITMAP inside frame and refresh its corner data
+    // while scaling we just repaint; we update coordinates only once when the
+    // gesture ends (object:scaled) so the math uses the final scale factors.
     img
-      .on('moving',  () => { this.clamp(); this.img!.setCoords() })
-      .on('scaling', () => { this.clamp(); this.img!.setCoords() })
+      .on('moving', () => {
+        // keep the photo within the crop window as it drags
+        this.clamp();
+        this.img!.setCoords();
+        updateMasks();
+        this.fc.requestRenderAll();
+      })
+      .on('scaling', () => {
+        // continuously refresh coords so the next render picks up the
+        // changing size—prevents stale handles after multiple enlarges.
+        this.img!.setCoords();
+        updateMasks();
+        this.fc.requestRenderAll();
+      })
+      .on('scaled', () => {
+        this.clamp();                 // final clamp at end of gesture
+        this.img!.setCoords();
+        // restore both handle sets now that the gesture is finished
+        this.img!.hasControls = true;
+        if (this.frame) this.frame.hasControls = true;
+        updateMasks();
+        this.fc.requestRenderAll();
+      });
   }
 
   public cancel () { this.teardown(false) }
@@ -174,6 +543,8 @@ export class CropTool {
 
     this.fc.off('after:render', this.renderBoth)
     if (this.frame) this.fc.remove(this.frame)
+    this.masks.forEach(r => this.fc.remove(r));
+    this.masks = [];
     if (!keep) this.fc.discardActiveObject()
     this.fc.requestRenderAll()
 
@@ -225,7 +596,14 @@ export class CropTool {
   /* draw controls for both objects each frame */
   private renderBoth = () => {
     if (!this.img || !this.frame) return
+
+    // Always refresh corner caches before drawing controls so they track
+    // live transforms even after repeated scale gestures.
+    this.img.setCoords();
+    this.frame.setCoords();
+
     const ctx = (this.fc as any).contextTop
+    if (!ctx) return;            // canvas disposed or not yet initialised
     this.fc.clearContext(ctx)
 
     ctx.save()
@@ -234,8 +612,8 @@ export class CropTool {
       //          a     b     c     d     e     f
       ctx.transform(vpt[0], vpt[1], vpt[2], vpt[3], vpt[4], vpt[5]);
     }      // draw in the same space as Fabric
-    this.img.drawControls(ctx)
-    this.frame.drawControls(ctx)
+    if (this.img?.hasControls)   this.img.drawControls(ctx);
+    if (this.frame?.hasControls) this.frame.drawControls(ctx);
     ctx.restore()
   }
 }
