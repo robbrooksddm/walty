@@ -573,7 +573,7 @@ export class CropTool {
         updateMasks();
         this.fc.requestRenderAll();
       })
-      .on('scaling', () => {
+      .on('scaling', (e: fabric.IEvent) => {
         // enforce limits but keep the opposite corner fixed while dragging
         this.clamp(true, false);
         const i = this.img!;
@@ -583,6 +583,15 @@ export class CropTool {
         if (imgEdge.top    !== undefined) i.top  = imgEdge.top;
         if (imgEdge.right  !== undefined) i.left = imgEdge.right  - w;
         if (imgEdge.bottom !== undefined) i.top  = imgEdge.bottom - h;
+
+        const t = (e as any).transform;
+        if (t) {
+          t.scaleX = i.scaleX!;
+          t.scaleY = i.scaleY!;
+          t.left   = i.left!;
+          t.top    = i.top!;
+        }
+
         i.setCoords();
         updateMasks();
         this.frameScaling = true;    // ON while photo itself is scaling
