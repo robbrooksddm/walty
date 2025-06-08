@@ -545,9 +545,9 @@ export class CropTool {
         this.fc.requestRenderAll();
       })
       .on('scaling', () => {
-        // clamp scale so the photo never shrinks past the crop window
-        // skip repositioning here so the image centre stays fixed
-        this.clamp(true, false);
+        // continuously refresh coords so the next render picks up the
+        // changing size—prevents stale handles after multiple enlarges.
+        this.img!.setCoords();
         updateMasks();
         this.frameScaling = true;    // ON while photo itself is scaling
         this.fc.requestRenderAll();
@@ -588,8 +588,8 @@ export class CropTool {
   }
 
   /* keep bitmap inside frame */
-  private clamp = (force = false, reposition = true) => {
-    if (!force && this.frameScaling) return;
+  private clamp = () => {
+    if (this.frameScaling) return;
     if (!this.img || !this.frame) return
     const { img, frame } = this
     const minSX = frame.width!*frame.scaleX! / img.width!
@@ -602,17 +602,13 @@ export class CropTool {
       img.scaleY = img.scaleX
     }
 
-    if (reposition) {
-      const fx=frame.left!, fy=frame.top!
-      const fw=frame.width!*frame.scaleX!, fh=frame.height!*frame.scaleY!
-      const iw=img.getScaledWidth(), ih=img.getScaledHeight()
-      img.set({
-        left: Math.min(fx, Math.max(fx+fw-iw, img.left!)),
-        top : Math.min(fy, Math.max(fy+fh-ih, img.top!)),
-      }).setCoords()
-    } else {
-      img.setCoords()
-    }
+    const fx=frame.left!, fy=frame.top!
+    const fw=frame.width!*frame.scaleX!, fh=frame.height!*frame.scaleY!
+    const iw=img.getScaledWidth(), ih=img.getScaledHeight()
+    img.set({
+      left: Math.min(fx, Math.max(fx+fw-iw, img.left!)),
+      top : Math.min(fy, Math.max(fy+fh-ih, img.top!)),
+    }).setCoords()
   }
 
   /* keep frame inside bitmap */
