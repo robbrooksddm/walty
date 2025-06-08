@@ -546,7 +546,8 @@ export class CropTool {
       })
       .on('scaling', () => {
         // clamp scale so the photo never shrinks past the crop window
-        this.clamp(true);            // reposition image during the gesture
+        // skip repositioning here so the image centre stays fixed
+        this.clamp(true, false);
         updateMasks();
         this.frameScaling = true;    // ON while photo itself is scaling
         this.fc.requestRenderAll();
