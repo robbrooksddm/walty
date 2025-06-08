@@ -537,8 +537,8 @@ export class CropTool {
         this.fc.requestRenderAll();
       })
       .on('scaling', () => {
-        // continuously refresh coords so the next render picks up the
-        // changing size—prevents stale handles after multiple enlarges.
+        // continuously clamp so the photo can't shrink inside the window
+        this.clamp(true);             // force clamp during interactive scale
         this.img!.setCoords();
         updateMasks();
         this.frameScaling = true;    // ON while photo itself is scaling
@@ -580,8 +580,8 @@ export class CropTool {
   }
 
   /* keep bitmap inside frame */
-  private clamp = () => {
-    if (this.frameScaling) return;
+  private clamp = (force = false) => {
+    if (!force && this.frameScaling) return;
     if (!this.img || !this.frame) return
     const { img, frame } = this
     const minSX = frame.width!*frame.scaleX! / img.width!
