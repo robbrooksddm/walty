@@ -71,6 +71,7 @@ export class CropTool {
       cropY : 0,
       lockRotation   : true,
       lockScalingFlip: true,
+      lockUniScaling : true,
       hasControls    : true,
       selectable     : true,
       evented        : true,
@@ -537,6 +538,9 @@ export class CropTool {
         this.fc.requestRenderAll();
       })
       .on('scaling', () => {
+        // Enforce minimum size while scaling so the photo never
+        // becomes smaller than the crop window.
+        this.clamp(true);
         // continuously refresh coords so the next render picks up the
         // changing size—prevents stale handles after multiple enlarges.
         this.img!.setCoords();
@@ -580,8 +584,8 @@ export class CropTool {
   }
 
   /* keep bitmap inside frame */
-  private clamp = () => {
-    if (this.frameScaling) return;
+  private clamp = (force = false) => {
+    if (this.frameScaling && !force) return;
     if (!this.img || !this.frame) return
     const { img, frame } = this
     const minSX = frame.width!*frame.scaleX! / img.width!
