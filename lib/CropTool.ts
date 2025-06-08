@@ -17,6 +17,7 @@ export class CropTool {
   private img     : fabric.Image | null = null
   private frame   : fabric.Group | null = null
   private masks   : fabric.Rect[] = [];      // 4‑piece dim overlay
+  private frameScaling = false;              // TRUE only while frame is being resized
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
 
@@ -124,8 +125,8 @@ export class CropTool {
         x, y,
         offsetX: 0, offsetY: 0,
         // enlarge hit‑box for easier grabbing
-        sizeX: 24 / this.SCALE,
-        sizeY: 24 / this.SCALE,
+        sizeX: 12 / this.SCALE,
+        sizeY: 12 / this.SCALE,
         // use Fabric helpers (cast to `any` to silence TS)
         cursorStyleHandler: (fabric as any).controlsUtils.scaleCursorStyleHandler,
         actionHandler     : (fabric as any).controlsUtils.scalingEqually,
@@ -349,6 +350,7 @@ export class CropTool {
 
       if (insideWindow) {
       // Temporarily turn off the frame so pointer events fall through to bitmap
+          this.frameScaling = false;
       restoreFrameSelectable = this.frame.selectable;
       restoreFrameEvented    = this.frame.evented;
       this.frame.selectable  = false;
@@ -375,6 +377,7 @@ export class CropTool {
     // Pointer move: if we’re in panning mode, relocate
     // ------------------------------------------------
     const moveHandler = (e: fabric.IEvent) => {
+        if (this.frameScaling) return;
       if (!isDraggingImage || !this.img) return;
 
       const pointer = this.fc.getPointer(e.e as any, false);
@@ -401,6 +404,7 @@ export class CropTool {
       if (restoreFrameSelectable !== undefined) this.frame!.selectable = restoreFrameSelectable;
       if (restoreFrameEvented    !== undefined) this.frame!.evented    = restoreFrameEvented;
       restoreFrameSelectable = restoreFrameEvented = undefined;
+      this.frameScaling = false;
       isDraggingImage = false;
     };
 
@@ -485,6 +489,7 @@ export class CropTool {
         this.clampFrame();            // keep window within bitmap limits
         this.frame!.setCoords();
         updateMasks();
+        this.frameScaling = true;    // flag ON while corner is being dragged
         this.fc.requestRenderAll();
       })
       .on('scaled', () => {
@@ -499,6 +504,7 @@ export class CropTool {
         this.frame!.hasControls = true;
         if (this.img) this.img.hasControls = true;
         updateMasks();
+        this.frameScaling = false;   // flag OFF once user releases the mouse
         this.fc.requestRenderAll();
       });
 
@@ -517,6 +523,7 @@ export class CropTool {
         // changing size—prevents stale handles after multiple enlarges.
         this.img!.setCoords();
         updateMasks();
+        this.frameScaling = true;    // ON while photo itself is scaling
         this.fc.requestRenderAll();
       })
       .on('scaled', () => {
@@ -526,6 +533,7 @@ export class CropTool {
         this.img!.hasControls = true;
         if (this.frame) this.frame.hasControls = true;
         updateMasks();
+        this.frameScaling = false;   // OFF at end of gesture
         this.fc.requestRenderAll();
       });
   }
@@ -555,6 +563,7 @@ export class CropTool {
 
   /* keep bitmap inside frame */
   private clamp = () => {
+    if (this.frameScaling) return;
     if (!this.img || !this.frame) return
     const { img, frame } = this
     const minSX = frame.width!*frame.scaleX! / img.width!
