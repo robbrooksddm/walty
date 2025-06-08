@@ -55,6 +55,8 @@ export class CropTool {
 
     // which edges stay locked while the user scales the frame
     let anchorEdge: { left?: number; top?: number; right?: number; bottom?: number } = {};
+    // which edges stay locked while the user scales the bitmap
+    let imgEdge: { left?: number; top?: number; right?: number; bottom?: number } = {};
 
     /* ① expand bitmap to its natural size (keep on‑screen scale) */
     const imgEl  = img.getElement() as HTMLImageElement
@@ -307,6 +309,33 @@ export class CropTool {
           this.img.lockMovementX = true;
           this.img.lockMovementY = true;
         }
+      } else if (t === this.img && (e as any).transform?.action === 'scale') {
+        const c = (e as any).transform.corner as string | undefined;
+        const i = this.img!;
+        const left   = i.left!;
+        const top    = i.top!;
+        const right  = left + i.getScaledWidth();
+        const bottom = top  + i.getScaledHeight();
+
+        imgEdge = {};
+        switch (c) {
+          case 'br':
+            imgEdge.left = left;
+            imgEdge.top  = top;
+            break;
+          case 'tl':
+            imgEdge.right  = right;
+            imgEdge.bottom = bottom;
+            break;
+          case 'tr':
+            imgEdge.left   = left;
+            imgEdge.bottom = bottom;
+            break;
+          case 'bl':
+            imgEdge.top   = top;
+            imgEdge.right = right;
+            break;
+        }
       }
     };
 
@@ -545,14 +574,22 @@ export class CropTool {
         this.fc.requestRenderAll();
       })
       .on('scaling', () => {
-        // continuously refresh coords so the next render picks up the
-        // changing size—prevents stale handles after multiple enlarges.
-        this.img!.setCoords();
+        // enforce limits but keep the opposite corner fixed while dragging
+        this.clamp(true, false);
+        const i = this.img!;
+        const w = i.width!  * i.scaleX!;
+        const h = i.height! * i.scaleY!;
+        if (imgEdge.left   !== undefined) i.left = imgEdge.left;
+        if (imgEdge.top    !== undefined) i.top  = imgEdge.top;
+        if (imgEdge.right  !== undefined) i.left = imgEdge.right  - w;
+        if (imgEdge.bottom !== undefined) i.top  = imgEdge.bottom - h;
+        i.setCoords();
         updateMasks();
         this.frameScaling = true;    // ON while photo itself is scaling
         this.fc.requestRenderAll();
       })
       .on('scaled', () => {
+        imgEdge = {};
         this.clamp();                 // final clamp at end of gesture
         this.img!.setCoords();
         // restore both handle sets now that the gesture is finished
@@ -588,8 +625,8 @@ export class CropTool {
   }
 
   /* keep bitmap inside frame */
-  private clamp = () => {
-    if (this.frameScaling) return;
+  private clamp = (force = false, reposition = true) => {
+    if (!force && this.frameScaling) return;
     if (!this.img || !this.frame) return
     const { img, frame } = this
     const minSX = frame.width!*frame.scaleX! / img.width!
@@ -602,13 +639,16 @@ export class CropTool {
       img.scaleY = img.scaleX
     }
 
-    const fx=frame.left!, fy=frame.top!
-    const fw=frame.width!*frame.scaleX!, fh=frame.height!*frame.scaleY!
-    const iw=img.getScaledWidth(), ih=img.getScaledHeight()
-    img.set({
-      left: Math.min(fx, Math.max(fx+fw-iw, img.left!)),
-      top : Math.min(fy, Math.max(fy+fh-ih, img.top!)),
-    }).setCoords()
+    if (reposition) {
+      const fx=frame.left!, fy=frame.top!
+      const fw=frame.width!*frame.scaleX!, fh=frame.height!*frame.scaleY!
+      const iw=img.getScaledWidth(), ih=img.getScaledHeight()
+      img.set({
+        left: Math.min(fx, Math.max(fx+fw-iw, img.left!)),
+        top : Math.min(fy, Math.max(fy+fh-ih, img.top!)),
+      })
+    }
+    img.setCoords()
   }
 
   /* keep frame inside bitmap */
