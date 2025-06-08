@@ -22,7 +22,7 @@ export default async function AdminTemplatePage({
   params: {id: string}
 }) {
   /* 1. fetch the *draft* template (404 if missing) */
-  const pages = await getTemplatePages(id)
+  const { pages } = await getTemplatePages(id)
   if (!pages) notFound()
 
   /* 2. load the client wrapper *only on the client* */

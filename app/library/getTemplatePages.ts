@@ -4,9 +4,10 @@
  * convert every layer with `fromSanity`.
  *********************************************************************/
 
-import { sanityPreview }          from '@/sanity/lib/client'
-import {fromSanity}            from '@/app/library/layerAdapters'
-import type {TemplatePage}     from '@/app/components/FabricCanvas'
+import { sanityPreview } from '@/sanity/lib/client'
+import { urlFor } from '@/sanity/lib/image'
+import { fromSanity } from '@/app/library/layerAdapters'
+import type { TemplatePage } from '@/app/components/FabricCanvas'
 
 /* ---------- 4-page fallback so the editor always mounts --------- */
 const EMPTY: TemplatePage[] = [
@@ -16,6 +17,11 @@ const EMPTY: TemplatePage[] = [
   {name: 'back',     layers: []},
 ]
 
+export interface TemplateData {
+  pages: TemplatePage[]
+  coverImage?: string
+}
+
 /**
  * Accepts a route param (`slug` -or- full `_id` -or- `drafts.<id>`).
  * Returns **exactly 4 pages** with all layers converted to editor
@@ -23,7 +29,7 @@ const EMPTY: TemplatePage[] = [
  */
 export async function getTemplatePages(
   idOrSlug: string,
-): Promise<TemplatePage[]> {
+): Promise<TemplateData> {
   /* 1 ─ pick the first match by _id or slug */
   const query = /* groq */ `
   *[
@@ -34,6 +40,7 @@ export async function getTemplatePages(
       slug.current == $key
     )
   ][0]{
+    coverImage,
     pages[]{
       layers[]{
         ...,                       // keep every native field
@@ -53,7 +60,7 @@ export async function getTemplatePages(
     draftKey:  idOrSlug.startsWith('drafts.') ? idOrSlug : `drafts.${idOrSlug}`,
   }
 
-  const raw = await sanityPreview.fetch<{pages?: any[]}>(query, params)
+  const raw = await sanityPreview.fetch<{pages?: any[]; coverImage?: any}>(query, params)
 
   const pages = Array.isArray(raw?.pages) && raw.pages.length === 4
     ? raw.pages
@@ -68,10 +75,14 @@ console.log(
   '\n',
 );
 
-  return names.map((name, i) => ({
+  const pagesOut = names.map((name, i) => ({
     name,
     layers: (pages[i]?.layers ?? [])
-      .map(fromSanity)     // (Layer | null)[]
-      .filter(Boolean),    // Layer[]
+      .map(fromSanity)
+      .filter(Boolean),
   })) as TemplatePage[]
+
+  const coverImage = raw?.coverImage ? urlFor(raw.coverImage).url() : undefined
+
+  return { pages: pagesOut, coverImage }
 }
