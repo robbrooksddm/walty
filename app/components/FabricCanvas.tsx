@@ -343,20 +343,38 @@ useEffect(() => {
   const crop = new CropTool(fc, SCALE, SEL_COLOR);
   cropToolRef.current = crop;
 
+  const startCrop = (img: fabric.Image) => {
+    crop.begin(img);
+    croppingRef.current = true;
+    onCroppingChange?.(true);
+  };
+
   // double‑click on an <image> starts cropping
   const dblHandler = (e: fabric.IEvent) => {
     const tgt = e.target as fabric.Object | undefined;
     if (tgt && (tgt as any).type === 'image') {
-      cropToolRef.current?.begin(tgt as fabric.Image);
+      startCrop(tgt as fabric.Image);
     }
   };
   fc.on('mouse:dblclick', dblHandler);
 
+  // toolbar or external trigger
+  const extHandler = () => {
+    const act = fc.getActiveObject() as fabric.Object | undefined;
+    if (act && (act as any).type === 'image') startCrop(act as fabric.Image);
+  };
+  document.addEventListener('start-crop', extHandler);
+
+  const endCrop = () => {
+    croppingRef.current = false;
+    onCroppingChange?.(false);
+  };
+
   // ESC cancels, ENTER commits
   const keyCropHandler = (ev: KeyboardEvent) => {
     if (!cropToolRef.current?.isActive) return;
-    if (ev.key === 'Escape') cropToolRef.current.cancel();
-    if (ev.key === 'Enter')  cropToolRef.current.commit();
+    if (ev.key === 'Escape') { cropToolRef.current.cancel(); endCrop(); }
+    if (ev.key === 'Enter')  { cropToolRef.current.commit(); endCrop(); }
   };
   window.addEventListener('keydown', keyCropHandler);
   /* ───────────────────────────────────────────────────────── */
@@ -602,6 +620,7 @@ window.addEventListener('keydown', onKey)
     if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
     // tidy up crop‑tool listeners
     fc.off('mouse:dblclick', dblHandler);
+    document.removeEventListener('start-crop', extHandler);
     window.removeEventListener('keydown', keyCropHandler);
     onReady(null)
     fc.dispose()
