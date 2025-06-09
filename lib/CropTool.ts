@@ -62,8 +62,9 @@ export class CropTool {
                   h: imgEl.naturalHeight || img.height! }
     const { cropX=0, cropY=0, width=nat.w, height=nat.h } = img
 
-    const prevLockUniScaling  = img.lockUniScaling;
-    const prevCenteredScaling = (img as any).centeredScaling;
+    const prevLockUniScaling   = img.lockUniScaling;
+    const prevCenteredScaling  = (img as any).centeredScaling;
+    let   restoreUniformScale: boolean | null = null;
     img.set({
       left  : (img.left ?? 0) - cropX * (img.scaleX ?? 1),
       top   : (img.top  ?? 0) - cropY * (img.scaleY ?? 1),
@@ -273,6 +274,11 @@ export class CropTool {
       // …then re‑enable the one that is actually being transformed
       t.hasControls = true;
 
+      if (t === this.img && (e as any).transform?.action === 'scale') {
+        restoreUniformScale = this.fc.uniformScaling;
+        this.fc.uniformScaling = true;   // lock aspect ratio for the photo
+      }
+
       // If the user begins scaling the crop frame, remember the
       // *opposite* edges so they remain fixed during the drag.
       if (t === this.frame && (e as any).transform?.action === 'scale') {
@@ -311,6 +317,10 @@ export class CropTool {
     };
 
     const upHandler = () => {
+      if (restoreUniformScale !== null) {
+        this.fc.uniformScaling = restoreUniformScale;
+        restoreUniformScale = null;
+      }
       if (this.frame) {
         this.frame.bringToFront();
       }
@@ -448,6 +458,10 @@ export class CropTool {
     this.cleanup.push(() => {
       this.fc.off('before:transform', beforeHandler);
       this.fc.off('mouse:up', upHandler);
+      if (restoreUniformScale !== null) {
+        this.fc.uniformScaling = restoreUniformScale;
+        restoreUniformScale = null;
+      }
     });
 
 
