@@ -253,6 +253,9 @@ export class CropTool {
     };
     updateMasks();
 
+    // Enforce minimum scale from the outset
+    this.clamp(true);
+
     this.fc.setActiveObject(this.frame)
 
     /* ------------------------------------------------------------------
@@ -644,6 +647,7 @@ export class CropTool {
     const minSX = frame.width!*frame.scaleX! / img.width!
     const minSY = frame.height!*frame.scaleY! / img.height!
     const minScale = Math.max(minSX, minSY)
+    img.minScaleLimit = minScale
 
     if ((img.scaleX ?? 1) < minScale) {
       img.scaleX = img.scaleY = minScale
@@ -681,6 +685,11 @@ export class CropTool {
       frame.scaleX = (maxR - frame.left!) / frame.width!
     if (frame.top! + fh > maxB)
       frame.scaleY = (maxB - frame.top!) / frame.height!
+
+    // Update bitmap's minimum scale so it can never shrink smaller
+    const minSX = frame.width! * frame.scaleX! / img.width!
+    const minSY = frame.height! * frame.scaleY! / img.height!
+    img.minScaleLimit = Math.max(minSX, minSY)
 
     frame.setCoords()
   }
