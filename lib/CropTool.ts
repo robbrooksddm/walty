@@ -253,6 +253,9 @@ export class CropTool {
     };
     updateMasks();
 
+    // Enforce minimum scale from the outset
+    this.clamp(true);
+
     this.fc.setActiveObject(this.frame)
 
     /* ------------------------------------------------------------------
@@ -578,13 +581,45 @@ export class CropTool {
         if (i.lockUniScaling) {
           i.scaleY = i.scaleX;
         }
-        // 🚫 Never let the bitmap become smaller than the crop window
+        // --- Determine the absolute minimum uniform scale for this tick ----
+        // 1) basic frame‑fit scale (width / height only)
         const f = this.frame!;
         const minSX = (f.width!  * f.scaleX!) / i.width!;
         const minSY = (f.height! * f.scaleY!) / i.height!;
-        const minScale = Math.max(minSX, minSY);
-        if (i.scaleX! < minScale) {
-          i.scaleX = i.scaleY = minScale;
+        let neededScale = Math.max(minSX, minSY);
+
+        // 2) coverage scale – depends on which edges are locked this drag
+        const fLeft   = f.left!;
+        const fTop    = f.top!;
+        const fRight  = fLeft + f.width!  * f.scaleX!;
+        const fBottom = fTop  + f.height! * f.scaleY!;
+
+        // The bitmap edge that stays fixed during this gesture (taken from imgEdge)
+        // If left is locked, the bitmap's left won't move; so its right must reach fRight
+        if (imgEdge.left !== undefined) {
+          const needW = fRight - imgEdge.left;
+          neededScale = Math.max(neededScale, needW / i.width!);
+        }
+        // If right is locked, its left must reach fLeft
+        if (imgEdge.right !== undefined) {
+          const needW = imgEdge.right - fLeft;
+          neededScale = Math.max(neededScale, needW / i.width!);
+        }
+        // If top is locked, its bottom must reach fBottom
+        if (imgEdge.top !== undefined) {
+          const needH = fBottom - imgEdge.top;
+          neededScale = Math.max(neededScale, needH / i.height!);
+        }
+        // If bottom is locked, its top must reach fTop
+        if (imgEdge.bottom !== undefined) {
+          const needH = imgEdge.bottom - fTop;
+          neededScale = Math.max(neededScale, needH / i.height!);
+        }
+
+        if (i.scaleX! < neededScale) {
+          i.scaleX = i.scaleY = neededScale;
+          const t = (e as any).transform;
+          if (t) t.scaleX = t.scaleY = neededScale; // keep Fabric’s live transform synced
         }
         // Make absolutely sure the bitmap still covers the frame mid‑gesture
         this.clamp(true);
@@ -644,6 +679,7 @@ export class CropTool {
     const minSX = frame.width!*frame.scaleX! / img.width!
     const minSY = frame.height!*frame.scaleY! / img.height!
     const minScale = Math.max(minSX, minSY)
+    img.minScaleLimit = minScale
 
     if ((img.scaleX ?? 1) < minScale) {
       img.scaleX = img.scaleY = minScale
@@ -682,8 +718,31 @@ export class CropTool {
     if (frame.top! + fh > maxB)
       frame.scaleY = (maxB - frame.top!) / frame.height!
 
+    // Update bitmap's minimum scale so it can never shrink smaller
+    const minSX = frame.width! * frame.scaleX! / img.width!
+    const minSY = frame.height! * frame.scaleY! / img.height!
+    img.minScaleLimit = Math.max(minSX, minSY)
+    
     frame.setCoords()
   }
+
+    /** Minimum uniform scale so the image fully covers the crop window,
+   *  taking the current left/top gap into account.
+   */
+    private coverScale = () => {
+      if (!this.img || !this.frame) return 1;
+      const { img, frame } = this;
+  
+      const frameRight  = frame.left! + frame.width!  * frame.scaleX!;
+      const frameBottom = frame.top!  + frame.height! * frame.scaleY!;
+      const imgLeft     = img.left!;
+      const imgTop      = img.top!;
+  
+      const needW = frameRight  - imgLeft;  // width needed to reach frame’s right edge
+      const needH = frameBottom - imgTop;   // height needed to reach frame’s bottom edge
+  
+      return Math.max(needW / img.width!, needH / img.height!);
+    }
 
   /* draw controls for both objects each frame */
   private renderBoth = () => {
