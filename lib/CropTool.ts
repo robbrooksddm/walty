@@ -76,7 +76,7 @@ export class CropTool {
       lockRotation   : true,
       lockScalingFlip: true,
       lockUniScaling : true,
-      centeredScaling: true,
+      centeredScaling: false,
       hasControls    : true,
       selectable     : true,
       evented        : true,
@@ -529,8 +529,7 @@ export class CropTool {
       .on('moving', () => {
         this.clampFrame();            // keep frame inside bitmap
         this.frame!.setCoords();
-        updateMasks();
-        this.fc.requestRenderAll();
+        updateMasks(); 
       })
       .on('scaling', () => {
         // keep the pre‑determined opposite edges fixed
@@ -544,8 +543,8 @@ export class CropTool {
         this.clampFrame();            // keep window within bitmap limits
         this.frame!.setCoords();
         updateMasks();
-        this.frameScaling = true;    // flag ON while corner is being dragged
-        this.fc.requestRenderAll();
+        this.frameScaling = true;       // flag ON while corner is dragged
+        // no extra requestRenderAll() – avoids double clear of contextTop    // flag ON while corner is being dragged
       })
       .on('scaled', () => {
         // 🔓 Re‑enable normal movement on the bitmap
@@ -570,13 +569,25 @@ export class CropTool {
         // keep the photo within the crop window as it drags
         this.clamp();
         this.img!.setCoords();
-        updateMasks();
-        this.fc.requestRenderAll();
+        updateMasks();        // automatic redraw already in flight
       })
       .on('scaling', (e: fabric.IEvent) => {
-        // enforce limits but keep the opposite corner fixed while dragging
-        this.clamp(true, false);
+        // defer min-size enforcement until 'scaled' to avoid jitter
         const i = this.img!;
+        // 🔒 Keep aspect ratio locked (uniform scaling) during drag
+        if (i.lockUniScaling) {
+          i.scaleY = i.scaleX;
+        }
+        // 🚫 Never let the bitmap become smaller than the crop window
+        const f = this.frame!;
+        const minSX = (f.width!  * f.scaleX!) / i.width!;
+        const minSY = (f.height! * f.scaleY!) / i.height!;
+        const minScale = Math.max(minSX, minSY);
+        if (i.scaleX! < minScale) {
+          i.scaleX = i.scaleY = minScale;
+        }
+        // Make absolutely sure the bitmap still covers the frame mid‑gesture
+        this.clamp(true);
         const w = i.width!  * i.scaleX!;
         const h = i.height! * i.scaleY!;
         if (imgEdge.left   !== undefined) i.left = imgEdge.left;
@@ -584,18 +595,10 @@ export class CropTool {
         if (imgEdge.right  !== undefined) i.left = imgEdge.right  - w;
         if (imgEdge.bottom !== undefined) i.top  = imgEdge.bottom - h;
 
-        const t = (e as any).transform;
-        if (t) {
-          t.scaleX = i.scaleX!;
-          t.scaleY = i.scaleY!;
-          t.left   = i.left!;
-          t.top    = i.top!;
-        }
-
         i.setCoords();
         updateMasks();
-        this.frameScaling = true;    // ON while photo itself is scaling
-        this.fc.requestRenderAll();
+        this.frameScaling = true;       // ON while photo itself is scaling
+        // Fabric’s own transform loop is already rendering each tick
       })
       .on('scaled', () => {
         imgEdge = {};
@@ -691,9 +694,11 @@ export class CropTool {
     this.img.setCoords();
     this.frame.setCoords();
 
-    const ctx = (this.fc as any).contextTop
-    if (!ctx) return;            // canvas disposed or not yet initialised
-    this.fc.clearContext(ctx)
+        const ctx = (this.fc as any).contextTop
+        if (!ctx) return;            // canvas disposed or not yet initialised
+        /* Fabric doesn’t always wipe contextTop if it draws nothing of its own.
+           Clear it ourselves before redrawing both control sets. */
+        this.fc.clearContext(ctx)
 
     ctx.save()
     const vpt = this.fc.viewportTransform;
