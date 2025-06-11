@@ -713,6 +713,11 @@ export class CropTool {
     this.teardown(true);
   }
 
+  /** Abort cropping without firing any events */
+  public abort () {
+    this.teardown(false);
+  }
+
   /* ─────────────── internal helpers ────────────────────────────── */
   private teardown (keep:boolean) {
     if (!this.isActive) return

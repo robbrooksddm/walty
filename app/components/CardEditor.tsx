@@ -19,6 +19,7 @@ import TextToolbar                      from './TextToolbar'
 import ImageToolbar                     from './ImageToolbar'
 import EditorCommands                   from './EditorCommands'
 import SelfieDrawer                     from './SelfieDrawer'
+import { CropTool }                     from '@/lib/CropTool'
 import type { TemplatePage }            from './FabricCanvas'
 
 /* ---------- helpers ------------------------------------------------ */
@@ -175,6 +176,10 @@ export default function CardEditor({
     if (!onSave) return
     setSaving(true)
     try {
+      canvasMap.forEach(fc => {
+        const tool = (fc as any)?._cropTool as CropTool | undefined
+        if (tool?.isActive) tool.commit()
+      })
       let coverImageId: string | undefined
       const fc = canvasMap[0]
       if (fc) {

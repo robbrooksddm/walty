@@ -342,6 +342,7 @@ useEffect(() => {
   // create a reusable crop helper and keep it in a ref
   const crop = new CropTool(fc, SCALE, SEL_COLOR);
   cropToolRef.current = crop;
+  (fc as any)._cropTool = crop;
 
   // double‑click on an <image> starts cropping
   const dblHandler = (e: fabric.IEvent) => {
@@ -608,6 +609,7 @@ window.addEventListener('keydown', onKey)
     fc.off('mouse:dblclick', dblHandler);
     window.removeEventListener('keydown', keyCropHandler);
     onReady(null)
+    cropToolRef.current?.abort()
     fc.dispose()
   }
 // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -635,6 +637,7 @@ window.addEventListener('keydown', onKey)
     if (!fc || !page) return
     if (isEditing.current || (fc as any)._editingRef?.current) return
 
+    cropToolRef.current?.abort()
     hydrating.current = true
     fc.clear();
     fc.setBackgroundColor('#fff', fc.renderAll.bind(fc));
