@@ -718,6 +718,10 @@ export class CropTool {
     if (!keep) this.fc.discardActiveObject()
     this.fc.requestRenderAll()
 
+    if (this.img) {
+      this.img.lockMovementX = false
+      this.img.lockMovementY = false
+    }
     this.frame    = null
     this.img      = null
     this.orig     = null
