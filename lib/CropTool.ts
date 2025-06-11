@@ -18,6 +18,8 @@ export class CropTool {
   private frame   : fabric.Group | null = null
   private masks   : fabric.Rect[] = [];      // 4‑piece dim overlay
   private frameScaling = false;              // TRUE only while frame is being resized
+  /** original bitmap state before cropping */
+  private orig: { left:number; top:number; cropX:number; cropY:number; width:number; height:number; } | null = null;
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
 
@@ -57,6 +59,16 @@ export class CropTool {
     let anchorEdge: { left?: number; top?: number; right?: number; bottom?: number } = {};
     // which edges stay locked while the user scales the bitmap
     let imgEdge: { left?: number; top?: number; right?: number; bottom?: number } = {};
+
+    // remember original crop for cancel()
+    this.orig = {
+      left  : img.left ?? 0,
+      top   : img.top  ?? 0,
+      cropX : img.cropX ?? 0,
+      cropY : img.cropY ?? 0,
+      width : img.width ?? 0,
+      height: img.height ?? 0,
+    };
 
     /* ① expand bitmap to its natural size (keep on‑screen scale) */
     const imgEl  = img.getElement() as HTMLImageElement
@@ -648,8 +660,48 @@ export class CropTool {
       });
   }
 
-  public cancel () { this.teardown(false) }
-  public commit () { this.teardown(true)  }
+  public cancel () {
+    if (this.isActive && this.img && this.orig) {
+      this.img.set({
+        left  : this.orig.left,
+        top   : this.orig.top,
+        cropX : this.orig.cropX,
+        cropY : this.orig.cropY,
+        width : this.orig.width,
+        height: this.orig.height,
+      }).setCoords();
+      this.fc.setActiveObject(this.img);
+      this.img.fire('modified');
+      this.fc.fire('object:modified', { target: this.img } as any);
+    }
+    this.teardown(false);
+  }
+
+  public commit () {
+    if (this.isActive && this.img && this.frame) {
+      const { img, frame } = this;
+      const sX = img.scaleX ?? 1;
+      const sY = img.scaleY ?? 1;
+      const cropX = (frame.left! - img.left!) / sX;
+      const cropY = (frame.top!  - img.top!)  / sY;
+      const cropW = frame.width!  * frame.scaleX! / sX;
+      const cropH = frame.height! * frame.scaleY! / sY;
+
+      img.set({
+        left  : frame.left!,
+        top   : frame.top!,
+        cropX : cropX,
+        cropY : cropY,
+        width : cropW,
+        height: cropH,
+      }).setCoords();
+
+      this.fc.setActiveObject(img);
+      img.fire('modified');
+      this.fc.fire('object:modified', { target: img } as any);
+    }
+    this.teardown(true);
+  }
 
   /* ─────────────── internal helpers ────────────────────────────── */
   private teardown (keep:boolean) {
@@ -668,6 +720,7 @@ export class CropTool {
 
     this.frame    = null
     this.img      = null
+    this.orig     = null
     this.isActive = false
   }
 
