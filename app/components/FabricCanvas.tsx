@@ -434,6 +434,10 @@ addGuides(fc)                                 // green safe-zone guides
       width  : t.getScaledWidth(),
       height : t.getScaledHeight(),
       opacity: t.opacity,
+      ...(t.cropX != null && { cropX: t.cropX }),
+      ...(t.cropY != null && { cropY: t.cropY }),
+      ...(t.width  != null && { cropW: t.width  }),
+      ...(t.height != null && { cropH: t.height }),
     })
     if (t.type === 'textbox') Object.assign(d, {
       text       : t.text,
