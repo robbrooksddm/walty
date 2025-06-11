@@ -287,14 +287,20 @@ const handleSwap = (url: string) => {
         placeholderId={aiPlaceholderId}   /* ← NEW prop */
       />
 
+      <EditorCommands
+        onUndo={undo}
+        onRedo={redo}
+        onSave={handleSave}
+        saving={saving}
+      />
+
 {/* sidebar */}
 <div className="relative z-30 w-64 flex-shrink-0">
   <LayerPanel />
 </div>
 
       {/* main */}
-      <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[840px]">
-       <EditorCommands onUndo={undo} onRedo={redo} onSave={handleSave} saving={saving} />
+      <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[840px] -translate-x-24 lg:-translate-x-28 xl:-translate-x-32">
      {activeType === 'text' && (
        <TextToolbar
          canvas={activeFc}
