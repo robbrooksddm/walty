@@ -184,6 +184,7 @@ export default function CardEditor({
       const sync = (fc as any)?._syncLayers as (() => void) | undefined
       if (sync) sync()
     })
+    const finalPages = useEditor.getState().pages
       let coverImageId: string | undefined
       const fc = canvasMap[0]
       if (fc) {
@@ -202,7 +203,7 @@ export default function CardEditor({
           console.error('cover upload failed', err)
         }
       }
-      await onSave(pages, coverImageId)
+      await onSave(finalPages, coverImageId)
     }
     finally { setSaving(false) }
   }
