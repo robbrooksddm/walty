@@ -658,6 +658,16 @@ export class CropTool {
         updateMasks();
         this.fc.requestRenderAll();
       });
+
+    // remove object event listeners when crop ends
+    this.cleanup.push(() => {
+      this.frame?.off('moving');
+      this.frame?.off('scaling');
+      this.frame?.off('scaled');
+      img.off('moving');
+      img.off('scaling');
+      img.off('scaled');
+    });
   }
 
   public cancel () {
