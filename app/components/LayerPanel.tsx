@@ -19,7 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  Plus,
+  Type,
   Upload as UploadIcon,
   Trash2,
   GripVertical,
@@ -50,7 +50,8 @@ function Row({ id, idx }: { id: string; idx: number }) {
     <li
       ref={setNodeRef}
       style={style}
-      className="group flex items-center gap-2 rounded-lg border border-walty-teal/40 px-2 py-1 text-sm hover:bg-walty-orange/10"
+      className="group flex items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 py-1 text-sm hover:bg-walty-orange/10"
+
     >
       {/* drag handle */}
       <button
@@ -107,20 +108,15 @@ export default function LayerPanel() {
     if (e.over && e.active.id !== e.over.id)
       reorder(+e.active.id, +e.over.id);
   };
+    return (
+        <aside
+        className={`fixed left-0 top-0 z-20 h-full
+                      w-54 sm:w-60 md:w-64 lg:w-70 xl:w-74
+                      rounded-r-2xl bg-white shadow-xl ring-2 ring-walty-teal/40
+                      transition-transform duration-300
+                      ${open ? "translate-x-0" : "-translate-x-full"}`}
+        >
 
-  return (
-    <aside
-      className={`fixed left-0 top-0 z-20 h-full w-60 bg-white shadow-lg transition-transform duration-300 ${
-        open ? "translate-x-0" : "-translate-x-56"
-      }`}
-    >
-      {/* slide toggle */}
-      <button
-        onClick={() => setOpen(!open)}
-        className="absolute -right-5 top-1/2 flex h-12 w-5 -translate-y-1/2 items-center justify-center rounded-r-lg bg-walty-brown text-walty-cream"
-      >
-        {open ? "◀" : "▶"}
-      </button>
 
       {/* upload */}
       <label className="m-4 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-walty-teal/50 p-4 text-walty-teal hover:bg-walty-orange/5">
@@ -139,20 +135,13 @@ export default function LayerPanel() {
       </label>
 
       {/* add buttons */}
-      <div className="mx-4 mb-4 flex flex-col gap-3">
+      <div className="mx-4 mb-6 flex flex-col gap-3">
         <button
           onClick={() => addText()}
-          className="flex items-center gap-2 rounded-lg bg-walty-mustard px-3 py-2 font-semibold text-walty-brown hover:bg-walty-mustard/90"
+          className="flex flex-col items-center justify-center gap-2 rounded-xl bg-walty-teal py-6 text-walty-cream shadow hover:bg-walty-teal/90"
         >
-          <Plus className="h-4 w-4" /> Add Text
-        </button>
-        <button
-          onClick={() => {
-            document.querySelector<HTMLInputElement>("#hidden-file-input")?.click();
-          }}
-          className="flex items-center gap-2 rounded-lg bg-walty-mustard px-3 py-2 font-semibold text-walty-brown hover:bg-walty-mustard/90"
-        >
-          <Plus className="h-4 w-4" /> Add Image
+          <Type className="h-8 w-8" />
+          <span className="text-lg font-semibold tracking-wide">Add Text</span>
         </button>
       </div>
 
