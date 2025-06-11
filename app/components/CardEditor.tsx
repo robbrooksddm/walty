@@ -19,6 +19,7 @@ import TextToolbar                      from './TextToolbar'
 import ImageToolbar                     from './ImageToolbar'
 import EditorCommands                   from './EditorCommands'
 import SelfieDrawer                     from './SelfieDrawer'
+import { CropTool }                     from '@/lib/CropTool'
 import type { TemplatePage }            from './FabricCanvas'
 
 /* ---------- helpers ------------------------------------------------ */
@@ -175,6 +176,15 @@ export default function CardEditor({
     if (!onSave) return
     setSaving(true)
     try {
+    canvasMap.forEach(fc => {
+      const tool = (fc as any)?._cropTool as CropTool | undefined
+      if (tool?.isActive) tool.commit()
+    })
+    canvasMap.forEach(fc => {
+      const sync = (fc as any)?._syncLayers as (() => void) | undefined
+      if (sync) sync()
+    })
+    const finalPages = useEditor.getState().pages
       let coverImageId: string | undefined
       const fc = canvasMap[0]
       if (fc) {
@@ -193,7 +203,7 @@ export default function CardEditor({
           console.error('cover upload failed', err)
         }
       }
-      await onSave(pages, coverImageId)
+      await onSave(finalPages, coverImageId)
     }
     finally { setSaving(false) }
   }
