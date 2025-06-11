@@ -343,6 +343,7 @@ useEffect(() => {
   const crop = new CropTool(fc, SCALE, SEL_COLOR);
   cropToolRef.current = crop;
   (fc as any)._cropTool = crop;
+  (fc as any)._syncLayers = () => syncLayersFromCanvas(fc, pageIdx);
 
   // double‑click on an <image> starts cropping
   const dblHandler = (e: fabric.IEvent) => {
@@ -602,16 +603,16 @@ window.addEventListener('keydown', onKey)
   ;(fc as any)._editingRef = isEditing
   fcRef.current = fc; onReady(fc)
 
-  return () => {
-    window.removeEventListener('keydown', onKey)
-    if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
-    // tidy up crop‑tool listeners
-    fc.off('mouse:dblclick', dblHandler);
-    window.removeEventListener('keydown', keyCropHandler);
-    onReady(null)
-    cropToolRef.current?.abort()
-    fc.dispose()
-  }
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
+      // tidy up crop‑tool listeners
+      fc.off('mouse:dblclick', dblHandler);
+      window.removeEventListener('keydown', keyCropHandler);
+      onReady(null)
+      cropToolRef.current?.abort()
+      fc.dispose()
+    }
 // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [])
 /* ---------- END mount once ----------------------------------- */

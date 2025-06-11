@@ -176,10 +176,14 @@ export default function CardEditor({
     if (!onSave) return
     setSaving(true)
     try {
-      canvasMap.forEach(fc => {
-        const tool = (fc as any)?._cropTool as CropTool | undefined
-        if (tool?.isActive) tool.commit()
-      })
+    canvasMap.forEach(fc => {
+      const tool = (fc as any)?._cropTool as CropTool | undefined
+      if (tool?.isActive) tool.commit()
+    })
+    canvasMap.forEach(fc => {
+      const sync = (fc as any)?._syncLayers as (() => void) | undefined
+      if (sync) sync()
+    })
       let coverImageId: string | undefined
       const fc = canvasMap[0]
       if (fc) {
