@@ -14,6 +14,7 @@ export class CropTool {
   private fc      : fabric.Canvas
   private SCALE   : number
   private SEL     : string
+  private SNAP    : number
   private img     : fabric.Image | null = null
   private frame   : fabric.Group | null = null
   private masks   : fabric.Rect[] = [];      // 4‑piece dim overlay
@@ -25,6 +26,7 @@ export class CropTool {
     this.fc    = fc
     this.SCALE = scale
     this.SEL   = selColour
+    this.SNAP  = 4 / scale             // slack in canvas units (≈4 px)
   }
 
   /* ─────────────── public API ──────────────────────────────────── */
@@ -349,6 +351,7 @@ export class CropTool {
       if (this.img)   {
         this.img.hasControls = true;
         this.img.setCoords();
+        this.clamp(true);          // final snap after drag
       }
       if (this.frame) {
         this.frame.hasControls = true;
@@ -445,7 +448,7 @@ export class CropTool {
       this.img.set({ left: imgOrigPos.x + dx,
                      top : imgOrigPos.y + dy });
 
-      this.clamp();                 // keep photo covering the window
+      this.clamp(false, true, this.SNAP); // gentle edge clamping
       this.img.setCoords();
       updateMasks();
       // keep dim overlay & frame visible over the photo
@@ -570,7 +573,7 @@ export class CropTool {
     img
       .on('moving', () => {
         // keep the photo within the crop window as it drags
-        this.clamp();
+        this.clamp(false, true, this.SNAP);
         this.img!.setCoords();
         updateMasks();        // automatic redraw already in flight
       })
@@ -672,7 +675,7 @@ export class CropTool {
   }
 
   /* keep bitmap inside frame */
-  private clamp = (force = false, reposition = true) => {
+  private clamp = (force = false, reposition = true, tol = 0) => {
     if (!force && this.frameScaling) return;
     if (!this.img || !this.frame) return
     const { img, frame } = this
@@ -692,8 +695,8 @@ export class CropTool {
       const fw=frame.width!*frame.scaleX!, fh=frame.height!*frame.scaleY!
       const iw=img.getScaledWidth(), ih=img.getScaledHeight()
       img.set({
-        left: Math.min(fx, Math.max(fx+fw-iw, img.left!)),
-        top : Math.min(fy, Math.max(fy+fh-ih, img.top!)),
+        left: Math.min(fx + tol, Math.max(fx+fw-iw - tol, img.left!)),
+        top : Math.min(fy + tol, Math.max(fy+fh-ih - tol, img.top!)),
       })
     }
     img.setCoords()
