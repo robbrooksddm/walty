@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     const spec = SPECS[sku]
     const width  = Math.round(mm(spec.trimW + spec.bleed * 2))
     const height = Math.round(mm(spec.trimH + spec.bleed * 2))
-    const canvas = fabric.createCanvasForNode(width, height)
+    const canvas = new fabric.StaticCanvas(undefined, { width, height })
 
     const page = pages[0] || {}
     const layers = Array.isArray(page.layers) ? page.layers : []
