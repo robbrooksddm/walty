@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fabric } from 'fabric'
 import sharp from 'sharp'
 
 export const dynamic = 'force-dynamic'
@@ -11,6 +10,10 @@ const SPECS = {
   'card-7x5': { trimW: 150, trimH: 214, bleed: 3 },
 } as const
 
+function esc(s: string) {
+  return s.replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]!))
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { pages, sku } = await req.json() as { pages:any[]; sku:keyof typeof SPECS }
@@ -20,62 +23,46 @@ export async function POST(req: NextRequest) {
     const spec = SPECS[sku]
     const width  = Math.round(mm(spec.trimW + spec.bleed * 2))
     const height = Math.round(mm(spec.trimH + spec.bleed * 2))
-    const canvas = new fabric.StaticCanvas(undefined, { width, height })
 
+    const composites: sharp.OverlayOptions[] = []
     const page = pages[0] || {}
     const layers = Array.isArray(page.layers) ? page.layers : []
+
     for (const ly of layers) {
       const x = ly.leftPct != null ? (ly.leftPct / 100) * width  : ly.x
       const y = ly.topPct  != null ? (ly.topPct  / 100) * height : ly.y
       const w = ly.widthPct  != null ? (ly.widthPct  / 100) * width  : ly.width
       const h = ly.heightPct != null ? (ly.heightPct / 100) * height : ly.height
+
       if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
-        await new Promise<void>(resolve => {
-          fabric.Image.fromURL(ly.srcUrl || ly.src, img => {
-            if (!img) return resolve()
-            img.set({ left: x, top: y, originX: 'left', originY: 'top' })
-            if (w && h) {
-              img.scaleToWidth(w)
-              img.scaleToHeight(h)
-            }
-            canvas.add(img)
-            resolve()
-          }, { crossOrigin: 'anonymous' })
-        })
+        try {
+          const res = await fetch(ly.srcUrl || ly.src)
+          const buf = Buffer.from(await res.arrayBuffer())
+          const img = await sharp(buf).resize(Math.round(w || 0), Math.round(h || 0)).toBuffer()
+          composites.push({ input: img, left: Math.round(x || 0), top: Math.round(y || 0) })
+        } catch (err) {
+          console.error('img', err)
+        }
       } else if (ly.type === 'text') {
-        const txt = new fabric.Textbox(ly.text || '', {
-          left: x,
-          top: y,
-          originX: 'left',
-          originY: 'top',
-          width: w,
-          fontSize: ly.fontSize,
-          fontFamily: ly.fontFamily,
-          fontWeight: ly.fontWeight,
-          fontStyle: ly.fontStyle,
-          underline: ly.underline,
-          fill: ly.fill,
-          textAlign: ly.textAlign,
-          lineHeight: ly.lineHeight,
-          scaleX: ly.scaleX ?? 1,
-          scaleY: ly.scaleY ?? 1,
-          opacity: ly.opacity ?? 1,
-        })
-        canvas.add(txt)
+        const fs = ly.fontSize || 20
+        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${Math.round(w || 0)}' height='${Math.round(fs*1.2)}'>`+
+          `<text x='0' y='${fs}' font-family='${ly.fontFamily || 'Helvetica'}' font-size='${fs}' font-weight='${ly.fontWeight || ''}' font-style='${ly.fontStyle || ''}' fill='${ly.fill || '#000'}' ${ly.underline ? "text-decoration='underline'" : ''}>${esc(ly.text || '')}</text>`+
+          `</svg>`
+        composites.push({ input: Buffer.from(svg), left: Math.round(x || 0), top: Math.round(y || 0) })
       }
     }
 
-    canvas.renderAll()
-    const png = canvas.toBuffer('image/png')
-    let img = sharp(png)
-    const masterRatio = (width) / (height)
+    let img = sharp({ create: { width, height, channels: 4, background: '#ffffff' } }).composite(composites)
+
+    const masterRatio = width / height
     const targetRatio = (spec.trimW + spec.bleed * 2) / (spec.trimH + spec.bleed * 2)
     if (targetRatio < masterRatio) {
       const cropW = Math.round(height * targetRatio)
       const offsetX = Math.floor((width - cropW) / 2)
       img = img.extract({ left: offsetX, top: 0, width: cropW, height })
-             .extend({ left: 0, right: 0, top: 0, bottom: 0, background: '#ffffff' })
+               .extend({ left: 0, right: 0, top: 0, bottom: 0, background: '#ffffff' })
     }
+
     const out = await img.png().toBuffer()
     return new NextResponse(out, { headers: { 'content-type': 'image/png' } })
   } catch (err) {
