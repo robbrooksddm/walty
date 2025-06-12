@@ -4,8 +4,6 @@ import sharp from 'sharp'
 
 export const dynamic = 'force-dynamic'
 
-export const dynamic = 'force-dynamic'
-
 const DPI = 300
 const mm = (n:number) => (n / 25.4) * DPI
 
