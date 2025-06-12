@@ -332,7 +332,7 @@ const handlePreview = () => {
         <LayerPanel />
 
         {/* main */}
-        <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[840px]">
+        <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[868px]">
           {activeType === 'text' ? (
             <TextToolbar
               canvas={activeFc}
@@ -367,6 +367,7 @@ const handlePreview = () => {
                 onReady={fc => onReady(0, fc)}
                 isCropping={cropping[0]}
                 onCroppingChange={state => handleCroppingChange(0, state)}
+                mode={mode}
               />
             </div>
             {/* inside */}
@@ -378,6 +379,7 @@ const handlePreview = () => {
                   onReady={fc => onReady(1, fc)}
                   isCropping={cropping[1]}
                   onCroppingChange={state => handleCroppingChange(1, state)}
+                  mode={mode}
                 />
               </div>
               <div className={box}>
@@ -387,6 +389,7 @@ const handlePreview = () => {
                   onReady={fc => onReady(2, fc)}
                   isCropping={cropping[2]}
                   onCroppingChange={state => handleCroppingChange(2, state)}
+                  mode={mode}
                 />
               </div>
             </div>
@@ -398,6 +401,7 @@ const handlePreview = () => {
                 onReady={fc => onReady(3, fc)}
                 isCropping={cropping[3]}
                 onCroppingChange={state => handleCroppingChange(3, state)}
+                mode={mode}
               />
             </div>
           </div>
