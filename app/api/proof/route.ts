@@ -54,8 +54,10 @@ export async function POST(req: NextRequest) {
             const ch = Math.round(ly.cropH)
             imgSharp = imgSharp.extract({ left, top, width: cw, height: ch })
           }
+          if (ly.flipY) imgSharp = imgSharp.flip()
+          if (ly.flipX) imgSharp = imgSharp.flop()
           const img = await imgSharp.resize(w, h, { fit: 'fill' }).toBuffer()
-          composites.push({ input: img, left: x, top: y })
+          composites.push({ input: img, left: x, top: y, opacity: ly.opacity ?? 1 })
         } catch (err) {
           console.error('img', err)
         }
@@ -67,12 +69,13 @@ export async function POST(req: NextRequest) {
                      : ly.textAlign === 'right' ? 'end' : 'start'
         const anchorX = ly.textAlign === 'center' ? '50%'
                         : ly.textAlign === 'right' ? '100%' : '0'
+        const pad = Math.round(fs * 0.2)
         const svgW = w ?? Math.round(fs * Math.max(...lines.map(l => l.length)) * 0.6)
-        const svgH = h ?? Math.round(lh * lines.length)
+        const svgH = (h ?? Math.round(lh * lines.length)) + pad * 2
         const tspans = lines.map((t,i)=>`<tspan x='${anchorX}' dy='${i?lh:0}'>${t}</tspan>`).join('')
         const svg = `<?xml version='1.0' encoding='UTF-8'?>`+
           `<svg xmlns='http://www.w3.org/2000/svg' width='${svgW}' height='${svgH}'>`+
-          `<text x='${anchorX}' y='0' dominant-baseline='text-before-edge' text-anchor='${anchor}' font-family='${ly.fontFamily || 'Helvetica'}' font-size='${fs}' font-weight='${ly.fontWeight || ''}' font-style='${ly.fontStyle || ''}' fill='${ly.fill || '#000'}' ${ly.underline ? "text-decoration='underline'" : ''}>${tspans}</text>`+
+          `<text x='${anchorX}' y='${pad}' dominant-baseline='text-before-edge' text-anchor='${anchor}' font-family='${ly.fontFamily || 'Helvetica'}' font-size='${fs}' font-weight='${ly.fontWeight || ''}' font-style='${ly.fontStyle || ''}' fill='${ly.fill || '#000'}' ${ly.underline ? "text-decoration='underline'" : ''} opacity='${ly.opacity ?? 1}'>${tspans}</text>`+
           `</svg>`
         composites.push({ input: Buffer.from(svg), left: x, top: y })
       }

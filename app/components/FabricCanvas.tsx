@@ -96,6 +96,10 @@ export interface Layer {
   widthPct?:  number
   heightPct?: number
 
+  /** image flips */
+  flipX?:     boolean
+  flipY?:     boolean
+
   opacity?:   number
   scaleX?:    number
   scaleY?:    number
@@ -225,6 +229,8 @@ const objToLayer = (o: fabric.Object): Layer => {
     opacity: i.opacity,
     scaleX : i.scaleX,
     scaleY : i.scaleY,
+    flipX  : (i as any).flipX,
+    flipY  : (i as any).flipY,
   }
 
   if (i.cropX != null) layer.cropX = i.cropX
@@ -735,10 +741,15 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
 
           /* shared props */
           img.set({
-            left: ly.x, top: ly.y, originX: 'left', originY: 'top',
+            left      : ly.x,
+            top       : ly.y,
+            originX   : 'left',
+            originY   : 'top',
             selectable: ly.selectable ?? true,
-            evented: ly.editable ?? true,
-            opacity: ly.opacity ?? 1,
+            evented   : ly.editable ?? true,
+            opacity   : ly.opacity ?? 1,
+            flipX     : ly.flipX ?? false,
+            flipY     : ly.flipY ?? false,
           })
 
           /* ---------- AI placeholder extras -------------------------------- */

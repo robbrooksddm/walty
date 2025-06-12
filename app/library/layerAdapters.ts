@@ -53,6 +53,8 @@ if (raw._type === 'aiLayer') {
     heightPct: typeof raw.heightPct === 'number' ? raw.heightPct : (raw.h != null ? (raw.h / PAGE_H) * 100 : undefined),
     scaleX: raw.scaleX,
     scaleY: raw.scaleY,
+    ...(raw.flipX != null && { flipX: raw.flipX }),
+    ...(raw.flipY != null && { flipY: raw.flipY }),
     selectable: !locked,
     editable  : !locked,
 
@@ -80,6 +82,8 @@ if (raw._type === 'aiLayer') {
       heightPct: typeof raw.heightPct === 'number' ? raw.heightPct : (raw.h != null ? (raw.h / PAGE_H) * 100 : undefined),
       scaleX: raw.scaleX,
       scaleY: raw.scaleY,
+      ...(raw.flipX != null && { flipX: raw.flipX }),
+      ...(raw.flipY != null && { flipY: raw.flipY }),
       ...(raw.cropX != null && { cropX: raw.cropX }),
       ...(raw.cropY != null && { cropY: raw.cropY }),
       ...(raw.cropW != null && { cropW: raw.cropW }),
@@ -156,6 +160,8 @@ if (layer?._type === 'aiLayer') {
     // ── persist explicit scale adjustments, if any ─────────────────
     ...(scaleX != null && { scaleX }),
     ...(scaleY != null && { scaleY }),
+    ...(layer.flipX != null && { flipX: layer.flipX }),
+    ...(layer.flipY != null && { flipY: layer.flipY }),
   };
 }
 
@@ -192,6 +198,8 @@ if (layer.type === 'image') {
     ...(layer.opacity != null && { opacity: layer.opacity }),
     ...(layer.scaleX  != null && { scaleX: layer.scaleX }),
     ...(layer.scaleY  != null && { scaleY: layer.scaleY }),
+    ...(layer.flipX   != null && { flipX: layer.flipX }),
+    ...(layer.flipY   != null && { flipY: layer.flipY }),
   };
 
 /* 1️⃣ Already have assetId → easiest */
