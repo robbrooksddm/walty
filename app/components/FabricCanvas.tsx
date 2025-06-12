@@ -709,15 +709,17 @@ window.addEventListener('keydown', onKey)
     hoverRef.current && fc.add(hoverRef.current)
 
     /* bottom ➜ top keeps original z-order */
+    const absW = fc.getWidth()
+    const absH = fc.getHeight()
     for (let idx = 0; idx < page.layers.length; idx++) {
       const raw = page.layers[idx]
-      const ly: Layer | null = (raw as any).type ? raw as Layer : fromSanity(raw)
+      const ly: Layer | null = (raw as any).type ? (raw as Layer) : fromSanity(raw)
       if (!ly) continue
 
-      if (ly.leftPct != null) ly.x = (ly.leftPct / 100) * PAGE_W
-      if (ly.topPct  != null) ly.y = (ly.topPct  / 100) * PAGE_H
-      if (ly.widthPct  != null) ly.width  = (ly.widthPct  / 100) * PAGE_W
-      if (ly.heightPct != null) ly.height = (ly.heightPct / 100) * PAGE_H
+      if (ly.leftPct != null) ly.x = (ly.leftPct / 100) * absW
+      if (ly.topPct  != null) ly.y = (ly.topPct  / 100) * absH
+      if (ly.widthPct  != null) ly.width  = (ly.widthPct  / 100) * absW
+      if (ly.heightPct != null) ly.height = (ly.heightPct / 100) * absH
 
 /* ---------- IMAGES --------------------------------------------- */
 if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
