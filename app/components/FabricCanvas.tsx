@@ -187,6 +187,9 @@ const objToLayer = (o: fabric.Object): Layer => {
       x         : t.left || 0,
       y         : t.top  || 0,
       width     : t.width || 200,
+      leftPct   : ((t.left || 0) / PAGE_W) * 100,
+      topPct    : ((t.top  || 0) / PAGE_H) * 100,
+      widthPct  : ((t.width || 200) / PAGE_W) * 100,
       fontSize  : t.fontSize,
       fontFamily: t.fontFamily,
       fontWeight: t.fontWeight,
@@ -215,6 +218,10 @@ const objToLayer = (o: fabric.Object): Layer => {
     y      : i.top   || 0,
     width  : i.getScaledWidth(),
     height : i.getScaledHeight(),
+    leftPct  : ((i.left  || 0) / PAGE_W) * 100,
+    topPct   : ((i.top   || 0) / PAGE_H) * 100,
+    widthPct : (i.getScaledWidth()  / PAGE_W) * 100,
+    heightPct: (i.getScaledHeight() / PAGE_H) * 100,
     opacity: i.opacity,
     scaleX : i.scaleX,
     scaleY : i.scaleY,
@@ -691,13 +698,10 @@ window.addEventListener('keydown', onKey)
       const ly: Layer | null = (raw as any).type ? raw as Layer : fromSanity(raw)
       if (!ly) continue
 
-      const fcW = fc.getWidth()
-      const fcH = fc.getHeight()
-
-      if (ly.leftPct != null) ly.x = (ly.leftPct / 100) * fcW
-      if (ly.topPct  != null) ly.y = (ly.topPct  / 100) * fcH
-      if (ly.widthPct  != null) ly.width  = (ly.widthPct  / 100) * fcW
-      if (ly.heightPct != null) ly.height = (ly.heightPct / 100) * fcH
+      if (ly.leftPct != null) ly.x = (ly.leftPct / 100) * PAGE_W
+      if (ly.topPct  != null) ly.y = (ly.topPct  / 100) * PAGE_H
+      if (ly.widthPct  != null) ly.width  = (ly.widthPct  / 100) * PAGE_W
+      if (ly.heightPct != null) ly.height = (ly.heightPct / 100) * PAGE_H
 
 /* ---------- IMAGES --------------------------------------------- */
 if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
