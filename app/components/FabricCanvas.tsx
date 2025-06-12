@@ -691,6 +691,14 @@ window.addEventListener('keydown', onKey)
       const ly: Layer | null = (raw as any).type ? raw as Layer : fromSanity(raw)
       if (!ly) continue
 
+      const fcW = fc.getWidth()
+      const fcH = fc.getHeight()
+
+      if (ly.leftPct != null) ly.x = (ly.leftPct / 100) * fcW
+      if (ly.topPct  != null) ly.y = (ly.topPct  / 100) * fcH
+      if (ly.widthPct  != null) ly.width  = (ly.widthPct  / 100) * fcW
+      if (ly.heightPct != null) ly.height = (ly.heightPct / 100) * fcH
+
 /* ---------- IMAGES --------------------------------------------- */
 if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
   // ① make sure we have a usable URL
