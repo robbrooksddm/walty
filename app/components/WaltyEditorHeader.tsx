@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect } from "react";
 
 /**
  * Walty branded editor header.
@@ -18,6 +19,16 @@ export default function WaltyEditorHeader({
   onAddToBasket: () => void | Promise<void>;
   height?: number;
 }) {
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.style.setProperty(
+        "--walty-header-h",
+        `${height}px`
+      );
+      return () =>
+        document.documentElement.style.removeProperty("--walty-header-h");
+    }
+  }, [height]);
   return (
     <header
       className="fixed inset-x-0 top-0 z-50 bg-[--walty-teal]"

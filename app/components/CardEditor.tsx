@@ -275,7 +275,10 @@ const handleSwap = (url: string) => {
 
   /* ---------------- UI ------------------------------------------ */
   return (
-    <div className="flex flex-col h-screen">
+    <div
+      className="flex flex-col h-screen box-border"
+      style={{ paddingTop: "var(--walty-header-h)" }}
+    >
       <WaltyEditorHeader                     /* ② mount new component */
         onPreview={() => console.log("preview")}
         onAddToBasket={() => console.log("basket")}

@@ -153,7 +153,10 @@ export default function TextToolbar (props: Props) {
   /* 7.  Render                                                         */
   /* ------------------------------------------------------------------ */
   return (
-    <div className="sticky inset-x-0 top-2 z-30 flex justify-center pointer-events-none select-none">
+    <div
+      className="sticky inset-x-0 z-30 flex justify-center pointer-events-none select-none"
+      style={{ top: "calc(var(--walty-header-h) + 0.5rem)" }}
+    >
 
       {mode === 'staff' && (
         <div
