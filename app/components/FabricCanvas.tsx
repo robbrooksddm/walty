@@ -482,11 +482,15 @@ addGuides(fc, mode)                           // add guides based on mode
       y      : t.top,
       scaleX : t.scaleX,
       scaleY : t.scaleY,
+      leftPct  : ((t.left  || 0) / PAGE_W) * 100,
+      topPct   : ((t.top   || 0) / PAGE_H) * 100,
     }
     if (t.type === 'image') Object.assign(d, {
       width  : t.getScaledWidth(),
       height : t.getScaledHeight(),
       opacity: t.opacity,
+      widthPct : (t.getScaledWidth()  / PAGE_W) * 100,
+      heightPct: (t.getScaledHeight() / PAGE_H) * 100,
       ...(t.cropX != null && { cropX: t.cropX }),
       ...(t.cropY != null && { cropY: t.cropY }),
       ...(t.width  != null && { cropW: t.width  }),
@@ -503,6 +507,8 @@ addGuides(fc, mode)                           // add guides based on mode
       textAlign  : t.textAlign,
       lineHeight : t.lineHeight,
       opacity    : t.opacity,
+      widthPct  : (t.getScaledWidth()  / PAGE_W) * 100,
+      heightPct : (t.getScaledHeight() / PAGE_H) * 100,
     })
     updateLayer(pageIdx, t.layerIdx, d)
     setTimeout(()=>{ isEditing.current = false })
@@ -525,6 +531,10 @@ addGuides(fc, mode)                           // add guides based on mode
       opacity    : t.opacity,
       width      : t.getScaledWidth(),
       height     : t.getScaledHeight(),
+      leftPct    : ((t.left || 0) / PAGE_W) * 100,
+      topPct     : ((t.top  || 0) / PAGE_H) * 100,
+      widthPct   : (t.getScaledWidth()  / PAGE_W) * 100,
+      heightPct  : (t.getScaledHeight() / PAGE_H) * 100,
     })
     setTimeout(()=>{ isEditing.current = false })
   })
