@@ -27,6 +27,14 @@ export default defineType({
       validation: (Rule) => Rule.required(),
     }),
 
+    /* which mockup images define the preview */
+    defineField({
+      name : 'mockup',
+      type : 'reference',
+      title: 'Preview mockup',
+      to   : [{type: 'productMockup'}],
+    }),
+
     /* commercial bits */
     defineField({
       name : 'price',
