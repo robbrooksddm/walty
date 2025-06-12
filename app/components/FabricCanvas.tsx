@@ -252,22 +252,48 @@ const syncLayersFromCanvas = (fc: fabric.Canvas, pageIdx: number) => {
 };
 
 /* ---------- guides ---------------------------------------------- */
-const addGuides = (fc: fabric.Canvas) => {
+type Mode = 'staff' | 'customer'
+type GuideName = 'safe-zone' | 'bleed'
+
+const addGuides = (fc: fabric.Canvas, mode: Mode) => {
   fc.getObjects().filter(o => (o as any)._guide).forEach(o => fc.remove(o))
-  const inset = mm(8 + BLEED_MM)
   const strokeW = mm(0.5)
-  const dash = [mm(3)]
-  const mk = (xy: [number, number, number, number]) =>
-    Object.assign(new fabric.Line(xy, {
-      stroke: '#34d399', strokeWidth: strokeW, strokeDashArray: dash,
-      selectable: false, evented: false, excludeFromExport: true,
-    }), { _guide: true })
+  const mk = (
+    xy: [number, number, number, number],
+    name: GuideName,
+    color: string,
+  ) =>
+    Object.assign(
+      new fabric.Line(xy, {
+        stroke: color,
+        strokeWidth: strokeW,
+        strokeDashArray: dash(6),
+        selectable: false,
+        evented: false,
+        excludeFromExport: true,
+      }),
+      { _guide: name },
+    )
+
+  /* responsive safe-zone */
+  const safeX = PAGE_W * 0.1
+  const safeY = PAGE_H * 0.05
   ;[
-    mk([inset, inset, PAGE_W - inset, inset]),
-    mk([PAGE_W - inset, inset, PAGE_W - inset, PAGE_H - inset]),
-    mk([PAGE_W - inset, PAGE_H - inset, inset, PAGE_H - inset]),
-    mk([inset, PAGE_H - inset, inset, inset]),
+    mk([safeX, safeY, PAGE_W - safeX, safeY], 'safe-zone', '#34d399'),
+    mk([PAGE_W - safeX, safeY, PAGE_W - safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
+    mk([PAGE_W - safeX, PAGE_H - safeY, safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
+    mk([safeX, PAGE_H - safeY, safeX, safeY], 'safe-zone', '#34d399'),
   ].forEach(l => fc.add(l))
+
+  if (mode === 'staff') {
+    const bleed = mm(BLEED_MM)
+    ;[
+      mk([bleed, bleed, PAGE_W - bleed, bleed], 'bleed', '#f87171'),
+      mk([PAGE_W - bleed, bleed, PAGE_W - bleed, PAGE_H - bleed], 'bleed', '#f87171'),
+      mk([PAGE_W - bleed, PAGE_H - bleed, bleed, PAGE_H - bleed], 'bleed', '#f87171'),
+      mk([bleed, PAGE_H - bleed, bleed, bleed], 'bleed', '#f87171'),
+    ].forEach(l => fc.add(l))
+  }
 }
 
 /* ---------- white backdrop -------------------------------------- */
@@ -298,9 +324,10 @@ interface Props {
   onReady    : (fc: fabric.Canvas | null) => void
   isCropping?: boolean
   onCroppingChange?: (state: boolean) => void
+  mode?: Mode
 }
 
-export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange }: Props) {
+export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, mode = 'customer' }: Props) {
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const maskRectsRef = useRef<fabric.Rect[]>([]);
@@ -425,7 +452,7 @@ fc.on('mouse:over', e => {
   fc.requestRenderAll()
 })
 
-addGuides(fc)                                 // green safe-zone guides
+addGuides(fc, mode)                           // add guides based on mode
   /* ── 4.5 ▸ Fabric ➜ Zustand sync ──────────────────────────── */
   fc.on('object:modified', e=>{
     isEditing.current = true
@@ -807,7 +834,7 @@ img.on('mouseup', () => {
       }
     }
 
-    addGuides(fc)
+    addGuides(fc, mode)
     hoverRef.current?.bringToFront()
     fc.requestRenderAll();
     hydrating.current = false
