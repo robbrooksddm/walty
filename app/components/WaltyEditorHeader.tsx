@@ -25,8 +25,14 @@ export default function WaltyEditorHeader({
         "--walty-header-h",
         `${height}px`
       );
-      return () =>
+      document.documentElement.style.setProperty(
+        "--walty-toolbar-h",
+        "72px"
+      );
+      return () => {
         document.documentElement.style.removeProperty("--walty-header-h");
+        document.documentElement.style.removeProperty("--walty-toolbar-h");
+      };
     }
   }, [height]);
   return (
@@ -37,6 +43,7 @@ export default function WaltyEditorHeader({
         // toolbars read this for their `top` value
         // (TextToolbar, ImageToolbar, EditorCommands wrappers)
         "--walty-header-h": `${height}px`,
+        "--walty-toolbar-h": "72px",
       } as React.CSSProperties}
     >
       <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6">

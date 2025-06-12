@@ -277,7 +277,7 @@ const handleSwap = (url: string) => {
   return (
     <div
       className="flex flex-col h-screen box-border"
-      style={{ paddingTop: "var(--walty-header-h)" }}
+      style={{ paddingTop: "calc(var(--walty-header-h) + var(--walty-toolbar-h))" }}
     >
       <WaltyEditorHeader                     /* ② mount new component */
         onPreview={() => console.log("preview")}

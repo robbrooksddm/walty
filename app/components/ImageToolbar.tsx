@@ -136,7 +136,7 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
   return (
     <div
       className="sticky inset-x-0 z-30 flex justify-center pointer-events-none select-none"
-      style={{ top: "calc(var(--walty-header-h) + 0.5rem)" }}
+      style={{ top: "var(--walty-header-h)" }}
     >
       {/* main bar */}
       <div
