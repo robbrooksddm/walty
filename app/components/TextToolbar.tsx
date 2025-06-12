@@ -158,6 +158,7 @@ export default function TextToolbar (props: Props) {
       style={{
         top: "var(--walty-header-h)",
         marginTop: "calc(var(--walty-toolbar-h) * -1)",
+        height: "var(--walty-toolbar-h)",
       }}
     >
 
