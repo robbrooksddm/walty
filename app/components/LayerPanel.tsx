@@ -108,13 +108,15 @@ export default function LayerPanel() {
     if (e.over && e.active.id !== e.over.id)
       reorder(+e.active.id, +e.over.id);
   };
-    return (
+
+  return (
         <aside
-        className={`fixed left-0 top-14 z-20 h-[calc(100%-56px)]
+        className={`fixed left-0 z-20
                       w-54 sm:w-60 md:w-64 lg:w-70 xl:w-74
                       rounded-r-2xl bg-white shadow-xl ring-2 ring-walty-teal/40
                       transition-transform duration-300
                       ${open ? "translate-x-0" : "-translate-x-full"}`}
+        style={{ top: "var(--walty-header-h)", height: "calc(100vh - var(--walty-header-h))" }}
         >
 
 
