@@ -194,6 +194,7 @@ const objToLayer = (o: fabric.Object): Layer => {
       leftPct   : ((t.left || 0) / PAGE_W) * 100,
       topPct    : ((t.top  || 0) / PAGE_H) * 100,
       widthPct  : ((t.width || 200) / PAGE_W) * 100,
+      heightPct : (t.getScaledHeight() / PAGE_H) * 100,
       fontSize  : t.fontSize,
       fontFamily: t.fontFamily,
       fontWeight: t.fontWeight,

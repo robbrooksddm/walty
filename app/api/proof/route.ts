@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import sharp from 'sharp'
 
+interface Overlay extends sharp.OverlayOptions {
+  /** Global opacity for the overlay; sharp's types omit this */
+  opacity?: number
+}
+
 export const dynamic = 'force-dynamic'
 
 const DPI = 300
@@ -25,7 +30,7 @@ export async function POST(req: NextRequest) {
     const height = Math.round(mm(spec.trimH + spec.bleed * 2))
 
     const clamp = (n:number, min:number, max:number) => Math.max(min, Math.min(max, n))
-    const composites: sharp.OverlayOptions[] = []
+    const composites: Overlay[] = []
     const page = pages[0] || {}
     const layers = Array.isArray(page.layers) ? page.layers : []
 
@@ -57,7 +62,7 @@ export async function POST(req: NextRequest) {
           if (ly.flipY) imgSharp = imgSharp.flip()
           if (ly.flipX) imgSharp = imgSharp.flop()
           const img = await imgSharp.resize(w, h, { fit: 'fill' }).toBuffer()
-          composites.push({ input: img, left: x, top: y, opacity: ly.opacity ?? 1 })
+          composites.push({ input: img, left: x, top: y, opacity: ly.opacity ?? 1 } as Overlay)
         } catch (err) {
           console.error('img', err)
         }
@@ -77,7 +82,7 @@ export async function POST(req: NextRequest) {
           `<svg xmlns='http://www.w3.org/2000/svg' width='${svgW}' height='${svgH}'>`+
           `<text x='${anchorX}' y='${pad}' dominant-baseline='text-before-edge' text-anchor='${anchor}' font-family='${ly.fontFamily || 'Helvetica'}' font-size='${fs}' font-weight='${ly.fontWeight || ''}' font-style='${ly.fontStyle || ''}' fill='${ly.fill || '#000'}' ${ly.underline ? "text-decoration='underline'" : ''} opacity='${ly.opacity ?? 1}'>${tspans}</text>`+
           `</svg>`
-        composites.push({ input: Buffer.from(svg), left: x, top: y })
+        composites.push({ input: Buffer.from(svg), left: x, top: y, opacity: ly.opacity ?? 1 } as Overlay)
       }
     }
 
