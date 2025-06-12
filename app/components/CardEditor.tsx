@@ -292,10 +292,7 @@ const handleSwap = (url: string) => {
         saving={saving}
       />
 
-      <div
-        className="flex flex-1 relative bg-[--walty-cream] lg:max-w-6xl mx-auto"
-        style={{ transform: 'translateX(-8rem)' }}
-      >
+      <div className="flex flex-1 relative bg-[--walty-cream] lg:max-w-6xl mx-auto">
         {/* global overlays */}
         <CoachMark
           anchor={anchor}
@@ -318,7 +315,10 @@ const handleSwap = (url: string) => {
         </div>
 
         {/* main */}
-        <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[840px]">
+        <div
+          className="flex flex-col flex-1 min-h-0 mx-auto max-w-[840px]"
+          style={{ transform: 'translateX(-8rem)' }}
+        >
           {activeType === 'text' ? (
             <TextToolbar
               canvas={activeFc}
