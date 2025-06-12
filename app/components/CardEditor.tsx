@@ -315,7 +315,7 @@ const handleSwap = (url: string) => {
         </div>
 
         {/* main */}
-        <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[840px] -translate-x-24 lg:-translate-x-28 xl:-translate-x-32">
+        <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[840px]">
           {activeType === 'text' && (
             <TextToolbar
               canvas={activeFc}
