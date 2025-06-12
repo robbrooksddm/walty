@@ -692,7 +692,7 @@ window.addEventListener('keydown', onKey)
     hoverRef.current && fc.add(hoverRef.current)
 
     /* bottom ➜ top keeps original z-order */
-    for (let idx = page.layers.length - 1; idx >= 0; idx--) {
+    for (let idx = 0; idx < page.layers.length; idx++) {
       const raw = page.layers[idx]
       const ly: Layer | null = (raw as any).type ? raw as Layer : fromSanity(raw)
       if (!ly) continue
@@ -813,9 +813,7 @@ img.on('mouseup', () => {
 
           /* keep z-order */
           ;(img as any).layerIdx = idx
-          const pos = fc.getObjects().findIndex(o =>
-            (o as any).layerIdx !== undefined && (o as any).layerIdx < idx)
-          fc.insertAt(img, pos === -1 ? fc.getObjects().length : pos, false)
+          fc.insertAt(img, idx, false)
           img.setCoords()
           fc.requestRenderAll()
           document.dispatchEvent(
@@ -847,7 +845,7 @@ img.on('mouseup', () => {
           lockScalingFlip: true,
         })
         ;(tb as any).layerIdx = idx
-        fc.add(tb)
+        fc.insertAt(tb, idx, false)
       }
     }
 
