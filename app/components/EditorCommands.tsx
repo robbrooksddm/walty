@@ -13,7 +13,8 @@ interface Props {
 
 export default function EditorCommands({ onUndo, onRedo, onSave, saving }: Props) {
   return (
-    <div className="sticky top-2 ml-auto mr-4 order-last self-start z-40 flex gap-3 pointer-events-auto select-none bg-white shadow rounded-md px-3 py-2">
+    <div className="fixed top-14   right-6 z-40 flex items-center gap-3
+                     bg-white shadow rounded-md px-3 py-3 pointer-events-auto select-none">
       <IconButton Icon={RotateCcw} label="Undo" onClick={onUndo} />
       <IconButton Icon={RotateCw} label="Redo" onClick={onRedo} />
       <button

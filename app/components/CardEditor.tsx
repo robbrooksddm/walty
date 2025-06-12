@@ -1,10 +1,3 @@
-/**********************************************************************
- * CardEditor.tsx  –  WYSIWYG editor for a 4-page greeting card
- * --------------------------------------------------------------------
- * ▸ Staff mode     – toolbar shows upload / font tools
- * ▸ Customer mode  – stripped-down toolbar
- * 2025-05-11       – wires SelfieDrawer → swaps chosen variant into canvas
- *********************************************************************/
 'use client'
 
 import { useEffect, useRef, useState, useLayoutEffect } from 'react'
@@ -282,6 +275,14 @@ const handleSwap = (url: string) => {
   return (
     <div className="flex flex-col h-screen">
       <header className="h-14 bg-walty-teal flex-shrink-0" />
+
+      <EditorCommands
+        onUndo={undo}
+        onRedo={redo}
+        onSave={handleSave}
+        saving={saving}
+      />
+
       <div className="flex flex-1 relative bg-[--walty-cream] lg:max-w-6xl mx-auto">
         {/* global overlays */}
         <CoachMark
@@ -298,12 +299,6 @@ const handleSwap = (url: string) => {
           placeholderId={aiPlaceholderId}   /* ← NEW prop */
         />
 
-        <EditorCommands
-          onUndo={undo}
-          onRedo={redo}
-          onSave={handleSave}
-          saving={saving}
-        />
 
         {/* sidebar */}
         <div className="relative z-30 w-64 flex-shrink-0">
@@ -328,24 +323,7 @@ const handleSwap = (url: string) => {
             />
           )}
 
-          {/* tabs */}
-          <nav className="flex justify-center gap-8 py-3 text-sm font-medium">
-            {(['front', 'inside', 'back'] as Section[]).map(lbl => (
-              <button
-                key={lbl}
-                onClick={() => setSection(lbl)}
-                className={
-                  section === lbl
-                    ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                    : 'text-gray-500 hover:text-gray-800'
-                }
-              >
-                {lbl.replace(/^./, c => c.toUpperCase())}
-              </button>
-            ))}
-          </nav>
-
-          {/* canvases */}
+                    {/* canvases */}
           <div className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6">
             {/* front */}
             <div className={section === 'front' ? box : 'hidden'}>

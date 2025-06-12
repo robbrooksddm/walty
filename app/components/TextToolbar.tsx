@@ -158,10 +158,10 @@ export default function TextToolbar (props: Props) {
       {mode === 'staff' && (
         <div
           className="
-            pointer-events-auto flex flex-nowrap items-center gap-4
+            pointer-events-auto flex flex-nowrap items-center gap-3
             bg-white shadow-lg rounded-xl
-            border border-[rgba(0,91,85,.2)] px-4 py-2
-            max-w-none w-[calc(100%-2rem)]]"
+            border border-[rgba(0,91,85,.2)] px-4 py-3
+            max-w-none w-[calc(100%-rem)]"
         >
           {/* ───────── Font family & size (no captions) ───────── */}
           <FontFamilySelect
