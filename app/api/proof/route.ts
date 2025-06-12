@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { fabric } from 'fabric'
 import sharp from 'sharp'
 
+export const dynamic = 'force-dynamic'
+
+export const dynamic = 'force-dynamic'
+
 const DPI = 300
 const mm = (n:number) => (n / 25.4) * DPI
 
@@ -18,7 +22,7 @@ export async function POST(req: NextRequest) {
     const spec = SPECS[sku]
     const width  = Math.round(mm(spec.trimW + spec.bleed * 2))
     const height = Math.round(mm(spec.trimH + spec.bleed * 2))
-    const canvas = new fabric.StaticCanvas(null, { width, height })
+    const canvas = fabric.createCanvasForNode(width, height)
 
     const page = pages[0] || {}
     const layers = Array.isArray(page.layers) ? page.layers : []
@@ -64,7 +68,7 @@ export async function POST(req: NextRequest) {
     }
 
     canvas.renderAll()
-    const png = Buffer.from(canvas.toDataURL({ format: 'png' }).split(',')[1], 'base64')
+    const png = canvas.toBuffer('image/png')
     let img = sharp(png)
     const masterRatio = (width) / (height)
     const targetRatio = (spec.trimW + spec.bleed * 2) / (spec.trimH + spec.bleed * 2)
