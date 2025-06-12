@@ -46,21 +46,33 @@ export async function POST(req: NextRequest) {
           if (typeof url !== 'string' || !/^https?:/i.test(url)) continue
           const res = await fetch(url)
           const buf = Buffer.from(await res.arrayBuffer())
-          const img = await sharp(buf)
-            .resize(w, h, { fit: 'inside' })
-            .toBuffer()
+          let imgSharp = sharp(buf)
+          if (ly.cropW != null && ly.cropH != null) {
+            const left = Math.max(0, Math.round(ly.cropX ?? 0))
+            const top = Math.max(0, Math.round(ly.cropY ?? 0))
+            const cw = Math.round(ly.cropW)
+            const ch = Math.round(ly.cropH)
+            imgSharp = imgSharp.extract({ left, top, width: cw, height: ch })
+          }
+          const img = await imgSharp.resize(w, h, { fit: 'fill' }).toBuffer()
           composites.push({ input: img, left: x, top: y })
         } catch (err) {
           console.error('img', err)
         }
-      } else if (ly.type === 'text') {
+      } else if (ly.type === 'text' && ly.text) {
         const fs = ly.fontSize || 20
-        const lines = String(ly.text || '').split('\n')
-        const lineH = fs * 1.2
+        const lh = (ly.lineHeight ?? 1.2) * fs
+        const lines = String(ly.text || '').split('\n').map(esc)
+        const anchor = ly.textAlign === 'center' ? 'middle'
+                     : ly.textAlign === 'right' ? 'end' : 'start'
+        const anchorX = ly.textAlign === 'center' ? '50%'
+                        : ly.textAlign === 'right' ? '100%' : '0'
         const svgW = w || Math.round(fs * Math.max(...lines.map(l => l.length)) * 0.6)
-        const svgH = h || Math.round(lineH * lines.length)
-        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${svgW}' height='${svgH}'>`+
-          `<text x='0' y='${fs}' font-family='${ly.fontFamily || 'Helvetica'}' font-size='${fs}' font-weight='${ly.fontWeight || ''}' font-style='${ly.fontStyle || ''}' fill='${ly.fill || '#000'}' ${ly.underline ? "text-decoration='underline'" : ''} xml:space='preserve'>${esc(ly.text || '')}</text>`+
+        const svgH = h || Math.round(lh * lines.length)
+        const tspans = lines.map((t,i)=>`<tspan x='${anchorX}' dy='${i?lh:0}'>${t}</tspan>`).join('')
+        const svg = `<?xml version='1.0' encoding='UTF-8'?>`+
+          `<svg xmlns='http://www.w3.org/2000/svg' width='${svgW}' height='${svgH}'>`+
+          `<text x='${anchorX}' y='0' dominant-baseline='text-before-edge' text-anchor='${anchor}' font-family='${ly.fontFamily || 'Helvetica'}' font-size='${fs}' font-weight='${ly.fontWeight || ''}' font-style='${ly.fontStyle || ''}' fill='${ly.fill || '#000'}' ${ly.underline ? "text-decoration='underline'" : ''}>${tspans}</text>`+
           `</svg>`
         composites.push({ input: Buffer.from(svg), left: x, top: y })
       }
