@@ -13,7 +13,9 @@ import ImageToolbar                     from './ImageToolbar'
 import EditorCommands                   from './EditorCommands'
 import SelfieDrawer                     from './SelfieDrawer'
 import { CropTool }                     from '@/lib/CropTool'
+import WaltyEditorHeader                from './WaltyEditorHeader'
 import type { TemplatePage }            from './FabricCanvas'
+
 
 /* ---------- helpers ------------------------------------------------ */
 type Section = 'front' | 'inside' | 'back'
@@ -274,7 +276,11 @@ const handleSwap = (url: string) => {
   /* ---------------- UI ------------------------------------------ */
   return (
     <div className="flex flex-col h-screen">
-      <header className="h-14 bg-walty-teal flex-shrink-0" />
+      <WaltyEditorHeader                     /* ② mount new component */
+        onPreview={() => console.log("preview")}
+        onAddToBasket={() => console.log("basket")}
+        height={72}                          /* match the design */
+      />
 
       <EditorCommands
         onUndo={undo}

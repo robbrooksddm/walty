@@ -14,7 +14,7 @@ interface Props {
 export default function EditorCommands({ onUndo, onRedo, onSave, saving }: Props) {
   return (
     <div className="fixed top-14   right-6 z-40 flex items-center gap-3
-                     bg-white shadow rounded-md px-3 py-3 pointer-events-auto select-none">
+                     bg-white shadow rounded-md px-3 py-3 pointer-events-auto select-none" style={{ top: "var(--walty-header-h)" }}>
       <IconButton Icon={RotateCcw} label="Undo" onClick={onUndo} />
       <IconButton Icon={RotateCw} label="Redo" onClick={onRedo} />
       <button
