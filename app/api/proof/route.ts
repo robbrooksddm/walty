@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
 
       x = clamp(Math.round(x || 0), 0, width)
       y = clamp(Math.round(y || 0), 0, height)
-      w = clamp(Math.round(w || 1), 1, width - x)
-      h = clamp(Math.round(h || 1), 1, height - y)
+      if (w != null) w = clamp(Math.round(w), 1, width - x)
+      if (h != null) h = clamp(Math.round(h), 1, height - y)
 
       if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
         try {
@@ -67,8 +67,8 @@ export async function POST(req: NextRequest) {
                      : ly.textAlign === 'right' ? 'end' : 'start'
         const anchorX = ly.textAlign === 'center' ? '50%'
                         : ly.textAlign === 'right' ? '100%' : '0'
-        const svgW = w || Math.round(fs * Math.max(...lines.map(l => l.length)) * 0.6)
-        const svgH = h || Math.round(lh * lines.length)
+        const svgW = w ?? Math.round(fs * Math.max(...lines.map(l => l.length)) * 0.6)
+        const svgH = h ?? Math.round(lh * lines.length)
         const tspans = lines.map((t,i)=>`<tspan x='${anchorX}' dy='${i?lh:0}'>${t}</tspan>`).join('')
         const svg = `<?xml version='1.0' encoding='UTF-8'?>`+
           `<svg xmlns='http://www.w3.org/2000/svg' width='${svgW}' height='${svgH}'>`+

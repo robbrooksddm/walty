@@ -244,8 +244,7 @@ const syncLayersFromCanvas = (fc: fabric.Canvas, pageIdx: number) => {
       !(o as any)._backdrop &&
       !(o as any).excludeFromExport &&
       (o as any).type !== 'activeSelection'      // skip wrapper
-    )
-    .reverse();                                  // bottom → top
+    );                                           // bottom → top
 
   /* remember original src on pasted images */
   objs.forEach(o => {
