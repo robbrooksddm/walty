@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect } from "react";
 
 /**
@@ -37,7 +38,7 @@ export default function WaltyEditorHeader({
   }, [height]);
   return (
     <header
-      className="fixed inset-x-0 top-0 z-50 bg-[--walty-teal]"
+      className="fixed inset-x-0 top-0 z-50 bg-[--walty-teal] shadow-md shadow-black/5 ring-1 ring-[--walty-teal]/40"
       style={{
         height: `${height}px`,
         // toolbars read this for their `top` value
@@ -46,20 +47,25 @@ export default function WaltyEditorHeader({
         "--walty-toolbar-h": "72px",
       } as React.CSSProperties}
     >
-      <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6">
-        {/* logo pill */}
-        <Image
-          src="/images/Walty Secondary Logo.png"
-          alt="Walty logo"
-          height={height - 24 /* gives 12-px vertical breathing room */}
-          width={160}
-          priority
-          draggable={false}
-          className="select-none"
-        />
+      <div className="relative h-full">
+        {/* centred logo → homepage */}
+        <Link
+          href="/"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+        >
+          <Image
+            src="/images/Walty Secondary Logo.png"
+            alt="Walty logo"
+            height={height - 21}
+            width={140}
+            priority
+            draggable={false}
+            className="select-none"
+          />
+        </Link>
 
-        {/* action buttons */}
-        <div className="flex gap-4">
+        {/* CTAs flush‑right */}
+        <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-4">
           <button
             onClick={onPreview}
             className="rounded-md bg-[--walty-cream] px-6 py-2 font-semibold
