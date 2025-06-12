@@ -12,6 +12,7 @@ import TextToolbar                      from './TextToolbar'
 import ImageToolbar                     from './ImageToolbar'
 import EditorCommands                   from './EditorCommands'
 import SelfieDrawer                     from './SelfieDrawer'
+import PreviewModal                    from './PreviewModal'
 import { CropTool }                     from '@/lib/CropTool'
 import WaltyEditorHeader                from './WaltyEditorHeader'
 import type { TemplatePage }            from './FabricCanvas'
@@ -52,8 +53,8 @@ function CoachMark({ anchor, onClose }: { anchor: DOMRect | null; onClose: () =>
         </button>
         <div className="absolute -left-2 top-6 w-0 h-0 border-y-8 border-y-transparent border-r-[12px] border-r-gray-800" />
       </div>
-    </div>
-  )
+  </div>
+ )
 }
 
 /* ────────────────────────────────────────────────────────────────── */
@@ -207,6 +208,10 @@ export default function CardEditor({
 const [drawerOpen, setDrawerOpen]           = useState(false)
 const [aiPlaceholderId, setAiPlaceholderId] = useState<string | null>(null)
 
+/* preview modal state */
+const [previewOpen, setPreviewOpen] = useState(false)
+const [previewImgs, setPreviewImgs] = useState<string[]>([])
+
 /* listen for the event FabricCanvas now emits */
 useEffect(() => {
   const open = (e: Event) => {
@@ -237,6 +242,20 @@ const handleSwap = (url: string) => {
   })
 
   setDrawerOpen(false)
+}
+
+/* generate images and show preview */
+const handlePreview = () => {
+  const imgs: string[] = []
+  canvasMap.forEach((fc, i) => {
+    if (!fc) return
+    const tool = (fc as any)._cropTool as CropTool | undefined
+    if (tool?.isActive) tool.commit()
+    fc.renderAll()
+    imgs[i] = fc.toDataURL({ format: 'png', quality: 1 })
+  })
+  setPreviewImgs(imgs)
+  setPreviewOpen(true)
 }
 
   /* 7 ─ coach-mark ----------------------------------------------- */
@@ -280,7 +299,7 @@ const handleSwap = (url: string) => {
       style={{ paddingTop: "calc(var(--walty-header-h) + var(--walty-toolbar-h))" }}
     >
       <WaltyEditorHeader                     /* ② mount new component */
-        onPreview={() => console.log("preview")}
+        onPreview={handlePreview}
         onAddToBasket={() => console.log("basket")}
         height={72}                          /* match the design */
       />
@@ -413,6 +432,11 @@ const handleSwap = (url: string) => {
           </div>
         </div>
       </div>
+      <PreviewModal
+        open={previewOpen}
+        images={previewImgs}
+        onClose={() => setPreviewOpen(false)}
+      />
     </div>
   )
 }
