@@ -338,6 +338,12 @@ useEffect(() => {
   // keep the preview scaled to 420 px wide
   fc.setViewportTransform([SCALE, 0, 0, SCALE, 0, 0]);
 
+  /* keep event coordinates aligned with any scroll/resize */
+  const updateOffset = () => fc.calcOffset();
+  updateOffset();
+  window.addEventListener('scroll', updateOffset, { passive: true });
+  window.addEventListener('resize', updateOffset);
+
   /* ── Crop‑tool wiring ────────────────────────────────────── */
   // create a reusable crop helper and keep it in a ref
   const crop = new CropTool(fc, SCALE, SEL_COLOR);
@@ -606,6 +612,8 @@ window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener('keydown', onKey)
       if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
+      window.removeEventListener('scroll', updateOffset)
+      window.removeEventListener('resize', updateOffset)
       // tidy up crop‑tool listeners
       fc.off('mouse:dblclick', dblHandler);
       window.removeEventListener('keydown', keyCropHandler);
