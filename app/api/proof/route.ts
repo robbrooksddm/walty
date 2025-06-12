@@ -14,6 +14,18 @@ function esc(s: string) {
   return s.replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]!))
 }
 
+function imageUrl(ly: any): string | undefined {
+  if (typeof ly.srcUrl === 'string') return ly.srcUrl
+  if (typeof ly.src === 'string') return ly.src
+  const ref = ly.assetId || ly.src?.asset?._ref
+  if (typeof ref === 'string') {
+    const id = ref.replace(/^image-/, '').replace(/-(png|jpg|jpeg|webp)$/, '')
+    const pid = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID
+    if (pid) return `https://cdn.sanity.io/images/${pid}/production/${id}.png`
+  }
+  return undefined
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { pages, sku } = await req.json() as { pages:any[]; sku:keyof typeof SPECS }
@@ -40,10 +52,10 @@ export async function POST(req: NextRequest) {
       if (w != null) w = clamp(Math.round(w), 1, width - x)
       if (h != null) h = clamp(Math.round(h), 1, height - y)
 
-      if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
+      if (ly.type === 'image') {
+        const url = imageUrl(ly)
+        if (!url || !/^https?:/i.test(url)) continue
         try {
-          const url = ly.srcUrl || ly.src
-          if (typeof url !== 'string' || !/^https?:/i.test(url)) continue
           const res = await fetch(url)
           const buf = Buffer.from(await res.arrayBuffer())
           let imgSharp = sharp(buf, { failOn: 'warn', limitInputPixels: false })
@@ -77,13 +89,11 @@ export async function POST(req: NextRequest) {
         const svgW = w ?? Math.round(fs * Math.max(...lines.map(l => l.length)) * 0.6)
         const svgH = (h ?? Math.round(lh * lines.length)) + pad * 2
         const tspans = lines.map((t,i)=>`<tspan x='${anchorX}' dy='${i?lh:0}'>${t}</tspan>`).join('')
-        const style = [
-          ly.underline ? 'text-decoration:underline' : '',
-          ly.opacity != null && ly.opacity < 1 ? `opacity:${ly.opacity}` : ''
-        ].filter(Boolean).join(';')
+        const underlineAttr = ly.underline ? " text-decoration='underline'" : ''
+        const style = ly.opacity != null && ly.opacity < 1 ? ` style='opacity:${ly.opacity}'` : ''
         const svg = `<?xml version='1.0' encoding='UTF-8'?>`+
           `<svg xmlns='http://www.w3.org/2000/svg' width='${svgW}' height='${svgH}'>`+
-          `<text x='${anchorX}' y='${pad}' dominant-baseline='text-before-edge' text-anchor='${anchor}' font-family='${ly.fontFamily || 'Helvetica'}' font-size='${fs}' font-weight='${ly.fontWeight || ''}' font-style='${ly.fontStyle || ''}' fill='${ly.fill || '#000'}'${style ? ` style='${style}'` : ''}>${tspans}</text>`+
+          `<text x='${anchorX}' y='${pad}' dominant-baseline='text-before-edge' text-anchor='${anchor}' font-family='${ly.fontFamily || 'Helvetica'}' font-size='${fs}' font-weight='${ly.fontWeight || ''}' font-style='${ly.fontStyle || ''}' fill='${ly.fill || '#000'}'${underlineAttr}${style}>${tspans}</text>`+
           `</svg>`
         composites.push({ input: Buffer.from(svg), left: x, top: y } as sharp.OverlayOptions)
       }
