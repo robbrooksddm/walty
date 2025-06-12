@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import sharp from 'sharp'
 
-interface Overlay extends sharp.OverlayOptions {
-  /** Global opacity for the overlay; sharp's types omit this */
-  opacity?: number
-}
-
 export const dynamic = 'force-dynamic'
 
 const DPI = 300
@@ -30,7 +25,7 @@ export async function POST(req: NextRequest) {
     const height = Math.round(mm(spec.trimH + spec.bleed * 2))
 
     const clamp = (n:number, min:number, max:number) => Math.max(min, Math.min(max, n))
-    const composites: Overlay[] = []
+    const composites: sharp.OverlayOptions[] = []
     const page = pages[0] || {}
     const layers = Array.isArray(page.layers) ? page.layers : []
 
@@ -51,7 +46,7 @@ export async function POST(req: NextRequest) {
           if (typeof url !== 'string' || !/^https?:/i.test(url)) continue
           const res = await fetch(url)
           const buf = Buffer.from(await res.arrayBuffer())
-          let imgSharp = sharp(buf)
+          let imgSharp = sharp(buf, { failOn: 'warn', limitInputPixels: false })
           if (ly.cropW != null && ly.cropH != null) {
             const left = Math.max(0, Math.round(ly.cropX ?? 0))
             const top = Math.max(0, Math.round(ly.cropY ?? 0))
@@ -61,8 +56,12 @@ export async function POST(req: NextRequest) {
           }
           if (ly.flipY) imgSharp = imgSharp.flip()
           if (ly.flipX) imgSharp = imgSharp.flop()
-          const img = await imgSharp.resize(w, h, { fit: 'fill' }).toBuffer()
-          composites.push({ input: img, left: x, top: y, opacity: ly.opacity ?? 1 } as Overlay)
+          imgSharp = imgSharp.resize(w, h, { fit: 'fill' })
+          if (ly.opacity != null && ly.opacity < 1) {
+            imgSharp = imgSharp.ensureAlpha().linear([1, 1, 1, ly.opacity])
+          }
+          const img = await imgSharp.toBuffer()
+          composites.push({ input: img, left: x, top: y } as sharp.OverlayOptions)
         } catch (err) {
           console.error('img', err)
         }
@@ -78,11 +77,15 @@ export async function POST(req: NextRequest) {
         const svgW = w ?? Math.round(fs * Math.max(...lines.map(l => l.length)) * 0.6)
         const svgH = (h ?? Math.round(lh * lines.length)) + pad * 2
         const tspans = lines.map((t,i)=>`<tspan x='${anchorX}' dy='${i?lh:0}'>${t}</tspan>`).join('')
+        const style = [
+          ly.underline ? 'text-decoration:underline' : '',
+          ly.opacity != null && ly.opacity < 1 ? `opacity:${ly.opacity}` : ''
+        ].filter(Boolean).join(';')
         const svg = `<?xml version='1.0' encoding='UTF-8'?>`+
           `<svg xmlns='http://www.w3.org/2000/svg' width='${svgW}' height='${svgH}'>`+
-          `<text x='${anchorX}' y='${pad}' dominant-baseline='text-before-edge' text-anchor='${anchor}' font-family='${ly.fontFamily || 'Helvetica'}' font-size='${fs}' font-weight='${ly.fontWeight || ''}' font-style='${ly.fontStyle || ''}' fill='${ly.fill || '#000'}' ${ly.underline ? "text-decoration='underline'" : ''} opacity='${ly.opacity ?? 1}'>${tspans}</text>`+
+          `<text x='${anchorX}' y='${pad}' dominant-baseline='text-before-edge' text-anchor='${anchor}' font-family='${ly.fontFamily || 'Helvetica'}' font-size='${fs}' font-weight='${ly.fontWeight || ''}' font-style='${ly.fontStyle || ''}' fill='${ly.fill || '#000'}'${style ? ` style='${style}'` : ''}>${tspans}</text>`+
           `</svg>`
-        composites.push({ input: Buffer.from(svg), left: x, top: y, opacity: ly.opacity ?? 1 } as Overlay)
+        composites.push({ input: Buffer.from(svg), left: x, top: y } as sharp.OverlayOptions)
       }
     }
 
