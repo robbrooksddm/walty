@@ -310,9 +310,7 @@ const handleSwap = (url: string) => {
 
 
         {/* sidebar */}
-        <div className="relative z-30 w-64 flex-shrink-0">
-          <LayerPanel />
-        </div>
+        <LayerPanel />
 
         {/* main */}
         <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[840px]">
