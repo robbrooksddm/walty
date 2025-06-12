@@ -90,6 +90,12 @@ export interface Layer {
   width:  number
   height?: number
 
+  /** geometry relative to the full canvas (0–100 %) */
+  leftPct?:   number
+  topPct?:    number
+  widthPct?:  number
+  heightPct?: number
+
   opacity?:   number
   scaleX?:    number
   scaleY?:    number
