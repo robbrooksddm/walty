@@ -153,15 +153,22 @@ export default function TextToolbar (props: Props) {
   /* 7.  Render                                                         */
   /* ------------------------------------------------------------------ */
   return (
-    <div className="fixed inset-x-0 top-2 z-30 flex justify-center pointer-events-none select-none">
+    <div
+      className="sticky inset-x-0 z-30 flex justify-center pointer-events-none select-none"
+      style={{
+        top: "var(--walty-header-h)",
+        marginTop: "calc(var(--walty-toolbar-h) * -1)",
+        height: "var(--walty-toolbar-h)",
+      }}
+    >
 
       {mode === 'staff' && (
         <div
           className="
-            pointer-events-auto flex flex-nowrap items-center gap-4
+            pointer-events-auto flex flex-nowrap items-center gap-3
             bg-white shadow-lg rounded-xl
-            border border-[rgba(0,91,85,.2)] px-4 py-2
-            max-w-none w-[calc(100%-2rem)]]"
+            border border-[rgba(0,91,85,.2)] px-4 py-3
+            max-w-none w-[calc(100%-rem)]"
         >
           {/* ───────── Font family & size (no captions) ───────── */}
           <FontFamilySelect

@@ -1,10 +1,3 @@
-/**********************************************************************
- * CardEditor.tsx  –  WYSIWYG editor for a 4-page greeting card
- * --------------------------------------------------------------------
- * ▸ Staff mode     – toolbar shows upload / font tools
- * ▸ Customer mode  – stripped-down toolbar
- * 2025-05-11       – wires SelfieDrawer → swaps chosen variant into canvas
- *********************************************************************/
 'use client'
 
 import { useEffect, useRef, useState, useLayoutEffect } from 'react'
@@ -19,7 +12,10 @@ import TextToolbar                      from './TextToolbar'
 import ImageToolbar                     from './ImageToolbar'
 import EditorCommands                   from './EditorCommands'
 import SelfieDrawer                     from './SelfieDrawer'
+import { CropTool }                     from '@/lib/CropTool'
+import WaltyEditorHeader                from './WaltyEditorHeader'
 import type { TemplatePage }            from './FabricCanvas'
+
 
 /* ---------- helpers ------------------------------------------------ */
 type Section = 'front' | 'inside' | 'back'
@@ -175,6 +171,15 @@ export default function CardEditor({
     if (!onSave) return
     setSaving(true)
     try {
+    canvasMap.forEach(fc => {
+      const tool = (fc as any)?._cropTool as CropTool | undefined
+      if (tool?.isActive) tool.commit()
+    })
+    canvasMap.forEach(fc => {
+      const sync = (fc as any)?._syncLayers as (() => void) | undefined
+      if (sync) sync()
+    })
+    const finalPages = useEditor.getState().pages
       let coverImageId: string | undefined
       const fc = canvasMap[0]
       if (fc) {
@@ -193,7 +198,7 @@ export default function CardEditor({
           console.error('cover upload failed', err)
         }
       }
-      await onSave(pages, coverImageId)
+      await onSave(finalPages, coverImageId)
     }
     finally { setSaving(false) }
   }
@@ -270,142 +275,147 @@ const handleSwap = (url: string) => {
 
   /* ---------------- UI ------------------------------------------ */
   return (
-    <div className="flex h-screen relative bg-[--walty-cream] lg:max-w-6xl mx-auto">
-
-      {/* global overlays */}
-      <CoachMark
-        anchor={anchor}
-        onClose={() => {
-          setAnchor(null)
-          localStorage.setItem('ai_coachmark_shown', '1')
-        }}
-      />
-      <SelfieDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        onUseSelected={handleSwap}
-        placeholderId={aiPlaceholderId}   /* ← NEW prop */
+    <div
+      className="flex flex-col h-screen box-border"
+      style={{ paddingTop: "calc(var(--walty-header-h) + var(--walty-toolbar-h))" }}
+    >
+      <WaltyEditorHeader                     /* ② mount new component */
+        onPreview={() => console.log("preview")}
+        onAddToBasket={() => console.log("basket")}
+        height={72}                          /* match the design */
       />
 
-{/* sidebar */}
-<div className="relative z-30 w-64 flex-shrink-0">
-  <LayerPanel />
-</div>
+      <EditorCommands
+        onUndo={undo}
+        onRedo={redo}
+        onSave={handleSave}
+        saving={saving}
+      />
 
-      {/* main */}
-      <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[840px]">
-       <EditorCommands onUndo={undo} onRedo={redo} onSave={handleSave} saving={saving} />
-     {activeType === 'text' && (
-       <TextToolbar
-         canvas={activeFc}
-         addText={addText}
-         addImage={addImage}
-         mode={mode}
-         saving={saving}
-       />
-     )}
-     {activeType === 'image' && (
-       <ImageToolbar
-         canvas={activeFc}
-         saving={saving}
-       />
-     )}
+      <div className="flex flex-1 relative bg-[--walty-cream] lg:max-w-6xl mx-auto">
+        {/* global overlays */}
+        <CoachMark
+          anchor={anchor}
+          onClose={() => {
+            setAnchor(null)
+            localStorage.setItem('ai_coachmark_shown', '1')
+          }}
+        />
+        <SelfieDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          onUseSelected={handleSwap}
+          placeholderId={aiPlaceholderId}   /* ← NEW prop */
+        />
 
-        {/* tabs */}
-        <nav className="flex justify-center gap-8 py-3 text-sm font-medium">
-          {(['front','inside','back'] as Section[]).map(lbl => (
-            <button
-              key={lbl}
-              onClick={() => setSection(lbl)}
-              className={
-                section === lbl
-                  ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                  : 'text-gray-500 hover:text-gray-800'
-              }
-            >
-              {lbl.replace(/^./, c => c.toUpperCase())}
-            </button>
-          ))}
-        </nav>
 
-        {/* canvases */}
-        <div className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6">
-          {/* front */}
-          <div className={section === 'front' ? box : 'hidden'}>
-            <FabricCanvas
-              pageIdx={0}
-              page={pages[0]}
-              onReady={fc => onReady(0, fc)}
-              isCropping={cropping[0]}
-              onCroppingChange={state => handleCroppingChange(0, state)}
-            />
-          </div>
-          {/* inside */}
-          <div className={section === 'inside' ? 'flex gap-6' : 'hidden'}>
-            <div className={box}>
-              <FabricCanvas
-                pageIdx={1}
-                page={pages[1]}
-                onReady={fc => onReady(1, fc)}
-                isCropping={cropping[1]}
-                onCroppingChange={state => handleCroppingChange(1, state)}
-              />
-            </div>
-            <div className={box}>
-              <FabricCanvas
-                pageIdx={2}
-                page={pages[2]}
-                onReady={fc => onReady(2, fc)}
-                isCropping={cropping[2]}
-                onCroppingChange={state => handleCroppingChange(2, state)}
-              />
-            </div>
-          </div>
-          {/* back */}
-          <div className={section === 'back' ? box : 'hidden'}>
-            <FabricCanvas
-              pageIdx={3}
-              page={pages[3]}
-              onReady={fc => onReady(3, fc)}
-              isCropping={cropping[3]}
-              onCroppingChange={state => handleCroppingChange(3, state)}
-            />
-          </div>
+        {/* sidebar */}
+        <div className="relative z-30 w-64 flex-shrink-0">
+          <LayerPanel />
         </div>
 
-        {/* thumbnails */}
-        <div className="
-   thumbnail-bar sticky bottom-0 z-20
-   flex justify-center gap-2
-    px-3 py-2
-    bg-[--walty-cream]       /* opaque backdrop so canvases don’t show through */
-    text-xs
-  ">
-          {(['FRONT', 'INNER-L', 'INNER-R', 'BACK'] as const).map((lbl, i) => (
-            <button
-              key={lbl}
-              className={`thumb ${
-                (section === 'front'  && i === 0) ||
-                (section === 'inside' && (i === 1 || i === 2)) ||
-                (section === 'back'   && i === 3)
-                  ? 'thumb-active'
-                  : ''
-              }`}
-              onClick={() =>
-                setSection(i === 0 ? 'front' : i === 3 ? 'back' : 'inside')
-              }
-            >
-              {thumbs[i] ? (
-                <img
-                  src={thumbs[i]}
-                  alt={lbl}
-                  className="h-full w-full object-cover"
+        {/* main */}
+        <div
+          className="flex flex-col flex-1 min-h-0 mx-auto max-w-[840px]"
+          style={{ transform: 'translateX(-8rem)' }}
+        >
+          {activeType === 'text' ? (
+            <TextToolbar
+              canvas={activeFc}
+              addText={addText}
+              addImage={addImage}
+              mode={mode}
+              saving={saving}
+            />
+          ) : activeType === 'image' ? (
+            <ImageToolbar
+              canvas={activeFc}
+              saving={saving}
+            />
+          ) : (
+            <div
+              className="sticky inset-x-0 z-30 flex justify-center pointer-events-none select-none"
+              style={{
+                top: 'var(--walty-header-h)',
+                marginTop: 'calc(var(--walty-toolbar-h) * -1)',
+                height: 'var(--walty-toolbar-h)',
+              }}
+            />
+          )}
+
+                    {/* canvases */}
+          <div className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6">
+            {/* front */}
+            <div className={section === 'front' ? box : 'hidden'}>
+              <FabricCanvas
+                pageIdx={0}
+                page={pages[0]}
+                onReady={fc => onReady(0, fc)}
+                isCropping={cropping[0]}
+                onCroppingChange={state => handleCroppingChange(0, state)}
+              />
+            </div>
+            {/* inside */}
+            <div className={section === 'inside' ? 'flex gap-6' : 'hidden'}>
+              <div className={box}>
+                <FabricCanvas
+                  pageIdx={1}
+                  page={pages[1]}
+                  onReady={fc => onReady(1, fc)}
+                  isCropping={cropping[1]}
+                  onCroppingChange={state => handleCroppingChange(1, state)}
                 />
-              ) : (
-                lbl
-              )}
-            </button>
-          ))}
+              </div>
+              <div className={box}>
+                <FabricCanvas
+                  pageIdx={2}
+                  page={pages[2]}
+                  onReady={fc => onReady(2, fc)}
+                  isCropping={cropping[2]}
+                  onCroppingChange={state => handleCroppingChange(2, state)}
+                />
+              </div>
+            </div>
+            {/* back */}
+            <div className={section === 'back' ? box : 'hidden'}>
+              <FabricCanvas
+                pageIdx={3}
+                page={pages[3]}
+                onReady={fc => onReady(3, fc)}
+                isCropping={cropping[3]}
+                onCroppingChange={state => handleCroppingChange(3, state)}
+              />
+            </div>
+          </div>
+
+          {/* thumbnails */}
+          <div className="thumbnail-bar sticky bottom-0 z-20 flex justify-center gap-2 px-3 py-2 bg-[--walty-cream] text-xs">
+            {(['FRONT', 'INNER-L', 'INNER-R', 'BACK'] as const).map((lbl, i) => (
+              <button
+                key={lbl}
+                className={`thumb ${
+                  (section === 'front' && i === 0) ||
+                  (section === 'inside' && (i === 1 || i === 2)) ||
+                  (section === 'back' && i === 3)
+                    ? 'thumb-active'
+                    : ''
+                }`}
+                onClick={() =>
+                  setSection(i === 0 ? 'front' : i === 3 ? 'back' : 'inside')
+                }
+              >
+                {thumbs[i] ? (
+                  <img
+                    src={thumbs[i]}
+                    alt={lbl}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  lbl
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

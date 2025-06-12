@@ -26,7 +26,7 @@ export default function WaltyNav() {
         <div className="flex h-20 items-center gap-6">
           {/* logo 140 × 48 */}
           <Link href="/" className="shrink-0">
-            <Image src="/images/Walty logo.png" alt="Walty" width={140} height={48} priority />
+            <Image src="/images/Walty Primary Logo.png" alt="Walty" width={134} height={46} priority />
           </Link>
 
           {/* search – 44 px tall */}

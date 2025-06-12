@@ -342,6 +342,8 @@ useEffect(() => {
   // create a reusable crop helper and keep it in a ref
   const crop = new CropTool(fc, SCALE, SEL_COLOR);
   cropToolRef.current = crop;
+  (fc as any)._cropTool = crop;
+  (fc as any)._syncLayers = () => syncLayersFromCanvas(fc, pageIdx);
 
   // double‑click on an <image> starts cropping
   const dblHandler = (e: fabric.IEvent) => {
@@ -434,6 +436,10 @@ addGuides(fc)                                 // green safe-zone guides
       width  : t.getScaledWidth(),
       height : t.getScaledHeight(),
       opacity: t.opacity,
+      ...(t.cropX != null && { cropX: t.cropX }),
+      ...(t.cropY != null && { cropY: t.cropY }),
+      ...(t.width  != null && { cropW: t.width  }),
+      ...(t.height != null && { cropH: t.height }),
     })
     if (t.type === 'textbox') Object.assign(d, {
       text       : t.text,
@@ -597,15 +603,16 @@ window.addEventListener('keydown', onKey)
   ;(fc as any)._editingRef = isEditing
   fcRef.current = fc; onReady(fc)
 
-  return () => {
-    window.removeEventListener('keydown', onKey)
-    if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
-    // tidy up crop‑tool listeners
-    fc.off('mouse:dblclick', dblHandler);
-    window.removeEventListener('keydown', keyCropHandler);
-    onReady(null)
-    fc.dispose()
-  }
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
+      // tidy up crop‑tool listeners
+      fc.off('mouse:dblclick', dblHandler);
+      window.removeEventListener('keydown', keyCropHandler);
+      onReady(null)
+      cropToolRef.current?.abort()
+      fc.dispose()
+    }
 // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [])
 /* ---------- END mount once ----------------------------------- */
@@ -631,6 +638,7 @@ window.addEventListener('keydown', onKey)
     if (!fc || !page) return
     if (isEditing.current || (fc as any)._editingRef?.current) return
 
+    cropToolRef.current?.abort()
     hydrating.current = true
     fc.clear();
     fc.setBackgroundColor('#fff', fc.renderAll.bind(fc));
@@ -703,6 +711,8 @@ img.on('mouseup', () => {
               ghost.className = 'ai-ghost'
               ghost.setAttribute('data-ai-placeholder', '')  // CoachMark anchor
               ghost.style.opacity = '0'          // hidden until hover
+              ghost.style.pointerEvents = 'none' // never block canvas clicks
+
 
               ghost.innerHTML = `
                 <div class="ai-ghost__center">
@@ -727,6 +737,8 @@ img.on('mouseup', () => {
             img.on('moving',   doSync)
                .on('scaling',  doSync)
                .on('rotating', doSync)
+               window.addEventListener('scroll', doSync, { passive: true })
+               window.addEventListener('resize', doSync)
                
 
             /* hide overlay when actively selected */
@@ -738,6 +750,12 @@ img.on('mouseup', () => {
             /* hide overlay when coach-mark is dismissed */
             document.addEventListener('ai-coach-dismiss', () => {
               ghost!.style.display = 'none'
+            })
+
+            img.on('removed', () => {
+              window.removeEventListener('scroll', doSync)
+              window.removeEventListener('resize', doSync)
+              ghost?.remove()
             })
           }
 
