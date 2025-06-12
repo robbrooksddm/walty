@@ -292,7 +292,10 @@ const handleSwap = (url: string) => {
         saving={saving}
       />
 
-      <div className="flex flex-1 relative bg-[--walty-cream] lg:max-w-6xl mx-auto">
+      <div
+        className="flex flex-1 relative bg-[--walty-cream]"
+        style={{ marginLeft: '16rem', width: 'calc(100% - 16rem)' }}
+      >
         {/* global overlays */}
         <CoachMark
           anchor={anchor}
