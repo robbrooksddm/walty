@@ -332,7 +332,7 @@ const handlePreview = () => {
         <LayerPanel />
 
         {/* main */}
-        <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[840px]">
+        <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[868px]">
           {activeType === 'text' ? (
             <TextToolbar
               canvas={activeFc}
