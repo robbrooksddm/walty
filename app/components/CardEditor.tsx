@@ -293,8 +293,8 @@ const handleSwap = (url: string) => {
       />
 
       <div
-        className="flex flex-1 relative bg-[--walty-cream]"
-        style={{ marginLeft: '16rem', width: 'calc(100% - 16rem)' }}
+        className="flex flex-1 relative bg-[--walty-cream] lg:max-w-6xl mx-auto"
+        style={{ transform: 'translateX(-8rem)' }}
       >
         {/* global overlays */}
         <CoachMark
