@@ -316,7 +316,7 @@ const handleSwap = (url: string) => {
 
         {/* main */}
         <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[840px] -translate-x-24 lg:-translate-x-28 xl:-translate-x-32">
-          {activeType === 'text' && (
+          {activeType === 'text' ? (
             <TextToolbar
               canvas={activeFc}
               addText={addText}
@@ -324,11 +324,19 @@ const handleSwap = (url: string) => {
               mode={mode}
               saving={saving}
             />
-          )}
-          {activeType === 'image' && (
+          ) : activeType === 'image' ? (
             <ImageToolbar
               canvas={activeFc}
               saving={saving}
+            />
+          ) : (
+            <div
+              className="sticky inset-x-0 z-30 flex justify-center pointer-events-none select-none"
+              style={{
+                top: 'var(--walty-header-h)',
+                marginTop: 'calc(var(--walty-toolbar-h) * -1)',
+                height: 'var(--walty-toolbar-h)',
+              }}
             />
           )}
 
