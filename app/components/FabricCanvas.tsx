@@ -711,6 +711,7 @@ img.on('mouseup', () => {
               ghost.className = 'ai-ghost'
               ghost.setAttribute('data-ai-placeholder', '')  // CoachMark anchor
               ghost.style.opacity = '0'          // hidden until hover
+              ghost.style.pointerEvents = 'none' // never block canvas clicks
 
               ghost.innerHTML = `
                 <div class="ai-ghost__center">
@@ -735,6 +736,8 @@ img.on('mouseup', () => {
             img.on('moving',   doSync)
                .on('scaling',  doSync)
                .on('rotating', doSync)
+            window.addEventListener('scroll', doSync, { passive: true })
+            window.addEventListener('resize', doSync)
                
 
             /* hide overlay when actively selected */
@@ -746,6 +749,12 @@ img.on('mouseup', () => {
             /* hide overlay when coach-mark is dismissed */
             document.addEventListener('ai-coach-dismiss', () => {
               ghost!.style.display = 'none'
+            })
+
+            img.on('removed', () => {
+              window.removeEventListener('scroll', doSync)
+              window.removeEventListener('resize', doSync)
+              ghost?.remove()
             })
           }
 
