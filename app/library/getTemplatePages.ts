@@ -40,8 +40,8 @@ export async function getTemplatePages(
     *[
       _type == "cardTemplate" &&
       (
-        _id == $key ||
-        slug.current == $key
+        defined($id)   && _id == $id   ||
+        defined($slug) && slug.current == $slug
       )
     ][0]{
       coverImage,
@@ -49,13 +49,14 @@ export async function getTemplatePages(
       pages[]{
         layers[]{
           ...,
-          source->{ _id, prompt, refImage }
+          source->{_id, prompt, refImage}
         }
       }
     }
   `
 
-  const params = { key: idOrSlug }
+  const isId = idOrSlug.startsWith('drafts.') || /^[0-9a-fA-F-]{36}$/.test(idOrSlug)
+  const params = isId ? { id: idOrSlug } : { slug: idOrSlug }
 
   console.log('[GROQ]', query)
   console.log('[PARAMS]', params)
