@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       `*[_type=="cardTemplate" && _id==$id][0]{ product->{ printSpec } }.product.printSpec`,
       { id },
     )
-    const fallback = sku && SPECS[sku]
+    const fallback = sku ? SPECS[sku as keyof typeof SPECS] : undefined
     const finalSpec = spec ?? fallback
     if (!finalSpec) {
       return NextResponse.json({ error: 'spec not found' }, { status: 404 })
