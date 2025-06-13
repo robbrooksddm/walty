@@ -21,13 +21,25 @@ function esc(s: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { pages, sku } = await req.json() as { pages:any[]; sku:keyof typeof SPECS }
-    if (!Array.isArray(pages) || !SPECS[sku]) {
+    const { pages, pageImages, sku } = await req.json() as { pages?:any[]; pageImages?:string[]; sku:keyof typeof SPECS }
+    if ((!Array.isArray(pages) && !Array.isArray(pageImages)) || !SPECS[sku]) {
       return NextResponse.json({ error: 'bad input' }, { status: 400 })
     }
     const spec = SPECS[sku]
     const width  = Math.round(mm(spec.trimW + spec.bleed * 2))
     const height = Math.round(mm(spec.trimH + spec.bleed * 2))
+
+    if (Array.isArray(pageImages) && pageImages.length) {
+      try {
+        const raw = pageImages[0].replace(/^data:image\/[^;]+;base64,/, '')
+        const buf = Buffer.from(raw, 'base64')
+        const out = await sharp(buf).resize(width, height, { fit: 'fill' }).png().toBuffer()
+        return new NextResponse(out, { headers: { 'content-type': 'image/png' } })
+      } catch (err) {
+        console.error('[proof/img]', err)
+        return NextResponse.json({ error: 'server' }, { status: 500 })
+      }
+    }
 
     const clamp = (n:number, min:number, max:number) => Math.max(min, Math.min(max, n))
     const composites: Overlay[] = []

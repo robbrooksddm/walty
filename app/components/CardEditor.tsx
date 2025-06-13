@@ -17,6 +17,15 @@ import { CropTool }                     from '@/lib/CropTool'
 import WaltyEditorHeader                from './WaltyEditorHeader'
 import type { TemplatePage }            from './FabricCanvas'
 
+/* ---------- shared page specs (matches FabricCanvas) ------------- */
+const DPI       = 300
+const mm        = (n:number) => (n / 25.4) * DPI
+const TRIM_W_MM = 150
+const TRIM_H_MM = 214
+const BLEED_MM  = 3
+const PAGE_W    = Math.round(mm(TRIM_W_MM + BLEED_MM * 2))
+const PREVIEW_W = 420
+
 
 /* ---------- helpers ------------------------------------------------ */
 type Section = 'front' | 'inside' | 'back'
@@ -260,20 +269,22 @@ const handlePreview = () => {
 
 /* download proof */
 const handleProof = async () => {
-  canvasMap.forEach(fc => {
+  const scale = PAGE_W / PREVIEW_W
+  const imgs: string[] = []
+  canvasMap.forEach((fc, i) => {
+    if (!fc) return
     const tool = (fc as any)?._cropTool as CropTool | undefined
     if (tool?.isActive) tool.commit()
-  })
-  canvasMap.forEach(fc => {
     const sync = (fc as any)?._syncLayers as (() => void) | undefined
     if (sync) sync()
+    fc.renderAll()
+    imgs[i] = fc.toDataURL({ format: 'png', multiplier: scale })
   })
-  const pages = useEditor.getState().pages
   try {
     const res = await fetch('/api/proof', {
       method : 'POST',
       headers: { 'content-type': 'application/json' },
-      body   : JSON.stringify({ pages, sku: 'card-7x5' }),
+      body   : JSON.stringify({ pageImages: imgs.filter(Boolean), sku: 'card-7x5' }),
     })
     if (res.ok) {
       const blob = await res.blob()
