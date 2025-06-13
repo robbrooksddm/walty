@@ -47,7 +47,7 @@ export async function getTemplatePages(
     pages[]{
       layers[]{
         ...,                       // keep every native field
-        // if this layer has a reference called “source”, pull it in-line:
+        // pull the "source" reference in-line if present
         "source": source->{
           _id,
           prompt,
