@@ -38,7 +38,7 @@ export async function getTemplatePages(
       _id == $key ||
       slug.current == $key
     )
-  ][0]{
+  ] | order(_updatedAt desc)[0]{
     coverImage,
     pages[]{
       layers[]{
