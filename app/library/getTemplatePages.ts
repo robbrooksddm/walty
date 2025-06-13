@@ -63,7 +63,9 @@ export async function getTemplatePages(
     draftKey:  idOrSlug.startsWith('drafts.') ? idOrSlug : `drafts.${idOrSlug}`,
   }
 
-  const raw = await sanityPreview.fetch<{pages?: any[]; coverImage?: any; product?: {printSpec?: PrintSpec}>>(query, params)
+  const raw = await sanityPreview.fetch(query, params) as {
+    pages?: any[]; coverImage?: any; product?: { printSpec?: PrintSpec }
+  }
 
   const pages = Array.isArray(raw?.pages) && raw.pages.length === 4
     ? raw.pages

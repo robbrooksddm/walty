@@ -406,7 +406,6 @@ const handleProof = async () => {
                 pageIdx={0}
                 page={pages[0]}
                 onReady={fc => onReady(0, fc)}
-                printSpec={printSpec}
                 isCropping={cropping[0]}
                 onCroppingChange={state => handleCroppingChange(0, state)}
                 mode={mode}
@@ -419,7 +418,6 @@ const handleProof = async () => {
                   pageIdx={1}
                   page={pages[1]}
                   onReady={fc => onReady(1, fc)}
-                  printSpec={printSpec}
                   isCropping={cropping[1]}
                   onCroppingChange={state => handleCroppingChange(1, state)}
                   mode={mode}
@@ -430,7 +428,6 @@ const handleProof = async () => {
                   pageIdx={2}
                   page={pages[2]}
                   onReady={fc => onReady(2, fc)}
-                  printSpec={printSpec}
                   isCropping={cropping[2]}
                   onCroppingChange={state => handleCroppingChange(2, state)}
                   mode={mode}
@@ -443,7 +440,6 @@ const handleProof = async () => {
                 pageIdx={3}
                 page={pages[3]}
                 onReady={fc => onReady(3, fc)}
-                printSpec={printSpec}
                 isCropping={cropping[3]}
                 onCroppingChange={state => handleCroppingChange(3, state)}
                 mode={mode}
