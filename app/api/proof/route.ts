@@ -23,6 +23,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'bad input' }, { status: 400 })
     }
     const q = '*[_type=="cardProduct" && slug.current==$s][0]{printSpec}'
+    console.log('[GROQ]', q)
+    console.log('[PARAMS]', { s: sku })
     const prod = await sanity.fetch<{printSpec: PrintSpec | null}>(q, {s: sku})
     const spec = prod?.printSpec
     if (!spec) {

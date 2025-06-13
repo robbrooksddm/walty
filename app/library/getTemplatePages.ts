@@ -64,6 +64,9 @@ export async function getTemplatePages(
   const query  = useId ? byId : bySlug
   const params = useId ? { id: idOrSlug } : { slug: idOrSlug }
 
+  console.log('[GROQ]', query)
+  console.log('[PARAMS]', params)
+
   const raw = await sanityPreview.fetch(query, params) as {
     pages?: any[]; coverImage?: any; product?: { printSpec?: PrintSpec }
   }
