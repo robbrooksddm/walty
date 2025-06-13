@@ -46,12 +46,11 @@ export async function getTemplatePages(
     product: products[0]->{ printSpec },
     pages[]{
       layers[]{
-        ...,                       // keep every native field
-        // pull the "source" reference in-line if present
-        "source": source->{
+        ...,
+        'source': source->{
           _id,
           prompt,
-          refImage                // we only need these three
+          refImage
         }
       }
     }
