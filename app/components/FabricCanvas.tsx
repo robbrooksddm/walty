@@ -12,18 +12,15 @@ import { useEffect, useRef } from 'react'
 import { fabric }            from 'fabric'
 import { useEditor }         from './EditorStore'
 import { fromSanity }        from '@/app/library/layerAdapters'
+import { PRINT_SPECS, inchesToPx, mmToPx } from '@/lib/printSpecs'
 import '@/lib/fabricDefaults'
 import { SEL_COLOR } from '@/lib/fabricDefaults';
 import { CropTool } from '@/lib/CropTool'
 
 /* ---------- size helpers ---------------------------------------- */
-const DPI       = 300
-const mm        = (n: number) => (n / 25.4) * DPI
-const TRIM_W_MM = 150
-const TRIM_H_MM = 214
-const BLEED_MM  = 3
-const PAGE_W    = Math.round(mm(TRIM_W_MM + BLEED_MM * 2))
-const PAGE_H    = Math.round(mm(TRIM_H_MM + BLEED_MM * 2))
+const spec      = PRINT_SPECS['card-7x5']
+const PAGE_W    = Math.round(inchesToPx(spec.trimW + spec.bleed * 2, spec.dpi))
+const PAGE_H    = Math.round(inchesToPx(spec.trimH + spec.bleed * 2, spec.dpi))
 const PREVIEW_W = 420
 const PREVIEW_H = Math.round(PAGE_H * PREVIEW_W / PAGE_W)
 const SCALE     = PREVIEW_W / PAGE_W
@@ -276,7 +273,7 @@ type GuideName = 'safe-zone' | 'bleed'
 
 const addGuides = (fc: fabric.Canvas, mode: Mode) => {
   fc.getObjects().filter(o => (o as any)._guide).forEach(o => fc.remove(o))
-  const strokeW = mm(0.5)
+  const strokeW = mmToPx(0.5, spec.dpi)
   const mk = (
     xy: [number, number, number, number],
     name: GuideName,
@@ -305,7 +302,7 @@ const addGuides = (fc: fabric.Canvas, mode: Mode) => {
   ].forEach(l => fc.add(l))
 
   if (mode === 'staff') {
-    const bleed = mm(BLEED_MM)
+    const bleed = inchesToPx(spec.bleed, spec.dpi)
     ;[
       mk([bleed, bleed, PAGE_W - bleed, bleed], 'bleed', '#f87171'),
       mk([PAGE_W - bleed, bleed, PAGE_W - bleed, PAGE_H - bleed], 'bleed', '#f87171'),

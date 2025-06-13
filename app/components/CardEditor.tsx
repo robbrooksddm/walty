@@ -16,14 +16,11 @@ import PreviewModal                    from './PreviewModal'
 import { CropTool }                     from '@/lib/CropTool'
 import WaltyEditorHeader                from './WaltyEditorHeader'
 import type { TemplatePage }            from './FabricCanvas'
+import { PRINT_SPECS, inchesToPx }      from '@/lib/printSpecs'
 
 /* ---------- shared page specs (matches FabricCanvas) ------------- */
-const DPI       = 300
-const mm        = (n:number) => (n / 25.4) * DPI
-const TRIM_W_MM = 150
-const TRIM_H_MM = 214
-const BLEED_MM  = 3
-const PAGE_W    = Math.round(mm(TRIM_W_MM + BLEED_MM * 2))
+const spec      = PRINT_SPECS['card-7x5']
+const PAGE_W    = Math.round(inchesToPx(spec.trimW + spec.bleed * 2, spec.dpi))
 const PREVIEW_W = 420
 
 
