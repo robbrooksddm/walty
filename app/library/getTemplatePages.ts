@@ -36,8 +36,14 @@ export async function getTemplatePages(
     throw new Error('getTemplatePages: missing id or slug')
   }
 
-  const byId = /* groq */ `
-    *[_id==$id][0]{
+  const query = /* groq */ `
+    *[
+      _type == "cardTemplate" &&
+      (
+        _id == $key ||
+        slug.current == $key
+      )
+    ][0]{
       coverImage,
       product: products[0]->{ printSpec },
       pages[]{
@@ -46,23 +52,10 @@ export async function getTemplatePages(
           source->{ _id, prompt, refImage }
         }
       }
-    }`
+    }
+  `
 
-  const bySlug = /* groq */ `
-    *[slug.current==$slug][0]{
-      coverImage,
-      product: products[0]->{ printSpec },
-      pages[]{
-        layers[]{
-          ...,
-          source->{ _id, prompt, refImage }
-        }
-      }
-    }`
-
-  const useId = idOrSlug.startsWith('drafts.')
-  const query  = useId ? byId : bySlug
-  const params = useId ? { id: idOrSlug } : { slug: idOrSlug }
+  const params = { key: idOrSlug }
 
   console.log('[GROQ]', query)
   console.log('[PARAMS]', params)
