@@ -32,35 +32,37 @@ export interface TemplateData {
 export async function getTemplatePages(
   idOrSlug: string,
 ): Promise<TemplateData> {
-  /* 1 ─ pick the first match by _id or slug */
-  const query = /* groq */ `
-  *[
-    _type == "cardTemplate" &&
-    (
-      _id == $key      ||
-      _id == $draftKey ||
-      slug.current == $key
-    )
-  ][0]{
-    coverImage,
-    product: products[0]->{ printSpec },
-    pages[]{
-      layers[]{
-        ...,
-        source->{
-          _id,
-          prompt,
-          refImage
+  if (!idOrSlug) {
+    throw new Error('getTemplatePages: missing id or slug')
+  }
+
+  const byId = /* groq */ `
+    *[_id==$id][0]{
+      coverImage,
+      product: products[0]->{ printSpec },
+      pages[]{
+        layers[]{
+          ...,
+          source->{ _id, prompt, refImage }
         }
       }
-    }
-  }
-`
+    }`
 
-  const params = {
-    key:       idOrSlug,
-    draftKey:  idOrSlug.startsWith('drafts.') ? idOrSlug : `drafts.${idOrSlug}`,
-  }
+  const bySlug = /* groq */ `
+    *[slug.current==$slug][0]{
+      coverImage,
+      product: products[0]->{ printSpec },
+      pages[]{
+        layers[]{
+          ...,
+          source->{ _id, prompt, refImage }
+        }
+      }
+    }`
+
+  const useId = idOrSlug.startsWith('drafts.')
+  const query  = useId ? byId : bySlug
+  const params = useId ? { id: idOrSlug } : { slug: idOrSlug }
 
   const raw = await sanityPreview.fetch(query, params) as {
     pages?: any[]; coverImage?: any; product?: { printSpec?: PrintSpec }
