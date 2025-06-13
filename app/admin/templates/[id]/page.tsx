@@ -22,9 +22,10 @@ export default async function AdminTemplatePage({
   params: {id: string}
 }) {
   /* 1. fetch the *draft* template (404 if missing) */
-  const data = await getTemplatePages(id)
-  if (!data) notFound()
-  const { pages, printSpec } = data
+  const tpl = await getTemplatePages(id)
+  console.log('[template]', tpl)
+  if (!tpl) return notFound()
+  const { pages, printSpec } = tpl
 
   /* 2. load the client wrapper *only on the client* */
   const EditorWrapper = nextDynamic(
