@@ -47,7 +47,7 @@ export async function getTemplatePages(
     pages[]{
       layers[]{
         ...,
-        'source': source->{
+        source->{
           _id,
           prompt,
           refImage
@@ -71,13 +71,6 @@ export async function getTemplatePages(
     : EMPTY
 
   const names = ['front', 'inner-L', 'inner-R', 'back'] as const
-
-// ─── DEBUG – show what actually came back from Sanity ───
-console.log(
-  '\n▶ getTemplatePages raw =\n',
-  JSON.stringify(raw, null, 2),
-  '\n',
-);
 
   const pagesOut = names.map((name, i) => ({
     name,
