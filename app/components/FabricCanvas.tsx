@@ -172,7 +172,12 @@ const getSrcUrl = (raw: Layer): string | undefined => {
       const id = raw.src.asset._ref             // image-xyz-2000x2000-png
         .replace('image-', '')                  // xyz-2000x2000-png
         .replace(/\-(png|jpg|jpeg|webp)$/, '')  // xyz-2000x2000
-      return `https://cdn.sanity.io/images/${process.env.NEXT_PUBLIC_SANITY_PROJECT_ID}/production/${id}.png`
+      const pid =
+        process.env.NEXT_PUBLIC_SANITY_PROJECT_ID ||
+        process.env.SANITY_STUDIO_PROJECT_ID
+      return pid
+        ? `https://cdn.sanity.io/images/${pid}/production/${id}.png`
+        : undefined
     }
   
     /* nothing usable yet */

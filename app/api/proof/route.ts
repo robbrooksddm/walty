@@ -20,7 +20,9 @@ function imageUrl(ly: any): string | undefined {
   const ref = ly.assetId || ly.src?.asset?._ref
   if (typeof ref === 'string') {
     const id = ref.replace(/^image-/, '').replace(/-(png|jpg|jpeg|webp)$/, '')
-    const pid = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID
+    const pid =
+      process.env.NEXT_PUBLIC_SANITY_PROJECT_ID ||
+      process.env.SANITY_STUDIO_PROJECT_ID
     if (pid) return `https://cdn.sanity.io/images/${pid}/production/${id}.png`
   }
   return undefined

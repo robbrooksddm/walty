@@ -149,10 +149,9 @@ export const useEditor = create<EditorState>((set, get) => ({
       x    : 100,
       y    : 100,
       width: 200,
-      leftPct:   (100 / PAGE_W) * 100,
-      topPct:    (100 / PAGE_H) * 100,
-      widthPct:  (200 / PAGE_W) * 100,
-      heightPct: (0 / PAGE_H) * 100,
+      leftPct:  (100 / PAGE_W) * 100,
+      topPct:   (100 / PAGE_H) * 100,
+      widthPct: (200 / PAGE_W) * 100,
     })
 
     set({ pages: nextPages })
