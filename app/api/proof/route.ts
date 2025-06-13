@@ -11,8 +11,8 @@ export const dynamic = 'force-dynamic'
 
 const SPECS = {
   'greeting-card-giant'  : { trimWidthIn: 9, trimHeightIn: 11.6667, bleedIn: 0.125, dpi: 300 },
-  'greeting-card-classic': { trimWidthIn: 7, trimHeightIn: 5, bleedIn: 0.125, dpi: 300 },
-  'greeting-card-mini'   : { trimWidthIn: 6, trimHeightIn: 4, bleedIn: 0.125, dpi: 300 },
+  'greeting-card-classic': { trimWidthIn: 5, trimHeightIn: 7, bleedIn: 0.125, dpi: 300 },
+  'greeting-card-mini'   : { trimWidthIn: 4, trimHeightIn: 6, bleedIn: 0.125, dpi: 300 },
 } as const
 
 function esc(s: string) {
@@ -30,16 +30,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'bad input' }, { status: 400 })
     }
 
-    const spec = await sanityPreview.fetch<{
-      trimWidthIn: number
-      trimHeightIn: number
-      bleedIn: number
-      dpi: number
-    } | null>(
-      `*[_type=="cardTemplate" && _id==$id][0]{ product->{ printSpec } }.product.printSpec`,
-      { id },
-    )
-    const fallback = sku && SPECS[sku]
+    const spec = sku
+      ? await sanityPreview.fetch<{
+          trimWidthIn: number
+          trimHeightIn: number
+          bleedIn: number
+          dpi: number
+        } | null>(
+          `*[_type=="cardProduct" && slug.current==$sku][0].printSpec`,
+          { sku },
+        )
+      : null
+    const fallback = sku ? SPECS[sku as keyof typeof SPECS] : undefined
     const finalSpec = spec ?? fallback
     if (!finalSpec) {
       return NextResponse.json({ error: 'spec not found' }, { status: 404 })
