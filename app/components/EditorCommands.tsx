@@ -2,16 +2,19 @@
 
 import React from "react";
 import IconButton from "./toolbar/IconButton";
-import { RotateCcw, RotateCw, Save } from "lucide-react";
+import { RotateCcw, RotateCw, Save, Download } from "lucide-react";
 
+type Mode = 'staff' | 'customer';
 interface Props {
   onUndo: () => void;
   onRedo: () => void;
   onSave: () => void | Promise<void>;
+  onProof?: (sku: string) => void | Promise<void>;
   saving: boolean;
+  mode?: Mode;
 }
 
-export default function EditorCommands({ onUndo, onRedo, onSave, saving }: Props) {
+export default function EditorCommands({ onUndo, onRedo, onSave, onProof, saving, mode = 'customer' }: Props) {
   return (
     <div className="fixed top-14   right-6 z-40 flex items-center gap-3
                      bg-white shadow rounded-md px-3 py-3 pointer-events-auto select-none" style={{ top: "var(--walty-header-h)" }}>
@@ -28,6 +31,25 @@ export default function EditorCommands({ onUndo, onRedo, onSave, saving }: Props
         <Save className="w-5 h-5" />
         {saving ? 'Saving…' : 'Save'}
       </button>
+      {mode === 'staff' && onProof && (
+        <>
+          {[
+            ['greeting-card-giant', 'Giant'],
+            ['greeting-card-classic', 'Classic'],
+            ['greeting-card-mini', 'Mini'],
+          ].map(([sku, label]) => (
+            <button
+              key={sku}
+              type="button"
+              onClick={() => onProof(sku)}
+              className="flex items-center gap-1 px-3 py-2 rounded text-[--walty-teal] hover:bg-[--walty-teal]/10"
+            >
+              <Download className="w-5 h-5" />
+              {label}
+            </button>
+          ))}
+        </>
+      )}
     </div>
   );
 }

@@ -12,6 +12,7 @@ import TextToolbar                      from './TextToolbar'
 import ImageToolbar                     from './ImageToolbar'
 import EditorCommands                   from './EditorCommands'
 import SelfieDrawer                     from './SelfieDrawer'
+import PreviewModal                    from './PreviewModal'
 import { CropTool }                     from '@/lib/CropTool'
 import WaltyEditorHeader                from './WaltyEditorHeader'
 import type { TemplatePage }            from './FabricCanvas'
@@ -52,17 +53,19 @@ function CoachMark({ anchor, onClose }: { anchor: DOMRect | null; onClose: () =>
         </button>
         <div className="absolute -left-2 top-6 w-0 h-0 border-y-8 border-y-transparent border-r-[12px] border-r-gray-800" />
       </div>
-    </div>
-  )
+  </div>
+ )
 }
 
 /* ────────────────────────────────────────────────────────────────── */
 export default function CardEditor({
   initialPages,
+  templateId,
   mode = 'customer',
   onSave,
 }: {
   initialPages: TemplatePage[] | undefined
+  templateId?: string
   mode?: Mode
   onSave?: SaveFn
 }) {
@@ -207,6 +210,10 @@ export default function CardEditor({
 const [drawerOpen, setDrawerOpen]           = useState(false)
 const [aiPlaceholderId, setAiPlaceholderId] = useState<string | null>(null)
 
+/* preview modal state */
+const [previewOpen, setPreviewOpen] = useState(false)
+const [previewImgs, setPreviewImgs] = useState<string[]>([])
+
 /* listen for the event FabricCanvas now emits */
 useEffect(() => {
   const open = (e: Event) => {
@@ -237,6 +244,54 @@ const handleSwap = (url: string) => {
   })
 
   setDrawerOpen(false)
+}
+
+/* generate images and show preview */
+const handlePreview = () => {
+  const imgs: string[] = []
+  canvasMap.forEach((fc, i) => {
+    if (!fc) return
+    const tool = (fc as any)._cropTool as CropTool | undefined
+    if (tool?.isActive) tool.commit()
+    fc.renderAll()
+    imgs[i] = fc.toDataURL({ format: 'png', quality: 1 })
+  })
+  setPreviewImgs(imgs)
+  setPreviewOpen(true)
+}
+
+/* download proof */
+const handleProof = async (sku: string) => {
+  canvasMap.forEach(fc => {
+    const tool = (fc as any)?._cropTool as CropTool | undefined
+    if (tool?.isActive) tool.commit()
+  })
+  canvasMap.forEach(fc => {
+    const sync = (fc as any)?._syncLayers as (() => void) | undefined
+    if (sync) sync()
+  })
+  const pages = useEditor.getState().pages
+  try {
+    const res = await fetch('/api/proof', {
+      method : 'POST',
+      headers: { 'content-type': 'application/json' },
+      body   : JSON.stringify({ pages, sku, id: templateId }),
+    })
+    if (res.ok) {
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'proof.jpg'
+      a.style.display = 'none'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    }
+  } catch (err) {
+    console.error('proof', err)
+  }
 }
 
   /* 7 ─ coach-mark ----------------------------------------------- */
@@ -280,7 +335,7 @@ const handleSwap = (url: string) => {
       style={{ paddingTop: "calc(var(--walty-header-h) + var(--walty-toolbar-h))" }}
     >
       <WaltyEditorHeader                     /* ② mount new component */
-        onPreview={() => console.log("preview")}
+        onPreview={handlePreview}
         onAddToBasket={() => console.log("basket")}
         height={72}                          /* match the design */
       />
@@ -289,7 +344,9 @@ const handleSwap = (url: string) => {
         onUndo={undo}
         onRedo={redo}
         onSave={handleSave}
+        onProof={mode === 'staff' ? handleProof : undefined}
         saving={saving}
+        mode={mode}
       />
 
       <div className="flex flex-1 relative bg-[--walty-cream] lg:max-w-6xl mx-auto">
@@ -313,7 +370,7 @@ const handleSwap = (url: string) => {
         <LayerPanel />
 
         {/* main */}
-        <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[840px]">
+        <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[868px]">
           {activeType === 'text' ? (
             <TextToolbar
               canvas={activeFc}
@@ -348,6 +405,7 @@ const handleSwap = (url: string) => {
                 onReady={fc => onReady(0, fc)}
                 isCropping={cropping[0]}
                 onCroppingChange={state => handleCroppingChange(0, state)}
+                mode={mode}
               />
             </div>
             {/* inside */}
@@ -359,6 +417,7 @@ const handleSwap = (url: string) => {
                   onReady={fc => onReady(1, fc)}
                   isCropping={cropping[1]}
                   onCroppingChange={state => handleCroppingChange(1, state)}
+                  mode={mode}
                 />
               </div>
               <div className={box}>
@@ -368,6 +427,7 @@ const handleSwap = (url: string) => {
                   onReady={fc => onReady(2, fc)}
                   isCropping={cropping[2]}
                   onCroppingChange={state => handleCroppingChange(2, state)}
+                  mode={mode}
                 />
               </div>
             </div>
@@ -379,6 +439,7 @@ const handleSwap = (url: string) => {
                 onReady={fc => onReady(3, fc)}
                 isCropping={cropping[3]}
                 onCroppingChange={state => handleCroppingChange(3, state)}
+                mode={mode}
               />
             </div>
           </div>
@@ -413,6 +474,11 @@ const handleSwap = (url: string) => {
           </div>
         </div>
       </div>
+      <PreviewModal
+        open={previewOpen}
+        images={previewImgs}
+        onClose={() => setPreviewOpen(false)}
+      />
     </div>
   )
 }

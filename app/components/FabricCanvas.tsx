@@ -90,6 +90,16 @@ export interface Layer {
   width:  number
   height?: number
 
+  /** geometry relative to the full canvas (0–100 %) */
+  leftPct?:   number
+  topPct?:    number
+  widthPct?:  number
+  heightPct?: number
+
+  /** image flips */
+  flipX?:     boolean
+  flipY?:     boolean
+
   opacity?:   number
   scaleX?:    number
   scaleY?:    number
@@ -181,6 +191,10 @@ const objToLayer = (o: fabric.Object): Layer => {
       x         : t.left || 0,
       y         : t.top  || 0,
       width     : t.width || 200,
+      leftPct   : ((t.left || 0) / PAGE_W) * 100,
+      topPct    : ((t.top  || 0) / PAGE_H) * 100,
+      widthPct  : ((t.width || 200) / PAGE_W) * 100,
+      heightPct : (t.getScaledHeight() / PAGE_H) * 100,
       fontSize  : t.fontSize,
       fontFamily: t.fontFamily,
       fontWeight: t.fontWeight,
@@ -209,9 +223,15 @@ const objToLayer = (o: fabric.Object): Layer => {
     y      : i.top   || 0,
     width  : i.getScaledWidth(),
     height : i.getScaledHeight(),
+    leftPct  : ((i.left  || 0) / PAGE_W) * 100,
+    topPct   : ((i.top   || 0) / PAGE_H) * 100,
+    widthPct : (i.getScaledWidth()  / PAGE_W) * 100,
+    heightPct: (i.getScaledHeight() / PAGE_H) * 100,
     opacity: i.opacity,
     scaleX : i.scaleX,
     scaleY : i.scaleY,
+    flipX  : (i as any).flipX,
+    flipY  : (i as any).flipY,
   }
 
   if (i.cropX != null) layer.cropX = i.cropX
@@ -231,8 +251,7 @@ const syncLayersFromCanvas = (fc: fabric.Canvas, pageIdx: number) => {
       !(o as any)._backdrop &&
       !(o as any).excludeFromExport &&
       (o as any).type !== 'activeSelection'      // skip wrapper
-    )
-    .reverse();                                  // bottom → top
+    );                                           // bottom → top
 
   /* remember original src on pasted images */
   objs.forEach(o => {
@@ -252,22 +271,48 @@ const syncLayersFromCanvas = (fc: fabric.Canvas, pageIdx: number) => {
 };
 
 /* ---------- guides ---------------------------------------------- */
-const addGuides = (fc: fabric.Canvas) => {
+type Mode = 'staff' | 'customer'
+type GuideName = 'safe-zone' | 'bleed'
+
+const addGuides = (fc: fabric.Canvas, mode: Mode) => {
   fc.getObjects().filter(o => (o as any)._guide).forEach(o => fc.remove(o))
-  const inset = mm(8 + BLEED_MM)
   const strokeW = mm(0.5)
-  const dash = [mm(3)]
-  const mk = (xy: [number, number, number, number]) =>
-    Object.assign(new fabric.Line(xy, {
-      stroke: '#34d399', strokeWidth: strokeW, strokeDashArray: dash,
-      selectable: false, evented: false, excludeFromExport: true,
-    }), { _guide: true })
+  const mk = (
+    xy: [number, number, number, number],
+    name: GuideName,
+    color: string,
+  ) =>
+    Object.assign(
+      new fabric.Line(xy, {
+        stroke: color,
+        strokeWidth: strokeW,
+        strokeDashArray: dash(6),
+        selectable: false,
+        evented: false,
+        excludeFromExport: true,
+      }),
+      { _guide: name },
+    )
+
+  /* responsive safe-zone */
+  const safeX = PAGE_W * 0.1
+  const safeY = PAGE_H * 0.05
   ;[
-    mk([inset, inset, PAGE_W - inset, inset]),
-    mk([PAGE_W - inset, inset, PAGE_W - inset, PAGE_H - inset]),
-    mk([PAGE_W - inset, PAGE_H - inset, inset, PAGE_H - inset]),
-    mk([inset, PAGE_H - inset, inset, inset]),
+    mk([safeX, safeY, PAGE_W - safeX, safeY], 'safe-zone', '#34d399'),
+    mk([PAGE_W - safeX, safeY, PAGE_W - safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
+    mk([PAGE_W - safeX, PAGE_H - safeY, safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
+    mk([safeX, PAGE_H - safeY, safeX, safeY], 'safe-zone', '#34d399'),
   ].forEach(l => fc.add(l))
+
+  if (mode === 'staff') {
+    const bleed = mm(BLEED_MM)
+    ;[
+      mk([bleed, bleed, PAGE_W - bleed, bleed], 'bleed', '#f87171'),
+      mk([PAGE_W - bleed, bleed, PAGE_W - bleed, PAGE_H - bleed], 'bleed', '#f87171'),
+      mk([PAGE_W - bleed, PAGE_H - bleed, bleed, PAGE_H - bleed], 'bleed', '#f87171'),
+      mk([bleed, PAGE_H - bleed, bleed, bleed], 'bleed', '#f87171'),
+    ].forEach(l => fc.add(l))
+  }
 }
 
 /* ---------- white backdrop -------------------------------------- */
@@ -298,9 +343,10 @@ interface Props {
   onReady    : (fc: fabric.Canvas | null) => void
   isCropping?: boolean
   onCroppingChange?: (state: boolean) => void
+  mode?: Mode
 }
 
-export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange }: Props) {
+export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, mode = 'customer' }: Props) {
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const maskRectsRef = useRef<fabric.Rect[]>([]);
@@ -425,7 +471,7 @@ fc.on('mouse:over', e => {
   fc.requestRenderAll()
 })
 
-addGuides(fc)                                 // green safe-zone guides
+addGuides(fc, mode)                           // add guides based on mode
   /* ── 4.5 ▸ Fabric ➜ Zustand sync ──────────────────────────── */
   fc.on('object:modified', e=>{
     isEditing.current = true
@@ -437,11 +483,15 @@ addGuides(fc)                                 // green safe-zone guides
       y      : t.top,
       scaleX : t.scaleX,
       scaleY : t.scaleY,
+      leftPct  : ((t.left  || 0) / PAGE_W) * 100,
+      topPct   : ((t.top   || 0) / PAGE_H) * 100,
     }
     if (t.type === 'image') Object.assign(d, {
       width  : t.getScaledWidth(),
       height : t.getScaledHeight(),
       opacity: t.opacity,
+      widthPct : (t.getScaledWidth()  / PAGE_W) * 100,
+      heightPct: (t.getScaledHeight() / PAGE_H) * 100,
       ...(t.cropX != null && { cropX: t.cropX }),
       ...(t.cropY != null && { cropY: t.cropY }),
       ...(t.width  != null && { cropW: t.width  }),
@@ -458,6 +508,8 @@ addGuides(fc)                                 // green safe-zone guides
       textAlign  : t.textAlign,
       lineHeight : t.lineHeight,
       opacity    : t.opacity,
+      widthPct  : (t.getScaledWidth()  / PAGE_W) * 100,
+      heightPct : (t.getScaledHeight() / PAGE_H) * 100,
     })
     updateLayer(pageIdx, t.layerIdx, d)
     setTimeout(()=>{ isEditing.current = false })
@@ -480,6 +532,10 @@ addGuides(fc)                                 // green safe-zone guides
       opacity    : t.opacity,
       width      : t.getScaledWidth(),
       height     : t.getScaledHeight(),
+      leftPct    : ((t.left || 0) / PAGE_W) * 100,
+      topPct     : ((t.top  || 0) / PAGE_H) * 100,
+      widthPct   : (t.getScaledWidth()  / PAGE_W) * 100,
+      heightPct  : (t.getScaledHeight() / PAGE_H) * 100,
     })
     setTimeout(()=>{ isEditing.current = false })
   })
@@ -653,10 +709,15 @@ window.addEventListener('keydown', onKey)
     hoverRef.current && fc.add(hoverRef.current)
 
     /* bottom ➜ top keeps original z-order */
-    for (let idx = page.layers.length - 1; idx >= 0; idx--) {
+    for (let idx = 0; idx < page.layers.length; idx++) {
       const raw = page.layers[idx]
       const ly: Layer | null = (raw as any).type ? raw as Layer : fromSanity(raw)
       if (!ly) continue
+
+      if (ly.leftPct != null) ly.x = (ly.leftPct / 100) * PAGE_W
+      if (ly.topPct  != null) ly.y = (ly.topPct  / 100) * PAGE_H
+      if (ly.widthPct  != null) ly.width  = (ly.widthPct  / 100) * PAGE_W
+      if (ly.heightPct != null) ly.height = (ly.heightPct / 100) * PAGE_H
 
 /* ---------- IMAGES --------------------------------------------- */
 if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
@@ -691,10 +752,15 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
 
           /* shared props */
           img.set({
-            left: ly.x, top: ly.y, originX: 'left', originY: 'top',
+            left      : ly.x,
+            top       : ly.y,
+            originX   : 'left',
+            originY   : 'top',
             selectable: ly.selectable ?? true,
-            evented: ly.editable ?? true,
-            opacity: ly.opacity ?? 1,
+            evented   : ly.editable ?? true,
+            opacity   : ly.opacity ?? 1,
+            flipX     : ly.flipX ?? false,
+            flipY     : ly.flipY ?? false,
           })
 
           /* ---------- AI placeholder extras -------------------------------- */
@@ -769,9 +835,7 @@ img.on('mouseup', () => {
 
           /* keep z-order */
           ;(img as any).layerIdx = idx
-          const pos = fc.getObjects().findIndex(o =>
-            (o as any).layerIdx !== undefined && (o as any).layerIdx < idx)
-          fc.insertAt(img, pos === -1 ? fc.getObjects().length : pos, false)
+          fc.insertAt(img, idx, false)
           img.setCoords()
           fc.requestRenderAll()
           document.dispatchEvent(
@@ -803,11 +867,11 @@ img.on('mouseup', () => {
           lockScalingFlip: true,
         })
         ;(tb as any).layerIdx = idx
-        fc.add(tb)
+        fc.insertAt(tb, idx, false)
       }
     }
 
-    addGuides(fc)
+    addGuides(fc, mode)
     hoverRef.current?.bringToFront()
     fc.requestRenderAll();
     hydrating.current = false

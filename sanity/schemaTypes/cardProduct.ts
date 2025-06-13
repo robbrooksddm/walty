@@ -27,12 +27,28 @@ export default defineType({
       validation: (Rule) => Rule.required(),
     }),
 
+    /* which mockup images define the preview */
+    defineField({
+      name : 'mockup',
+      type : 'reference',
+      title: 'Preview mockup',
+      to   : [{type: 'productMockup'}],
+    }),
+
     /* commercial bits */
     defineField({
       name : 'price',
       type : 'number',
       title: 'Retail price (£)',
       validation: (Rule) => Rule.required().positive(),
+    }),
+
+    /* how the product should be printed */
+    defineField({
+      name: 'printSpec',
+      title: 'Print specification',
+      type: 'printSpec',
+      validation: Rule => Rule.required(),
     }),
 
     /* print specs – the editor can read these if you ever show guides
