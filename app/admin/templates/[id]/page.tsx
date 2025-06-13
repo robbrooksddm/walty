@@ -24,7 +24,7 @@ export default async function AdminTemplatePage({
 }) {
   /* 1. fetch the *draft* template (404 if missing) */
   const tpl = await sanity.fetch(
-    '*[_type=="cardTemplate" && _id==$id][0]{ _id }',
+    '*[_type=="cardTemplate" && _id==$id][0]{ _id, pages[]{ _key } }',
     { id },
   )
   if (!tpl) return notFound()
