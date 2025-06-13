@@ -259,7 +259,7 @@ const handlePreview = () => {
 }
 
 /* download proof */
-const handleProof = async () => {
+const handleProof = async (sku: string) => {
   canvasMap.forEach(fc => {
     const tool = (fc as any)?._cropTool as CropTool | undefined
     if (tool?.isActive) tool.commit()
@@ -273,14 +273,14 @@ const handleProof = async () => {
     const res = await fetch('/api/proof', {
       method : 'POST',
       headers: { 'content-type': 'application/json' },
-      body   : JSON.stringify({ pages, sku: 'card-7x5' }),
+      body   : JSON.stringify({ pages, sku }),
     })
     if (res.ok) {
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'proof.png'
+      a.download = 'proof.jpg'
       a.style.display = 'none'
       document.body.appendChild(a)
       a.click()

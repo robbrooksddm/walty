@@ -20,18 +20,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'bad input' }, { status: 400 })
     }
 
-    const spec = await sanity.fetch<{
-      trimWidthIn: number
-      trimHeightIn: number
-      bleedIn: number
-      dpi: number
-    }>(
-      `*[_type=="cardProduct" && slug.current==$sku][0].printSpec`,
-      { sku },
-    )
-    if (!spec) {
-      return NextResponse.json({ error: 'spec' }, { status: 404 })
-    }
+    const spec =
+      (await sanity
+        .fetch<{
+          trimWidthIn: number
+          trimHeightIn: number
+          bleedIn: number
+          dpi: number
+        }>(
+          `*[_type=="cardProduct" && slug.current==$sku][0].printSpec`,
+          { sku },
+        )
+        .catch((err) => {
+          console.error("[proof spec]", err)
+          return null
+        })) || {
+        trimWidthIn: 150 / 25.4,
+        trimHeightIn: 214 / 25.4,
+        bleedIn: 3 / 25.4,
+        dpi: 300,
+      }
 
     const px = (inches: number) => Math.round(inches * spec.dpi)
     const width  = px(spec.trimWidthIn  + spec.bleedIn * 2)
