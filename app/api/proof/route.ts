@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
           if (typeof url !== 'string' || !/^https?:/i.test(url)) continue
           const res = await fetch(url)
           const buf = Buffer.from(await res.arrayBuffer())
-          let imgSharp = sharp(buf)
+          let imgSharp = sharp(buf).ensureAlpha()
           if (ly.cropW != null && ly.cropH != null) {
             const left = Math.max(0, Math.round(ly.cropX ?? 0))
             const top = Math.max(0, Math.round(ly.cropY ?? 0))
@@ -91,18 +91,21 @@ export async function POST(req: NextRequest) {
       } else if (ly.type === 'text' && ly.text) {
         const fs = ly.fontSize || 20
         const lh = (ly.lineHeight ?? 1.2) * fs
-        const lines = String(ly.text || '').split('\n').map(esc)
+        const linesRaw = Array.isArray(ly.lines)
+          ? ly.lines
+          : String(ly.text || '').split('\n')
+        const lines = linesRaw.map(esc)
         const anchor = ly.textAlign === 'center' ? 'middle'
                      : ly.textAlign === 'right' ? 'end' : 'start'
         const anchorX = ly.textAlign === 'center' ? '50%'
                         : ly.textAlign === 'right' ? '100%' : '0'
         const pad = Math.round(fs * 0.2)
-        const svgW = w ?? Math.round(fs * Math.max(...lines.map(l => l.length)) * 0.6)
-        const svgH = (h ?? Math.round(lh * lines.length)) + pad * 2
+        const svgW = w ?? Math.round(fs * Math.max(...linesRaw.map(l => l.length)) * 0.6)
+        const svgH = (h ?? Math.round(lh * linesRaw.length)) + pad * 2
         const tspans = lines.map((t,i)=>`<tspan x='${anchorX}' dy='${i?lh:0}'>${t}</tspan>`).join('')
         const svg = `<?xml version='1.0' encoding='UTF-8'?>`+
           `<svg xmlns='http://www.w3.org/2000/svg' width='${svgW}' height='${svgH}'>`+
-          `<text x='${anchorX}' y='${pad}' dominant-baseline='text-before-edge' text-anchor='${anchor}' font-family='${ly.fontFamily || 'Helvetica'}' font-size='${fs}' font-weight='${ly.fontWeight || ''}' font-style='${ly.fontStyle || ''}' fill='${ly.fill || '#000'}' ${ly.underline ? "text-decoration='underline'" : ''} opacity='${ly.opacity ?? 1}'>${tspans}</text>`+
+          `<text x='${anchorX}' y='${pad}' dominant-baseline='text-before-edge' text-anchor='${anchor}' font-family='${ly.fontFamily || 'Helvetica'}' font-size='${fs}' font-weight='${ly.fontWeight || ''}' font-style='${ly.fontStyle || ''}' fill='${ly.fill || '#000'}' ${ly.underline ? "style='text-decoration:underline'" : ''} opacity='${ly.opacity ?? 1}'>${tspans}</text>`+
           `</svg>`
         composites.push({ input: Buffer.from(svg), left: x, top: y, opacity: ly.opacity ?? 1 } as Overlay)
       }

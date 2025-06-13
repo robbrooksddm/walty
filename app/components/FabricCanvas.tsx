@@ -117,6 +117,8 @@ export interface Layer {
   underline?:   boolean
   textAlign?:   'left' | 'center' | 'right'
   lineHeight?:  number
+  /** Wrapped lines as computed by Fabric */
+  lines?:       string[]
 
   /* ---- AI placeholder bookkeeping ------------------------------- */
   _isAI?: boolean
@@ -206,6 +208,7 @@ const objToLayer = (o: fabric.Object): Layer => {
       opacity   : t.opacity,
       scaleX    : t.scaleX,
       scaleY    : t.scaleY,
+      lines     : t.textLines as string[],
     }
   }
   const i = o as fabric.Image
@@ -510,6 +513,7 @@ addGuides(fc, mode)                           // add guides based on mode
       opacity    : t.opacity,
       widthPct  : (t.getScaledWidth()  / PAGE_W) * 100,
       heightPct : (t.getScaledHeight() / PAGE_H) * 100,
+      lines     : t.textLines as string[],
     })
     updateLayer(pageIdx, t.layerIdx, d)
     setTimeout(()=>{ isEditing.current = false })
@@ -532,6 +536,7 @@ addGuides(fc, mode)                           // add guides based on mode
       opacity    : t.opacity,
       width      : t.getScaledWidth(),
       height     : t.getScaledHeight(),
+      lines      : t.textLines as string[],
       leftPct    : ((t.left || 0) / PAGE_W) * 100,
       topPct     : ((t.top  || 0) / PAGE_H) * 100,
       widthPct   : (t.getScaledWidth()  / PAGE_W) * 100,
@@ -557,7 +562,7 @@ const PROPS = [
   'src', 'srcUrl', 'assetId', '__src',               // images
   'text', 'fontSize', 'fontFamily', 'fill',          // text
   'fontWeight', 'fontStyle', 'underline',
-  'textAlign', 'lineHeight', 'opacity',
+  'textAlign', 'lineHeight', 'opacity', 'lines',
   'scaleX', 'scaleY', 'width', 'height',
   'locked', 'selectable', 'left', 'top',
 ]
