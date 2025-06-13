@@ -21,7 +21,6 @@ import { PRINT_SPECS, inchesToPx }      from '@/lib/printSpecs'
 /* ---------- shared page specs (matches FabricCanvas) ------------- */
 const spec      = PRINT_SPECS['card-7x5']
 const PAGE_W    = Math.round(inchesToPx(spec.trimW + spec.bleed * 2, spec.dpi))
-const PREVIEW_W = 420
 
 
 /* ---------- helpers ------------------------------------------------ */
@@ -266,7 +265,8 @@ const handlePreview = () => {
 
 /* download proof */
 const handleProof = async () => {
-  const scale = PAGE_W / PREVIEW_W
+  const w = canvasMap[0]?.getWidth() || 420
+  const scale = PAGE_W / w
   const imgs: string[] = []
   canvasMap.forEach((fc, i) => {
     if (!fc) return
@@ -332,7 +332,7 @@ const handleProof = async () => {
     )
   }
 
-  const box = 'flex-shrink-0 w-[420px]'
+  const box = 'flex-shrink-0'
 
   /* ---------------- UI ------------------------------------------ */
   return (
