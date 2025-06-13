@@ -16,6 +16,8 @@ import PreviewModal                    from './PreviewModal'
 import { CropTool }                     from '@/lib/CropTool'
 import WaltyEditorHeader                from './WaltyEditorHeader'
 import type { TemplatePage }            from './FabricCanvas'
+import type { PrintSpec }               from '@/sanity/lib/types'
+import { setPrintSpec }                 from '@/lib/printSpec'
 
 
 /* ---------- helpers ------------------------------------------------ */
@@ -60,10 +62,12 @@ function CoachMark({ anchor, onClose }: { anchor: DOMRect | null; onClose: () =>
 /* ────────────────────────────────────────────────────────────────── */
 export default function CardEditor({
   initialPages,
+  printSpec,
   mode = 'customer',
   onSave,
 }: {
   initialPages: TemplatePage[] | undefined
+  printSpec: PrintSpec
   mode?: Mode
   onSave?: SaveFn
 }) {
@@ -72,6 +76,7 @@ export default function CardEditor({
     useEditor.getState().setPages(
       Array.isArray(initialPages) && initialPages.length === 4 ? initialPages : EMPTY,
     )
+    setPrintSpec(printSpec)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -401,6 +406,7 @@ const handleProof = async () => {
                 pageIdx={0}
                 page={pages[0]}
                 onReady={fc => onReady(0, fc)}
+                printSpec={printSpec}
                 isCropping={cropping[0]}
                 onCroppingChange={state => handleCroppingChange(0, state)}
                 mode={mode}
@@ -413,6 +419,7 @@ const handleProof = async () => {
                   pageIdx={1}
                   page={pages[1]}
                   onReady={fc => onReady(1, fc)}
+                  printSpec={printSpec}
                   isCropping={cropping[1]}
                   onCroppingChange={state => handleCroppingChange(1, state)}
                   mode={mode}
@@ -423,6 +430,7 @@ const handleProof = async () => {
                   pageIdx={2}
                   page={pages[2]}
                   onReady={fc => onReady(2, fc)}
+                  printSpec={printSpec}
                   isCropping={cropping[2]}
                   onCroppingChange={state => handleCroppingChange(2, state)}
                   mode={mode}
@@ -435,6 +443,7 @@ const handleProof = async () => {
                 pageIdx={3}
                 page={pages[3]}
                 onReady={fc => onReady(3, fc)}
+                printSpec={printSpec}
                 isCropping={cropping[3]}
                 onCroppingChange={state => handleCroppingChange(3, state)}
                 mode={mode}

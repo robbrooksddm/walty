@@ -15,24 +15,21 @@ import { fromSanity }        from '@/app/library/layerAdapters'
 import '@/lib/fabricDefaults'
 import { SEL_COLOR } from '@/lib/fabricDefaults';
 import { CropTool } from '@/lib/CropTool'
+import type { PrintSpec } from '@/sanity/lib/types'
 
 /* ---------- size helpers ---------------------------------------- */
-const DPI       = 300
-const mm        = (n: number) => (n / 25.4) * DPI
-const TRIM_W_MM = 150
-const TRIM_H_MM = 214
-const BLEED_MM  = 3
-const PAGE_W    = Math.round(mm(TRIM_W_MM + BLEED_MM * 2))
-const PAGE_H    = Math.round(mm(TRIM_H_MM + BLEED_MM * 2))
 const PREVIEW_W = 420
-const PREVIEW_H = Math.round(PAGE_H * PREVIEW_W / PAGE_W)
-const SCALE     = PREVIEW_W / PAGE_W
 
-// 4 CSS-px padding used by the hover outline
-const PAD  = 4 / SCALE;
-
-/** turn  gap (px) → a dashed-array scaled to canvas units */
-const dash = (gap: number) => [gap / SCALE, (gap - 2) / SCALE];
+function derive(spec: PrintSpec) {
+  const mm = (n: number) => (n / 25.4) * spec.dpi
+  const pageW = Math.round(mm(spec.trimWidthIn + spec.bleedIn * 2))
+  const pageH = Math.round(mm(spec.trimHeightIn + spec.bleedIn * 2))
+  const scale = PREVIEW_W / pageW
+  const previewH = Math.round(pageH * PREVIEW_W / pageW)
+  const pad = 4 / scale
+  const dash = (gap: number) => [gap / scale, (gap - 2) / scale]
+  return { mm, pageW, pageH, scale, previewH, pad, dash }
+}
 
 
 
@@ -274,7 +271,15 @@ const syncLayersFromCanvas = (fc: fabric.Canvas, pageIdx: number) => {
 type Mode = 'staff' | 'customer'
 type GuideName = 'safe-zone' | 'bleed'
 
-const addGuides = (fc: fabric.Canvas, mode: Mode) => {
+const addGuides = (
+  fc: fabric.Canvas,
+  mode: Mode,
+  mm: (n: number) => number,
+  PAGE_W: number,
+  PAGE_H: number,
+  dash: (n: number) => number[],
+  bleedPx: number,
+) => {
   fc.getObjects().filter(o => (o as any)._guide).forEach(o => fc.remove(o))
   const strokeW = mm(0.5)
   const mk = (
@@ -305,7 +310,7 @@ const addGuides = (fc: fabric.Canvas, mode: Mode) => {
   ].forEach(l => fc.add(l))
 
   if (mode === 'staff') {
-    const bleed = mm(BLEED_MM)
+    const bleed = bleedPx
     ;[
       mk([bleed, bleed, PAGE_W - bleed, bleed], 'bleed', '#f87171'),
       mk([PAGE_W - bleed, bleed, PAGE_W - bleed, PAGE_H - bleed], 'bleed', '#f87171'),
@@ -316,7 +321,7 @@ const addGuides = (fc: fabric.Canvas, mode: Mode) => {
 }
 
 /* ---------- white backdrop -------------------------------------- */
-const addBackdrop = (fc: fabric.Canvas) => {
+const addBackdrop = (fc: fabric.Canvas, PAGE_W: number, PAGE_H: number) => {
   // only add it once
   if (fc.getObjects().some(o => (o as any)._backdrop)) return
 
@@ -344,9 +349,10 @@ interface Props {
   isCropping?: boolean
   onCroppingChange?: (state: boolean) => void
   mode?: Mode
+  printSpec : PrintSpec
 }
 
-export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, mode = 'customer' }: Props) {
+export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, mode = 'customer', printSpec }: Props) {
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const maskRectsRef = useRef<fabric.Rect[]>([]);
@@ -361,6 +367,8 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
 
   const setPageLayers = useEditor(s => s.setPageLayers)
   const updateLayer   = useEditor(s => s.updateLayer)
+
+  const { mm, pageW: PAGE_W, pageH: PAGE_H, scale: SCALE, previewH: PREVIEW_H, pad: PAD, dash } = derive(printSpec)
 
 /* ---------- mount once --------------------------------------- */
 useEffect(() => {
@@ -380,7 +388,7 @@ useEffect(() => {
     container.style.maxWidth  = `${PREVIEW_W}px`;
     container.style.maxHeight = `${PREVIEW_H}px`;
   }
-  addBackdrop(fc);
+  addBackdrop(fc, PAGE_W, PAGE_H);
   // keep the preview scaled to 420 px wide
   fc.setViewportTransform([SCALE, 0, 0, SCALE, 0, 0]);
 
@@ -471,7 +479,7 @@ fc.on('mouse:over', e => {
   fc.requestRenderAll()
 })
 
-addGuides(fc, mode)                           // add guides based on mode
+addGuides(fc, mode, mm, PAGE_W, PAGE_H, dash, mm(printSpec.bleedIn * 25.4))                           // add guides based on mode
   /* ── 4.5 ▸ Fabric ➜ Zustand sync ──────────────────────────── */
   fc.on('object:modified', e=>{
     isEditing.current = true
@@ -871,7 +879,7 @@ img.on('mouseup', () => {
       }
     }
 
-    addGuides(fc, mode)
+    addGuides(fc, mode, mm, PAGE_W, PAGE_H, dash, mm(printSpec.bleedIn * 25.4))
     hoverRef.current?.bringToFront()
     fc.requestRenderAll();
     hydrating.current = false
