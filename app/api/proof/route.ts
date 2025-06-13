@@ -17,7 +17,7 @@ function esc(s: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { pages, pageImages, sku } = await req.json() as { pages?:any[]; pageImages?:string[]; sku:Sku }
+    const { pages = [], pageImages, sku } = await req.json() as { pages?:any[]; pageImages?:string[]; sku:Sku }
     if ((!Array.isArray(pages) && !Array.isArray(pageImages)) || !PRINT_SPECS[sku]) {
       return NextResponse.json({ error: 'bad input' }, { status: 400 })
     }

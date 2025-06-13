@@ -268,7 +268,7 @@ const syncLayersFromCanvas = (fc: fabric.Canvas, pageIdx: number) => {
 type Mode = 'staff' | 'customer'
 type GuideName = 'safe-zone' | 'bleed'
 
-const addGuides = (fc: fabric.Canvas, mode: Mode) => {
+const addGuides = (fc: fabric.Canvas, mode: Mode, scale: number) => {
   fc.getObjects().filter(o => (o as any)._guide).forEach(o => fc.remove(o))
   const strokeW = mmToPx(0.5, spec.dpi)
   const mk = (
@@ -280,7 +280,7 @@ const addGuides = (fc: fabric.Canvas, mode: Mode) => {
       new fabric.Line(xy, {
         stroke: color,
         strokeWidth: strokeW,
-        strokeDashArray: dash(6, scaleRef.current),
+        strokeDashArray: dash(6, scale),
         selectable: false,
         evented: false,
         excludeFromExport: true,
@@ -486,7 +486,7 @@ fc.on('mouse:over', e => {
   fc.requestRenderAll()
 })
 
-addGuides(fc, mode)                           // add guides based on mode
+addGuides(fc, mode, scaleRef.current)         // add guides based on mode
   /* ── 4.5 ▸ Fabric ➜ Zustand sync ──────────────────────────── */
   fc.on('object:modified', e=>{
     isEditing.current = true
@@ -892,7 +892,7 @@ img.on('mouseup', () => {
       }
     }
 
-    addGuides(fc, mode)
+    addGuides(fc, mode, scaleRef.current)
     hoverRef.current?.bringToFront()
     fc.requestRenderAll();
     hydrating.current = false
