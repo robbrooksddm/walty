@@ -60,10 +60,12 @@ function CoachMark({ anchor, onClose }: { anchor: DOMRect | null; onClose: () =>
 /* ────────────────────────────────────────────────────────────────── */
 export default function CardEditor({
   initialPages,
+  templateId,
   mode = 'customer',
   onSave,
 }: {
   initialPages: TemplatePage[] | undefined
+  templateId?: string
   mode?: Mode
   onSave?: SaveFn
 }) {
@@ -273,7 +275,7 @@ const handleProof = async (sku: string) => {
     const res = await fetch('/api/proof', {
       method : 'POST',
       headers: { 'content-type': 'application/json' },
-      body   : JSON.stringify({ pages, sku }),
+      body   : JSON.stringify({ pages, sku, id: templateId }),
     })
     if (res.ok) {
       const blob = await res.blob()

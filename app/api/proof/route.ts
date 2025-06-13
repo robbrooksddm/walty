@@ -15,31 +15,27 @@ function esc(s: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { pages, sku } = (await req.json()) as { pages: any[]; sku: string }
-    if (!Array.isArray(pages) || typeof sku !== 'string') {
+    const { pages, id } = (await req.json()) as {
+      pages: any[]
+      id: string
+    }
+    if (!Array.isArray(pages) || typeof id !== 'string') {
       return NextResponse.json({ error: 'bad input' }, { status: 400 })
     }
 
-    const spec =
-      (await sanity
-        .fetch<{
-          trimWidthIn: number
-          trimHeightIn: number
-          bleedIn: number
-          dpi: number
-        }>(
-          `*[_type=="cardProduct" && slug.current==$sku][0].printSpec`,
-          { sku },
-        )
-        .catch((err) => {
-          console.error("[proof spec]", err)
-          return null
-        })) || {
-        trimWidthIn: 150 / 25.4,
-        trimHeightIn: 214 / 25.4,
-        bleedIn: 3 / 25.4,
-        dpi: 300,
-      }
+    const spec = await sanity.fetch<{
+      trimWidthIn: number
+      trimHeightIn: number
+      bleedIn: number
+      dpi: number
+    } | null>(
+      `*[_type=="cardTemplate" && _id==$id][0]{ product->{ printSpec } }.product.printSpec`,
+      { id },
+    )
+
+    if (!spec) {
+      return NextResponse.json({ error: 'spec not found' }, { status: 404 })
+    }
 
     const px = (inches: number) => Math.round(inches * spec.dpi)
     const width  = px(spec.trimWidthIn  + spec.bleedIn * 2)
