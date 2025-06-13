@@ -47,7 +47,7 @@ export async function getTemplatePages(
     pages[]{
       layers[]{
         ...,
-        source->{
+        'source': source->{
           _id,
           prompt,
           refImage
