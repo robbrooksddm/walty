@@ -39,7 +39,7 @@ export async function getTemplatePages(
       _id == $draftKey ||
       slug.current == $key
     )
-  ][0]{
+  ] | order(_updatedAt desc)[0]{
     coverImage,
     pages[]{
       layers[]{
@@ -56,8 +56,8 @@ export async function getTemplatePages(
 `
 
   const params = {
-    key:       idOrSlug,
-    draftKey:  idOrSlug.startsWith('drafts.') ? idOrSlug : `drafts.${idOrSlug}`,
+    key:      idOrSlug,
+    draftKey: idOrSlug.startsWith('drafts.') ? idOrSlug : `drafts.${idOrSlug}`,
   }
 
   const raw = await sanityPreview.fetch<{pages?: any[]; coverImage?: any}>(query, params)
