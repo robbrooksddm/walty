@@ -35,7 +35,8 @@ export async function getTemplatePages(
   *[
     _type == "cardTemplate" &&
     (
-      _id == $key ||
+      _id == $key      ||
+      _id == $draftKey ||
       slug.current == $key
     )
   ] | order(_updatedAt desc)[0]{
@@ -54,7 +55,10 @@ export async function getTemplatePages(
   }
 `
 
-  const params = { key: idOrSlug }
+  const params = {
+    key:      idOrSlug,
+    draftKey: idOrSlug.startsWith('drafts.') ? idOrSlug : `drafts.${idOrSlug}`,
+  }
 
   const raw = await sanityPreview.fetch<{pages?: any[]; coverImage?: any}>(query, params)
 
