@@ -31,7 +31,7 @@ export interface TemplateData {
  */
 export async function getTemplatePages(
   idOrSlug: string,
-): Promise<TemplateData> {
+): Promise<TemplateData | null> {
   if (!idOrSlug) {
     throw new Error('getTemplatePages: missing id or slug')
   }
@@ -71,7 +71,9 @@ export async function getTemplatePages(
 
   const raw = await sanityPreview.fetch(query, params) as {
     pages?: any[]; coverImage?: any; product?: { printSpec?: PrintSpec }
-  }
+  } | null
+
+  if (!raw) return null
 
   const pages = Array.isArray(raw?.pages) && raw.pages.length === 4
     ? raw.pages

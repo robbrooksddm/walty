@@ -17,7 +17,9 @@ export default async function CustomisePage({
   // 🡇 open the "params" gift‑box and pull out slug
   const { slug } = await params;
 
-  const { pages, printSpec } = await getTemplatePages(slug)
+  const data = await getTemplatePages(slug)
+  if (!data) notFound()
+  const { pages, printSpec } = data
   console.log('SERVER tpl.pages =', pages)
 
   return <CustomiseClient tpl={{ pages, printSpec }} />;
