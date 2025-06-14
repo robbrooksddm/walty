@@ -23,25 +23,13 @@ export default async function AdminTemplatePage({
   params: {id: string}
 }) {
   /* 1. fetch the *draft* template (404 if missing) */
-  const tpl = await sanityPreview.fetch(
-    `*[_type=="cardTemplate" && (_id==$id || _id==$draftId)][0]{
-       _id,
-       title,
-      "product": products[0]->{ "printSpec": coalesce(printSpec->, printSpec) },
-       pages[]{
-         _key,
-         name,
-         layers[]{
-           ...,
-           source->{ _id, prompt, refImage }
-         }
-       }
-     }`,
-    { id, draftId: `drafts.${id}` }
-  );
-  if (!tpl) return notFound();
+  const exists = await sanityPreview.fetch(
+    `*[_type=="cardTemplate" && (_id==$id || _id==$draft)][0]._id`,
+    { id, draft: `drafts.${id}` }
+  )
+  if (!exists) return notFound();
 
-  const { pages, spec, previewSpec } = await getTemplatePages(id)
+  const { pages, spec, previewSpec, products } = await getTemplatePages(id)
   console.log('↳ template printSpec', spec)
 
   /* 2. load the client wrapper *only on the client* */
@@ -56,6 +44,7 @@ export default async function AdminTemplatePage({
       initialPages={pages}
       printSpec={spec}
       previewSpec={previewSpec}
+      products={products}
     />
   )
 }

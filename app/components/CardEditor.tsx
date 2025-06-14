@@ -26,6 +26,7 @@ import PreviewModal                    from './PreviewModal'
 import { CropTool }                     from '@/lib/CropTool'
 import WaltyEditorHeader                from './WaltyEditorHeader'
 import type { TemplatePage }            from './FabricCanvas'
+import type { TemplateProduct }         from '@/app/library/getTemplatePages'
 
 
 /* ---------- helpers ------------------------------------------------ */
@@ -73,6 +74,7 @@ export default function CardEditor({
   templateId,
   printSpec,
   previewSpec,
+  products = [],
   mode = 'customer',
   onSave,
 }: {
@@ -80,6 +82,7 @@ export default function CardEditor({
   templateId?: string
   printSpec?: PrintSpec
   previewSpec?: PreviewSpec
+  products?: TemplateProduct[]
   mode?: Mode
   onSave?: SaveFn
 }) {
@@ -305,8 +308,8 @@ const handlePreview = () => {
   setPreviewOpen(true)
 }
 
-/* download proof */
-const handleProof = async (sku: string) => {
+/* helper – gather pages and rendered images once */
+const collectProofData = () => {
   canvasMap.forEach(fc => {
     const tool = (fc as any)?._cropTool as CropTool | undefined
     if (tool?.isActive) tool.commit()
@@ -315,30 +318,38 @@ const handleProof = async (sku: string) => {
     const sync = (fc as any)?._syncLayers as (() => void) | undefined
     if (sync) sync()
   })
+
   const pages = useEditor.getState().pages
   const pageImages: string[] = []
   canvasMap.forEach(fc => {
     if (!fc) { pageImages.push(''); return }
     fc.renderAll()
-    console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
-    console.log('Expected page px', pageW(), pageH())
-    console.log('Export multiplier', EXPORT_MULT())
     pageImages.push(
       fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT() })
     )
   })
+  return { pages, pageImages }
+}
+
+/* download proof for a single product */
+const downloadProof = async (
+  sku: string,
+  filename: string,
+  pages: any[],
+  pageImages: string[],
+) => {
   try {
     const res = await fetch('/api/proof', {
       method : 'POST',
       headers: { 'content-type': 'application/json' },
-      body   : JSON.stringify({ pages, pageImages, sku, id: templateId }),
+      body   : JSON.stringify({ pages, pageImages, sku, id: templateId, filename }),
     })
     if (res.ok) {
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'proof.jpg'
+      a.download = filename
       a.style.display = 'none'
       document.body.appendChild(a)
       a.click()
@@ -347,6 +358,16 @@ const handleProof = async (sku: string) => {
     }
   } catch (err) {
     console.error('proof', err)
+  }
+}
+
+/* download proofs for all products */
+const handleProofAll = async () => {
+  if (!products.length) return
+  const { pages, pageImages } = collectProofData()
+  for (const p of products) {
+    const name = `${p.slug}.jpg`
+    await downloadProof(p.slug, name, pages, pageImages)
   }
 }
 
@@ -401,7 +422,7 @@ const handleProof = async (sku: string) => {
         onUndo={undo}
         onRedo={redo}
         onSave={handleSave}
-        onProof={mode === 'staff' ? handleProof : undefined}
+        onProof={mode === 'staff' ? handleProofAll : undefined}
         saving={saving}
         mode={mode}
       />

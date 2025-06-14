@@ -17,11 +17,19 @@ const EMPTY: TemplatePage[] = [
   {name: 'back',     layers: []},
 ]
 
+export interface TemplateProduct {
+  _id: string
+  slug: string
+  title: string
+  printSpec?: PrintSpec
+}
+
 export interface TemplateData {
   pages: TemplatePage[]
   coverImage?: string
   spec?: PrintSpec
   previewSpec?: PreviewSpec
+  products?: TemplateProduct[]
 }
 
 /**
@@ -44,7 +52,12 @@ export async function getTemplatePages(
   ] | order(_updatedAt desc)[0]{
     coverImage,
     previewSpec,
-    "product": products[0]->{ "printSpec": coalesce(printSpec->, printSpec) },
+    "products": products[]->{
+      _id,
+      title,
+      "slug": slug.current,
+      "printSpec": coalesce(printSpec->, printSpec)
+    },
     pages[]{
       layers[]{
         ...,                       // keep every native field
@@ -64,7 +77,12 @@ export async function getTemplatePages(
     draftKey: idOrSlug.startsWith('drafts.') ? idOrSlug : `drafts.${idOrSlug}`,
   }
 
-  const raw = await sanityPreview.fetch<{pages?: any[]; coverImage?: any; previewSpec?: PreviewSpec; product?: {printSpec?: PrintSpec}}>(query, params)
+  const raw = await sanityPreview.fetch<{
+    pages?: any[]
+    coverImage?: any
+    previewSpec?: PreviewSpec
+    products?: { _id: string; title: string; slug: string; printSpec?: PrintSpec }[]
+  }>(query, params)
 
   const pages = Array.isArray(raw?.pages) && raw.pages.length === 4
     ? raw.pages
@@ -79,7 +97,7 @@ console.log(
   '\n',
 );
 
-  const spec = (raw?.product?.printSpec || undefined) as PrintSpec | undefined
+  const spec = (raw?.products?.[0]?.printSpec || undefined) as PrintSpec | undefined
   const previewSpec = raw?.previewSpec as PreviewSpec | undefined
 
   const pagesOut = names.map((name, i) => ({
@@ -90,6 +108,7 @@ console.log(
   })) as TemplatePage[]
 
   const coverImage = raw?.coverImage ? urlFor(raw.coverImage).url() : undefined
+  const products = raw?.products as TemplateProduct[] | undefined
 
-  return { pages: pagesOut, coverImage, spec, previewSpec }
+  return { pages: pagesOut, coverImage, spec, previewSpec, products }
 }
