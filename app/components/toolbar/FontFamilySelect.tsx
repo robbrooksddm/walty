@@ -1,30 +1,125 @@
 // app/components/toolbar/FontFamilySelect.tsx
-'use client'
+"use client";
 
-import type { ChangeEvent } from 'react'
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
+import Popover from "./Popover";
 
-interface Props {
-  value    : string
-  onChange : (v: string) => void
-  disabled : boolean
+interface Font {
+  name: string;
+  family: string;
+  url?: string; // Google Fonts stylesheet URL
 }
 
-export function FontFamilySelect ({ value, onChange, disabled }: Props) {
+const FONTS: Font[] = [
+  { name: "Arial", family: "Arial, Helvetica, sans-serif" },
+  { name: "Georgia", family: "Georgia, serif" },
+  {
+    name: "Domine",
+    family: "Domine, serif",
+    url: "https://fonts.googleapis.com/css2?family=Domine:wght@400;700&display=swap",
+  },
+  {
+    name: "Recoleta",
+    family: "var(--font-recoleta), serif",
+  },
+];
+
+interface Props {
+  value: string;
+  onChange: (v: string) => void;
+  disabled: boolean;
+}
+
+export function FontFamilySelect({ value, onChange, disabled }: Props) {
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // load Google fonts on mount
+  useEffect(() => {
+    FONTS.forEach((f) => {
+      if (!f.url) return;
+      if (!document.querySelector(`link[data-font="${f.name}"]`)) {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = f.url;
+        link.setAttribute("data-font", f.name);
+        document.head.appendChild(link);
+      }
+    });
+  }, []);
+
+  // keyboard navigation
+  useEffect(() => {
+    if (!open) return;
+    setActive(Math.max(0, FONTS.findIndex((f) => f.name === value)));
+    const handle = (e: KeyboardEvent) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setActive((i) => Math.min(i + 1, FONTS.length - 1));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setActive((i) => Math.max(i - 1, 0));
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const f = FONTS[active];
+        if (f) onChange(f.name);
+        setOpen(false);
+        btnRef.current?.focus();
+      } else if (e.key === "Escape") {
+        setOpen(false);
+        btnRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handle);
+    return () => window.removeEventListener("keydown", handle);
+  }, [open, active, value, onChange]);
+
+  useEffect(() => {
+    if (open) itemRefs.current[active]?.focus();
+  }, [open, active]);
+
+  const current = FONTS.find((f) => f.name === value) || FONTS[0];
+
   return (
-    <select
-      value={value}
-      disabled={disabled}
-      onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange(e.target.value)}
-      className="
-        h-12 min-w-[9rem] px-2 rounded-lg
-        bg-white/80 border border-teal-800/10 text-sm
-        disabled:opacity-40
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50
-      "
-    >
-      {['Arial', 'Georgia', 'monospace', 'Dingos Stamp'].map(f => (
-        <option key={f}>{f}</option>
-      ))}
-    </select>
-  )
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((o) => !o)}
+        className="h-12 min-w-[9rem] px-3 flex items-center justify-between rounded-lg bg-white/80 border border-teal-800/10 text-sm disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50"
+        style={{ fontFamily: current.family }}
+      >
+        {current.name}
+        <ChevronDown className="ml-1 h-4 w-4" />
+      </button>
+
+      <Popover anchor={btnRef.current} open={open} onClose={() => setOpen(false)}>
+        <ul className="max-h-60 overflow-y-auto p-1">
+          {FONTS.map((f, i) => (
+            <li key={f.name} className="my-0.5">
+              <button
+                ref={(el) => (itemRefs.current[i] = el)}
+                type="button"
+                onClick={() => {
+                  onChange(f.name);
+                  setOpen(false);
+                  btnRef.current?.focus();
+                }}
+                className={`w-full text-left px-3 py-1.5 rounded-md focus:outline-none hover:bg-[--walty-cream] focus:bg-[--walty-cream] ${
+                  value === f.name ? "bg-[--walty-cream]" : ""
+                }`}
+                style={{ fontFamily: f.family }}
+              >
+                {f.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Popover>
+    </>
+  );
 }

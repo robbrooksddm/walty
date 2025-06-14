@@ -31,7 +31,6 @@ import {
 } from './toolbar/AlignToPage'
 
 type Mode = 'staff' | 'customer'
-const fonts = ['Arial', 'Georgia', 'monospace', 'Dingos Stamp']
 
 interface Props {
   canvas   : fabric.Canvas | null
