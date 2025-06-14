@@ -7,7 +7,7 @@ import { useEditor }                    from './EditorStore'
 if (typeof window !== 'undefined') (window as any).useEditor = useEditor // debug helper
 
 import LayerPanel                       from './LayerPanel'
-import FabricCanvas, { pageW, pageH }    from './FabricCanvas'
+import FabricCanvas, { pageW, pageH, EXPORT_MULT } from './FabricCanvas'
 import TextToolbar                      from './TextToolbar'
 import ImageToolbar                     from './ImageToolbar'
 import EditorCommands                   from './EditorCommands'
@@ -109,7 +109,11 @@ export default function CardEditor({
       fc.renderAll()
       console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
       console.log('Expected page px', pageW(), pageH())
-      const url = fc.toDataURL({ format: 'jpeg', quality: 0.8 })
+      const url = fc.toDataURL({
+        format: 'jpeg',
+        quality: 0.8,
+        multiplier: EXPORT_MULT,
+      })
       setThumbs(prev => {
         const next = [...prev]
         next[idx] = url
@@ -191,7 +195,11 @@ export default function CardEditor({
         try {
           console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
           console.log('Expected page px', pageW(), pageH())
-          const dataUrl = fc.toDataURL({ format: 'jpeg', quality: 0.8 })
+          const dataUrl = fc.toDataURL({
+            format: 'jpeg',
+            quality: 0.8,
+            multiplier: EXPORT_MULT,
+          })
           const res = await fetch(dataUrl)
           const blob = await res.blob()
           const form = new FormData()
@@ -260,7 +268,11 @@ const handlePreview = () => {
     fc.renderAll()
     console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
     console.log('Expected page px', pageW(), pageH())
-    imgs[i] = fc.toDataURL({ format: 'png', quality: 1 })
+    imgs[i] = fc.toDataURL({
+      format: 'png',
+      quality: 1,
+      multiplier: EXPORT_MULT,
+    })
   })
   setPreviewImgs(imgs)
   setPreviewOpen(true)

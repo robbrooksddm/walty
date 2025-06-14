@@ -30,6 +30,7 @@ const SCALE     = PREVIEW_W / PAGE_W
 
 export const pageW = () => PAGE_W
 export const pageH = () => PAGE_H
+export const EXPORT_MULT = 1 / SCALE
 
 // 4 CSS-px padding used by the hover outline
 const PAD  = 4 / SCALE;
