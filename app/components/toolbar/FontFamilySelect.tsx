@@ -11,7 +11,7 @@ interface Font {
   url?: string; // Google Fonts stylesheet URL
 }
 
-const FONTS: Font[] = [
+const BASE_FONTS: Font[] = [
   { name: "Arial", family: "Arial, Helvetica, sans-serif" },
   { name: "Georgia", family: "Georgia, serif" },
   {
@@ -45,24 +45,40 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
     if (open) setQuery("");
   }, [open]);
 
+  const [fonts, setFonts] = useState<Font[]>(BASE_FONTS);
+
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
-    return FONTS.filter((f) => f.name.toLowerCase().includes(q));
-  }, [query]);
+    return fonts.filter((f) => f.name.toLowerCase().includes(q));
+  }, [query, fonts]);
 
-  // load Google fonts on mount
+  // fetch full font list
   useEffect(() => {
-    FONTS.forEach((f) => {
-      if (!f.url) return;
+    fetch('/api/fonts')
+      .then((res) => res.json())
+      .then((list: { name: string; category: string }[]) => {
+        const extras = list.map((f) => ({
+          name: f.name,
+          family: `'${f.name}', ${f.category === 'serif' ? 'serif' : 'sans-serif'}`,
+        }));
+        setFonts((prev) => [...prev, ...extras]);
+      })
+      .catch(() => {/* ignore */});
+  }, []);
+
+  // load fonts for visible options
+  useEffect(() => {
+    filtered.forEach((f) => {
+      const url = f.url || `https://fonts.googleapis.com/css2?family=${f.name.replace(/ /g, '+')}&display=swap`;
       if (!document.querySelector(`link[data-font="${f.name}"]`)) {
-        const link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.href = f.url;
-        link.setAttribute("data-font", f.name);
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = url;
+        link.setAttribute('data-font', f.name);
         document.head.appendChild(link);
       }
     });
-  }, []);
+  }, [filtered]);
 
   // keyboard navigation
   useEffect(() => {
@@ -97,7 +113,7 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
     }
   }, [open, active]);
 
-  const current = FONTS.find((f) => f.name === value) || FONTS[0];
+  const current = fonts.find((f) => f.name === value) || fonts[0];
 
   return (
     <>
