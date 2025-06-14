@@ -17,6 +17,13 @@ import { SEL_COLOR } from '@/lib/fabricDefaults';
 import { CropTool } from '@/lib/CropTool'
 import type { PrintSpec } from '@/lib/printSpecs'
 
+const disposedCanvases = new WeakSet<fabric.Canvas>()
+export const safeDispose = (fc: fabric.Canvas | null) => {
+  if (!fc || disposedCanvases.has(fc)) return
+  disposedCanvases.add(fc)
+  fc.dispose()
+}
+
 /* ---------- print spec ----------------------------------------- */
 let currentSpec: PrintSpec = {
   trimWidthIn: 5,
@@ -722,7 +729,7 @@ window.addEventListener('keydown', onKey)
       window.removeEventListener('keydown', keyCropHandler)
       onReady(null)
       cropToolRef.current?.abort()
-      fc.dispose()
+      safeDispose(fc)
       fcRef.current = null
     }
 // eslint-disable-next-line react-hooks/exhaustive-deps

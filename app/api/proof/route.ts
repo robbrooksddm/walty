@@ -27,7 +27,12 @@ export async function POST(req: NextRequest) {
     if (typeof id !== 'string') {
       return NextResponse.json({ error: 'bad input' }, { status: 400 })
     }
-    if (!Array.isArray(pageImages) || typeof pageImages[0] !== 'string' || !pageImages[0]) {
+    if (
+      !Array.isArray(pageImages) ||
+      pageImages.length === 0 ||
+      typeof pageImages[0] !== 'string' ||
+      !/^data:image\//i.test(pageImages[0])
+    ) {
       return NextResponse.json({ error: 'missing page images' }, { status: 400 })
     }
 
