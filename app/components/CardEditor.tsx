@@ -81,6 +81,7 @@ export default function CardEditor({
     setPrintSpec(spec)
     console.log('CardEditor received spec', spec)
     setSpecKey(k => k + 1)
+    canvasMap.forEach(fc => fc && applySpecToCanvas(fc))
   }, [spec])
   /* 1 ─ hydrate Zustand once ------------------------------------- */
   useEffect(() => {
@@ -112,7 +113,12 @@ export default function CardEditor({
   const [canvasMap, setCanvasMap] =
     useState<(fabric.Canvas | null)[]>([null, null, null, null])
   const onReady = (idx: number, fc: fabric.Canvas | null) =>
-    setCanvasMap(list => { const next = [...list]; next[idx] = fc; return next })
+    setCanvasMap(list => {
+      if (fc) applySpecToCanvas(fc)
+      const next = [...list]
+      next[idx] = fc
+      return next
+    })
   const activeFc = canvasMap[activeIdx]
 
   const [thumbs, setThumbs] = useState<string[]>(['', '', '', ''])
