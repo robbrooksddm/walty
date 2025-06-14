@@ -74,6 +74,9 @@ export async function POST(req: NextRequest) {
           const res = await fetch(url)
           const buf = Buffer.from(await res.arrayBuffer())
           let imgSharp = sharp(buf).ensureAlpha()
+          const meta = await imgSharp.metadata()
+          console.log('Fabric canvas px', meta.width, meta.height)
+          console.log('Expected page px', width, height)
           if (ly.cropW != null && ly.cropH != null) {
             const left = Math.max(0, Math.round(ly.cropX ?? 0))
             const top = Math.max(0, Math.round(ly.cropY ?? 0))

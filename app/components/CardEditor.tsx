@@ -7,7 +7,7 @@ import { useEditor }                    from './EditorStore'
 if (typeof window !== 'undefined') (window as any).useEditor = useEditor // debug helper
 
 import LayerPanel                       from './LayerPanel'
-import FabricCanvas                      from './FabricCanvas'
+import FabricCanvas, { pageW, pageH }    from './FabricCanvas'
 import TextToolbar                      from './TextToolbar'
 import ImageToolbar                     from './ImageToolbar'
 import EditorCommands                   from './EditorCommands'
@@ -107,6 +107,8 @@ export default function CardEditor({
   const updateThumbFromCanvas = (idx: number, fc: fabric.Canvas) => {
     try {
       fc.renderAll()
+      console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
+      console.log('Expected page px', pageW(), pageH())
       const url = fc.toDataURL({ format: 'jpeg', quality: 0.8 })
       setThumbs(prev => {
         const next = [...prev]
@@ -187,6 +189,8 @@ export default function CardEditor({
       const fc = canvasMap[0]
       if (fc) {
         try {
+          console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
+          console.log('Expected page px', pageW(), pageH())
           const dataUrl = fc.toDataURL({ format: 'jpeg', quality: 0.8 })
           const res = await fetch(dataUrl)
           const blob = await res.blob()
@@ -254,6 +258,8 @@ const handlePreview = () => {
     const tool = (fc as any)._cropTool as CropTool | undefined
     if (tool?.isActive) tool.commit()
     fc.renderAll()
+    console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
+    console.log('Expected page px', pageW(), pageH())
     imgs[i] = fc.toDataURL({ format: 'png', quality: 1 })
   })
   setPreviewImgs(imgs)

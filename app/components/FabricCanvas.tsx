@@ -28,6 +28,9 @@ const PREVIEW_W = 420
 const PREVIEW_H = Math.round(PAGE_H * PREVIEW_W / PAGE_W)
 const SCALE     = PREVIEW_W / PAGE_W
 
+export const pageW = () => PAGE_W
+export const pageH = () => PAGE_H
+
 // 4 CSS-px padding used by the hover outline
 const PAD  = 4 / SCALE;
 
