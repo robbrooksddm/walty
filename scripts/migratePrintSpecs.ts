@@ -41,9 +41,17 @@ async function run() {
       await sanity.create({ _id: specId, _type: 'printSpec', ...spec })
     }
 
-    await sanity.patch(p._id)
+    await sanity
+      .patch(p._id)
       .set({ printSpec: { _type: 'reference', _ref: specId } })
-      .unset(['trimWidthMm', 'trimHeightMm'])
+      .unset([
+        'trimWidthMm',
+        'trimHeightMm',
+        'printSpec.trimWidthIn',
+        'printSpec.trimHeightIn',
+        'printSpec.bleedIn',
+        'printSpec.dpi',
+      ])
       .commit()
 
     console.log(`✔ migrated ${p._id} → ${specId}`)
