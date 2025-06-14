@@ -75,8 +75,8 @@ export default function CardEditor({
     console.warn('CardEditor missing printSpec – using Classic fallback')
     printSpec = { trimWidthIn: 5, trimHeightIn: 7, bleedIn: 0.125, dpi: 300 }
   }
+  setPrintSpec(printSpec)
   console.log('CardEditor received spec', printSpec)
-  useEffect(() => { setPrintSpec(printSpec!) }, [printSpec])
   /* 1 ─ hydrate Zustand once ------------------------------------- */
   useEffect(() => {
     useEditor.getState().setPages(

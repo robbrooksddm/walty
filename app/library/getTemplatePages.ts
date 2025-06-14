@@ -42,7 +42,7 @@ export async function getTemplatePages(
     )
   ] | order(_updatedAt desc)[0]{
     coverImage,
-    products[0]->{ printSpec },
+    product->{ printSpec },
     pages[]{
       layers[]{
         ...,                       // keep every native field
@@ -62,7 +62,7 @@ export async function getTemplatePages(
     draftKey: idOrSlug.startsWith('drafts.') ? idOrSlug : `drafts.${idOrSlug}`,
   }
 
-  const raw = await sanityPreview.fetch<{pages?: any[]; coverImage?: any; products?: {printSpec?: PrintSpec}[]}>(query, params)
+  const raw = await sanityPreview.fetch<{pages?: any[]; coverImage?: any; product?: {printSpec?: PrintSpec}}>(query, params)
 
   const pages = Array.isArray(raw?.pages) && raw.pages.length === 4
     ? raw.pages
@@ -85,7 +85,7 @@ console.log(
   })) as TemplatePage[]
 
   const coverImage = raw?.coverImage ? urlFor(raw.coverImage).url() : undefined
-  const spec = raw?.products?.[0]?.printSpec as PrintSpec | undefined
+  const spec = raw?.product?.printSpec as PrintSpec | undefined
 
   return { pages: pagesOut, coverImage, spec }
 }
