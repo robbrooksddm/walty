@@ -7,7 +7,7 @@ import { useEditor }                    from './EditorStore'
 if (typeof window !== 'undefined') (window as any).useEditor = useEditor // debug helper
 
 import LayerPanel                       from './LayerPanel'
-import FabricCanvas, { pageW, pageH, EXPORT_MULT } from './FabricCanvas'
+import FabricCanvas, { pageW, pageH, EXPORT_MULT, setPrintSpec, PrintSpec } from './FabricCanvas'
 import TextToolbar                      from './TextToolbar'
 import ImageToolbar                     from './ImageToolbar'
 import EditorCommands                   from './EditorCommands'
@@ -61,14 +61,17 @@ function CoachMark({ anchor, onClose }: { anchor: DOMRect | null; onClose: () =>
 export default function CardEditor({
   initialPages,
   templateId,
+  printSpec = { trimWidthIn: 5, trimHeightIn: 7, bleedIn: 0.125, dpi: 300 },
   mode = 'customer',
   onSave,
 }: {
   initialPages: TemplatePage[] | undefined
   templateId?: string
+  printSpec: PrintSpec
   mode?: Mode
   onSave?: SaveFn
 }) {
+  setPrintSpec(printSpec)
   /* 1 ─ hydrate Zustand once ------------------------------------- */
   useEffect(() => {
     useEditor.getState().setPages(
@@ -109,11 +112,11 @@ export default function CardEditor({
       fc.renderAll()
       console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
       console.log('Expected page px', pageW(), pageH())
-      console.log('Export multiplier', EXPORT_MULT)
+      console.log('Export multiplier', EXPORT_MULT())
       const url = fc.toDataURL({
         format: 'jpeg',
         quality: 0.8,
-        multiplier: EXPORT_MULT,
+        multiplier: EXPORT_MULT(),
       })
       setThumbs(prev => {
         const next = [...prev]
@@ -196,11 +199,11 @@ export default function CardEditor({
         try {
           console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
           console.log('Expected page px', pageW(), pageH())
-          console.log('Export multiplier', EXPORT_MULT)
+          console.log('Export multiplier', EXPORT_MULT())
           const dataUrl = fc.toDataURL({
             format: 'jpeg',
             quality: 0.8,
-            multiplier: EXPORT_MULT,
+            multiplier: EXPORT_MULT(),
           })
           const res = await fetch(dataUrl)
           const blob = await res.blob()
@@ -270,11 +273,11 @@ const handlePreview = () => {
     fc.renderAll()
     console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
     console.log('Expected page px', pageW(), pageH())
-    console.log('Export multiplier', EXPORT_MULT)
+    console.log('Export multiplier', EXPORT_MULT())
     imgs[i] = fc.toDataURL({
       format: 'png',
       quality: 1,
-      multiplier: EXPORT_MULT,
+      multiplier: EXPORT_MULT(),
     })
   })
   setPreviewImgs(imgs)
@@ -298,9 +301,9 @@ const handleProof = async (sku: string) => {
     fc.renderAll()
     console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
     console.log('Expected page px', pageW(), pageH())
-    console.log('Export multiplier', EXPORT_MULT)
+    console.log('Export multiplier', EXPORT_MULT())
     pageImages.push(
-      fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT })
+      fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT() })
     )
   })
   try {
@@ -434,6 +437,7 @@ const handleProof = async (sku: string) => {
               <FabricCanvas
                 pageIdx={0}
                 page={pages[0]}
+                printSpec={printSpec}
                 onReady={fc => onReady(0, fc)}
                 isCropping={cropping[0]}
                 onCroppingChange={state => handleCroppingChange(0, state)}
@@ -446,6 +450,7 @@ const handleProof = async (sku: string) => {
                 <FabricCanvas
                   pageIdx={1}
                   page={pages[1]}
+                  printSpec={printSpec}
                   onReady={fc => onReady(1, fc)}
                   isCropping={cropping[1]}
                   onCroppingChange={state => handleCroppingChange(1, state)}
@@ -456,6 +461,7 @@ const handleProof = async (sku: string) => {
                 <FabricCanvas
                   pageIdx={2}
                   page={pages[2]}
+                  printSpec={printSpec}
                   onReady={fc => onReady(2, fc)}
                   isCropping={cropping[2]}
                   onCroppingChange={state => handleCroppingChange(2, state)}
@@ -468,6 +474,7 @@ const handleProof = async (sku: string) => {
               <FabricCanvas
                 pageIdx={3}
                 page={pages[3]}
+                printSpec={printSpec}
                 onReady={fc => onReady(3, fc)}
                 isCropping={cropping[3]}
                 onCroppingChange={state => handleCroppingChange(3, state)}

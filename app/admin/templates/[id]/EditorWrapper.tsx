@@ -10,14 +10,15 @@ import {useState}   from 'react'
 import {useRouter}  from 'next/navigation'
 
 import CardEditor   from '@/app/components/CardEditor'
-import type {TemplatePage} from '@/app/components/FabricCanvas'
+import type {TemplatePage, PrintSpec} from '@/app/components/FabricCanvas'
 
 interface Props {
   templateId   : string
   initialPages : TemplatePage[]
+  printSpec?   : PrintSpec
 }
 
-export default function EditorWrapper({templateId, initialPages}: Props) {
+export default function EditorWrapper({templateId, initialPages, printSpec}: Props) {
   const router          = useRouter()
   const [error, setErr] = useState<string | null>(null)
 
@@ -55,6 +56,7 @@ export default function EditorWrapper({templateId, initialPages}: Props) {
       <CardEditor
         initialPages={initialPages}
         templateId={templateId}
+        printSpec={printSpec}
         mode="staff"
         onSave={handleSave}
       />

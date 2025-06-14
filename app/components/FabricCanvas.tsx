@@ -16,26 +16,52 @@ import '@/lib/fabricDefaults'
 import { SEL_COLOR } from '@/lib/fabricDefaults';
 import { CropTool } from '@/lib/CropTool'
 
+/* ---------- print spec ----------------------------------------- */
+export interface PrintSpec {
+  trimWidthIn: number
+  trimHeightIn: number
+  bleedIn: number
+  dpi: number
+}
+
+let currentSpec: PrintSpec = {
+  trimWidthIn: 5,
+  trimHeightIn: 7,
+  bleedIn: 0.125,
+  dpi: 300,
+}
+
+function recompute() {
+  PAGE_W = Math.round((currentSpec.trimWidthIn + currentSpec.bleedIn * 2) * currentSpec.dpi)
+  PAGE_H = Math.round((currentSpec.trimHeightIn + currentSpec.bleedIn * 2) * currentSpec.dpi)
+  PREVIEW_H = Math.round(PAGE_H * PREVIEW_W / PAGE_W)
+  SCALE = PREVIEW_W / PAGE_W
+  PAD = 4 / SCALE
+}
+
+export const setPrintSpec = (spec: PrintSpec) => {
+  currentSpec = spec
+  recompute()
+}
+
 /* ---------- size helpers ---------------------------------------- */
-const DPI       = 300
-const mm        = (n: number) => (n / 25.4) * DPI
-const TRIM_W_MM = 150
-const TRIM_H_MM = 214
-const BLEED_MM  = 3
-const PAGE_W    = Math.round(mm(TRIM_W_MM + BLEED_MM * 2))
-const PAGE_H    = Math.round(mm(TRIM_H_MM + BLEED_MM * 2))
 const PREVIEW_W = 420
-const PREVIEW_H = Math.round(PAGE_H * PREVIEW_W / PAGE_W)
-const SCALE     = PREVIEW_W / PAGE_W
+
+let PAGE_W = 0
+let PAGE_H = 0
+let PREVIEW_H = 0
+let SCALE = 1
+let PAD = 4
+
+recompute()
+
+const mm = (n: number) => (n / 25.4) * currentSpec.dpi
 
 export const pageW = () => PAGE_W
 export const pageH = () => PAGE_H
-export const EXPORT_MULT = 1 / SCALE
+export const EXPORT_MULT = () => 1 / SCALE
 
 // 4 CSS-px padding used by the hover outline
-const PAD  = 4 / SCALE;
-
-/** turn  gap (px) → a dashed-array scaled to canvas units */
 const dash = (gap: number) => [gap / SCALE, (gap - 2) / SCALE];
 
 
@@ -312,7 +338,7 @@ const addGuides = (fc: fabric.Canvas, mode: Mode) => {
   ].forEach(l => fc.add(l))
 
   if (mode === 'staff') {
-    const bleed = mm(BLEED_MM)
+    const bleed = mm(currentSpec.bleedIn * 25.4)
     ;[
       mk([bleed, bleed, PAGE_W - bleed, bleed], 'bleed', '#f87171'),
       mk([PAGE_W - bleed, bleed, PAGE_W - bleed, PAGE_H - bleed], 'bleed', '#f87171'),
@@ -347,13 +373,15 @@ const addBackdrop = (fc: fabric.Canvas) => {
 interface Props {
   pageIdx    : number
   page?      : TemplatePage
+  printSpec  : PrintSpec
   onReady    : (fc: fabric.Canvas | null) => void
   isCropping?: boolean
   onCroppingChange?: (state: boolean) => void
   mode?: Mode
 }
 
-export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, mode = 'customer' }: Props) {
+export default function FabricCanvas ({ pageIdx, page, printSpec, onReady, isCropping = false, onCroppingChange, mode = 'customer' }: Props) {
+  setPrintSpec(printSpec)
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const maskRectsRef = useRef<fabric.Rect[]>([]);

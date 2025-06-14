@@ -7,7 +7,7 @@
 import { sanityPreview } from '@/sanity/lib/client'
 import { urlFor } from '@/sanity/lib/image'
 import { fromSanity } from '@/app/library/layerAdapters'
-import type { TemplatePage } from '@/app/components/FabricCanvas'
+import type { TemplatePage, PrintSpec } from '@/app/components/FabricCanvas'
 
 /* ---------- 4-page fallback so the editor always mounts --------- */
 const EMPTY: TemplatePage[] = [
@@ -20,6 +20,7 @@ const EMPTY: TemplatePage[] = [
 export interface TemplateData {
   pages: TemplatePage[]
   coverImage?: string
+  spec?: PrintSpec
 }
 
 /**
@@ -41,6 +42,7 @@ export async function getTemplatePages(
     )
   ] | order(_updatedAt desc)[0]{
     coverImage,
+    products[0]->{ printSpec },
     pages[]{
       layers[]{
         ...,                       // keep every native field
@@ -60,7 +62,7 @@ export async function getTemplatePages(
     draftKey: idOrSlug.startsWith('drafts.') ? idOrSlug : `drafts.${idOrSlug}`,
   }
 
-  const raw = await sanityPreview.fetch<{pages?: any[]; coverImage?: any}>(query, params)
+  const raw = await sanityPreview.fetch<{pages?: any[]; coverImage?: any; products?: {printSpec?: PrintSpec}[]}>(query, params)
 
   const pages = Array.isArray(raw?.pages) && raw.pages.length === 4
     ? raw.pages
@@ -83,6 +85,7 @@ console.log(
   })) as TemplatePage[]
 
   const coverImage = raw?.coverImage ? urlFor(raw.coverImage).url() : undefined
+  const spec = raw?.products?.[0]?.printSpec as PrintSpec | undefined
 
-  return { pages: pagesOut, coverImage }
+  return { pages: pagesOut, coverImage, spec }
 }
