@@ -109,6 +109,7 @@ export default function CardEditor({
       fc.renderAll()
       console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
       console.log('Expected page px', pageW(), pageH())
+      console.log('Export multiplier', EXPORT_MULT)
       const url = fc.toDataURL({
         format: 'jpeg',
         quality: 0.8,
@@ -195,6 +196,7 @@ export default function CardEditor({
         try {
           console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
           console.log('Expected page px', pageW(), pageH())
+          console.log('Export multiplier', EXPORT_MULT)
           const dataUrl = fc.toDataURL({
             format: 'jpeg',
             quality: 0.8,
@@ -268,6 +270,7 @@ const handlePreview = () => {
     fc.renderAll()
     console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
     console.log('Expected page px', pageW(), pageH())
+    console.log('Export multiplier', EXPORT_MULT)
     imgs[i] = fc.toDataURL({
       format: 'png',
       quality: 1,
