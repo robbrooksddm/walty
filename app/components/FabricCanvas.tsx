@@ -374,15 +374,13 @@ const addBackdrop = (fc: fabric.Canvas) => {
 interface Props {
   pageIdx    : number
   page?      : TemplatePage
-  printSpec  : PrintSpec
   onReady    : (fc: fabric.Canvas | null) => void
   isCropping?: boolean
   onCroppingChange?: (state: boolean) => void
   mode?: Mode
 }
 
-export default function FabricCanvas ({ pageIdx, page, printSpec, onReady, isCropping = false, onCroppingChange, mode = 'customer' }: Props) {
-  setPrintSpec(printSpec)
+export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, mode = 'customer' }: Props) {
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const maskRectsRef = useRef<fabric.Rect[]>([]);

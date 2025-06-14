@@ -61,18 +61,22 @@ function CoachMark({ anchor, onClose }: { anchor: DOMRect | null; onClose: () =>
 export default function CardEditor({
   initialPages,
   templateId,
-  printSpec = { trimWidthIn: 5, trimHeightIn: 7, bleedIn: 0.125, dpi: 300 },
+  printSpec,
   mode = 'customer',
   onSave,
 }: {
   initialPages: TemplatePage[] | undefined
   templateId?: string
-  printSpec: PrintSpec
+  printSpec?: PrintSpec
   mode?: Mode
   onSave?: SaveFn
 }) {
+  if (!printSpec) {
+    console.warn('CardEditor missing printSpec – using Classic fallback')
+    printSpec = { trimWidthIn: 5, trimHeightIn: 7, bleedIn: 0.125, dpi: 300 }
+  }
   console.log('CardEditor received spec', printSpec)
-  setPrintSpec(printSpec)
+  useEffect(() => { setPrintSpec(printSpec!) }, [printSpec])
   /* 1 ─ hydrate Zustand once ------------------------------------- */
   useEffect(() => {
     useEditor.getState().setPages(
@@ -438,7 +442,6 @@ const handleProof = async (sku: string) => {
               <FabricCanvas
                 pageIdx={0}
                 page={pages[0]}
-                printSpec={printSpec}
                 onReady={fc => onReady(0, fc)}
                 isCropping={cropping[0]}
                 onCroppingChange={state => handleCroppingChange(0, state)}
@@ -451,7 +454,6 @@ const handleProof = async (sku: string) => {
                 <FabricCanvas
                   pageIdx={1}
                   page={pages[1]}
-                  printSpec={printSpec}
                   onReady={fc => onReady(1, fc)}
                   isCropping={cropping[1]}
                   onCroppingChange={state => handleCroppingChange(1, state)}
@@ -462,7 +464,6 @@ const handleProof = async (sku: string) => {
                 <FabricCanvas
                   pageIdx={2}
                   page={pages[2]}
-                  printSpec={printSpec}
                   onReady={fc => onReady(2, fc)}
                   isCropping={cropping[2]}
                   onCroppingChange={state => handleCroppingChange(2, state)}
@@ -475,7 +476,6 @@ const handleProof = async (sku: string) => {
               <FabricCanvas
                 pageIdx={3}
                 page={pages[3]}
-                printSpec={printSpec}
                 onReady={fc => onReady(3, fc)}
                 isCropping={cropping[3]}
                 onCroppingChange={state => handleCroppingChange(3, state)}

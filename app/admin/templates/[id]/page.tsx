@@ -41,8 +41,7 @@ export default async function AdminTemplatePage({
   );
   if (!tpl) return notFound();
 
-  const { pages } = await getTemplatePages(id)
-  const spec = tpl.product?.printSpec
+  const { pages, spec } = await getTemplatePages(id)
   console.log('↳ template printSpec', spec)
 
   /* 2. load the client wrapper *only on the client* */
