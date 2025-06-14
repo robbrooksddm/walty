@@ -24,8 +24,11 @@ export async function POST(req: NextRequest) {
       id: string
       sku?: string
     }
-    if ((!Array.isArray(pages) && !Array.isArray(pageImages)) || typeof id !== 'string') {
+    if (typeof id !== 'string') {
       return NextResponse.json({ error: 'bad input' }, { status: 400 })
+    }
+    if (!Array.isArray(pageImages) || typeof pageImages[0] !== 'string' || !pageImages[0]) {
+      return NextResponse.json({ error: 'missing page images' }, { status: 400 })
     }
 
     const spec = sku
