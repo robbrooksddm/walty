@@ -43,6 +43,7 @@ export default async function AdminTemplatePage({
 
   const { pages } = await getTemplatePages(id)
   const spec = tpl.product?.printSpec
+  console.log('↳ template printSpec', spec)
 
   /* 2. load the client wrapper *only on the client* */
   const EditorWrapper = nextDynamic(

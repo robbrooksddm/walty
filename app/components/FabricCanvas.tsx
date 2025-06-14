@@ -40,6 +40,7 @@ function recompute() {
 }
 
 export const setPrintSpec = (spec: PrintSpec) => {
+  console.log('FabricCanvas setSpec', spec.trimWidthIn, spec.trimHeightIn)
   currentSpec = spec
   recompute()
 }

@@ -19,6 +19,7 @@ export default async function CustomisePage({
 
   const { pages, spec } = await getTemplatePages(slug)
   console.log('SERVER tpl.pages =', pages)
+  console.log('↳ template printSpec', spec)
 
   return <CustomiseClient tpl={{ pages, spec }} />;
 }

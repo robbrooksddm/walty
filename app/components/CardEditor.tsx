@@ -71,6 +71,7 @@ export default function CardEditor({
   mode?: Mode
   onSave?: SaveFn
 }) {
+  console.log('CardEditor received spec', printSpec)
   setPrintSpec(printSpec)
   /* 1 ─ hydrate Zustand once ------------------------------------- */
   useEffect(() => {
