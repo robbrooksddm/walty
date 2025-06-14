@@ -292,11 +292,22 @@ const handleProof = async (sku: string) => {
     if (sync) sync()
   })
   const pages = useEditor.getState().pages
+  const pageImages: string[] = []
+  canvasMap.forEach(fc => {
+    if (!fc) { pageImages.push(''); return }
+    fc.renderAll()
+    console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
+    console.log('Expected page px', pageW(), pageH())
+    console.log('Export multiplier', EXPORT_MULT)
+    pageImages.push(
+      fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT })
+    )
+  })
   try {
     const res = await fetch('/api/proof', {
       method : 'POST',
       headers: { 'content-type': 'application/json' },
-      body   : JSON.stringify({ pages, sku, id: templateId }),
+      body   : JSON.stringify({ pages, pageImages, sku, id: templateId }),
     })
     if (res.ok) {
       const blob = await res.blob()

@@ -21,12 +21,13 @@ function esc(s: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { pages, id, sku } = (await req.json()) as {
+    const { pages, pageImages, id, sku } = (await req.json()) as {
       pages: any[]
+      pageImages?: string[]
       id: string
       sku?: string
     }
-    if (!Array.isArray(pages) || typeof id !== 'string') {
+    if ((!Array.isArray(pages) && !Array.isArray(pageImages)) || typeof id !== 'string') {
       return NextResponse.json({ error: 'bad input' }, { status: 400 })
     }
 
@@ -52,12 +53,22 @@ export async function POST(req: NextRequest) {
     const height = px(finalSpec.trimHeightIn + finalSpec.bleedIn * 2)
 
     const clamp = (n:number, min:number, max:number) => Math.max(min, Math.min(max, n))
-    const composites: Overlay[] = []
-    const page = pages[0] || {}
-    const layers = Array.isArray(page.layers) ? page.layers : []
+    let img: sharp.Sharp
 
-    for (const ly of layers) {
-      let x = ly.leftPct != null ? (ly.leftPct / 100) * width  : ly.x
+    if (Array.isArray(pageImages) && typeof pageImages[0] === 'string' && pageImages[0]) {
+      const m = pageImages[0].match(/^data:image\/\w+;base64,/)
+      const buf = Buffer.from(pageImages[0].replace(m ? m[0] : '', ''), 'base64')
+      img = sharp(buf).ensureAlpha()
+      const meta = await img.metadata()
+      console.log('Fabric canvas px', meta.width, meta.height)
+      console.log('Expected page px', width, height)
+    } else {
+      const composites: Overlay[] = []
+      const page = pages[0] || {}
+      const layers = Array.isArray(page.layers) ? page.layers : []
+
+      for (const ly of layers) {
+        let x = ly.leftPct != null ? (ly.leftPct / 100) * width  : ly.x
       let y = ly.topPct  != null ? (ly.topPct  / 100) * height : ly.y
       let w = ly.widthPct  != null ? (ly.widthPct  / 100) * width  : ly.width
       let h = ly.heightPct != null ? (ly.heightPct / 100) * height : ly.height
@@ -112,9 +123,10 @@ export async function POST(req: NextRequest) {
           `</svg>`
         composites.push({ input: Buffer.from(svg), left: x, top: y, opacity: ly.opacity ?? 1 } as Overlay)
       }
-    }
+      }
 
-    let img = sharp({ create: { width, height, channels: 4, background: '#ffffff' } }).composite(composites)
+      img = sharp({ create: { width, height, channels: 4, background: '#ffffff' } }).composite(composites)
+    }
 
     const bleedW = finalSpec.trimWidthIn + finalSpec.bleedIn * 2
     const bleedH = finalSpec.trimHeightIn + finalSpec.bleedIn * 2
