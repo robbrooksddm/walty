@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
 import { fabric } from "fabric";
-import { EyeDropper } from "lucide-react";
+import { Pipette } from "lucide-react";
 import Popover from "./Popover";
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -204,7 +204,7 @@ export default function ToolTextColorPicker({ tb, canvas, mutate }: Props) {
               onClick={handleEyeDropper}
               className="flex items-center gap-1 rounded border px-2 py-1 text-sm hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50"
             >
-              <EyeDropper className="h-4 w-4" /> Pick colour
+              <Pipette className="h-4 w-4" /> Pick colour
             </button>
           )}
         </div>
