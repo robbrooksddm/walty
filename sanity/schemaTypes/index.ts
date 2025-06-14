@@ -31,13 +31,13 @@ export const schemaTypes = [
   productMockup,
   page,
   aiPlaceholder,
+  printSpec,
 
   /* objects */
   aiLayer,
   editableImage,
   editableText,
   heroSection,
-  printSpec,
 
   /* facets */
   occasion,

@@ -120,6 +120,34 @@ export default defineType({
       validation: r => r.required(),
     }),
 
+    defineField({
+      name: 'previewSpec',
+      type: 'object',
+      title: 'Preview canvas',
+      group: 'basic',
+      fields: [
+        {
+          name: 'previewWidthPx',
+          type: 'number',
+          title: 'Width (px)',
+          initialValue: 420,
+          validation: r => r.required().positive(),
+        },
+        {
+          name: 'previewHeightPx',
+          type: 'number',
+          title: 'Height (px)',
+          initialValue: 580,
+          validation: r => r.required().positive(),
+        },
+        defineField({
+          name: 'maxMobileWidthPx',
+          type: 'number',
+          title: 'Max mobile width (px)',
+        }),
+      ],
+    }),
+
     /* —— Pages —————————————————————————— */
     defineField({
       name: 'pages',

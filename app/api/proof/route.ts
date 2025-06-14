@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
           bleedIn: number
           dpi: number
         } | null>(
-          `*[_type=="cardProduct" && slug.current==$sku][0].printSpec`,
+          `*[_type=="cardProduct" && slug.current==$sku][0].printSpec->`,
           { sku },
         )
       : null
