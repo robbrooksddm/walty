@@ -82,6 +82,13 @@ export async function POST(req: NextRequest) {
         console.error('bad ratio', inputRatio, 'vs', targetRatio)
         return NextResponse.json({ error: 'ratio mismatch' }, { status: 400 })
       }
+      if (
+        (meta.width || 0) < width * 0.75 ||
+        (meta.height || 0) < height * 0.75
+      ) {
+        console.error('image too small', meta.width, meta.height)
+        return NextResponse.json({ error: 'image too small' }, { status: 400 })
+      }
       img = sharp(buf).ensureAlpha()
       console.log('Fabric canvas px', meta.width, meta.height)
       console.log('Expected page px', width, height)

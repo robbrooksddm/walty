@@ -104,11 +104,17 @@ export default function CardEditor({
     setCanvasMap(list => { const next = [...list]; next[idx] = fc; return next })
   const activeFc = canvasMap[activeIdx]
 
+  const prevSpec = useRef<PrintSpec | null>(null)
+
   useEffect(() => {
     if (!printSpec) {
       console.warn('CardEditor missing printSpec')
       return
     }
+    if (prevSpec.current && JSON.stringify(prevSpec.current) === JSON.stringify(printSpec)) {
+      return
+    }
+    prevSpec.current = printSpec
     setPrintSpec(printSpec)
     console.log('CardEditor received spec', printSpec)
     const SCALE = 420 / pageW()
@@ -290,6 +296,12 @@ const handlePreview = () => {
     console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
     console.log('Expected page px', pageW(), pageH())
     console.log('Export multiplier', EXPORT_MULT())
+    const ratio = fc.getWidth() / pageW()
+    if (ratio < 0.95 || ratio > 1.05) {
+      console.warn('preview multiplier off', ratio)
+      imgs[i] = ''
+      return
+    }
     console.log('outgoing preview', fc.getWidth(), fc.getHeight(), EXPORT_MULT())
     imgs[i] = fc.toDataURL({
       format: 'png',
@@ -319,6 +331,12 @@ const handleProof = async (sku: string) => {
     console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
     console.log('Expected page px', pageW(), pageH())
     console.log('Export multiplier', EXPORT_MULT())
+    const ratio = fc.getWidth() / pageW()
+    if (ratio < 0.95 || ratio > 1.05) {
+      console.warn('proof multiplier off', ratio)
+      pageImages.push('')
+      return
+    }
     console.log('outgoing', sku, fc.getWidth(), fc.getHeight(), EXPORT_MULT())
     pageImages.push(
       fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT() })
