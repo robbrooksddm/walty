@@ -7,7 +7,8 @@
 import { sanityPreview } from '@/sanity/lib/client'
 import { urlFor } from '@/sanity/lib/image'
 import { fromSanity } from '@/app/library/layerAdapters'
-import type { TemplatePage, PrintSpec } from '@/app/components/FabricCanvas'
+import type { TemplatePage } from '@/app/components/FabricCanvas'
+import type { PrintSpec } from '@/lib/printSpecs'
 
 /* ---------- 4-page fallback so the editor always mounts --------- */
 const EMPTY: TemplatePage[] = [

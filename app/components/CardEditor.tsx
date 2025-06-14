@@ -7,7 +7,9 @@ import { useEditor }                    from './EditorStore'
 if (typeof window !== 'undefined') (window as any).useEditor = useEditor // debug helper
 
 import LayerPanel                       from './LayerPanel'
-import FabricCanvas, { pageW, pageH, EXPORT_MULT, setPrintSpec, PrintSpec } from './FabricCanvas'
+import FabricCanvas, { pageW, pageH, EXPORT_MULT, setPrintSpec, applySpecToCanvas } from './FabricCanvas'
+import type { PrintSpec } from '@/lib/printSpecs'
+import { PRINT_SPECS } from '@/lib/printSpecs'
 import TextToolbar                      from './TextToolbar'
 import ImageToolbar                     from './ImageToolbar'
 import EditorCommands                   from './EditorCommands'
@@ -71,12 +73,15 @@ export default function CardEditor({
   mode?: Mode
   onSave?: SaveFn
 }) {
-  if (printSpec) {
-    setPrintSpec(printSpec)
-    console.log('CardEditor received spec', printSpec)
-  } else {
-    console.warn('CardEditor missing printSpec')
-  }
+  const defaultSpec = printSpec || PRINT_SPECS['greeting-card-classic']
+  const [spec, setSpec] = useState<PrintSpec>(defaultSpec)
+  const [specKey, setSpecKey] = useState(0)
+
+  useEffect(() => {
+    setPrintSpec(spec)
+    console.log('CardEditor received spec', spec)
+    setSpecKey(k => k + 1)
+  }, [spec])
   /* 1 ─ hydrate Zustand once ------------------------------------- */
   useEffect(() => {
     useEditor.getState().setPages(
@@ -291,6 +296,12 @@ const handlePreview = () => {
 
 /* download proof */
 const handleProof = async (sku: string) => {
+  const newSpec = PRINT_SPECS[sku as keyof typeof PRINT_SPECS]
+  if (newSpec) {
+    setPrintSpec(newSpec)
+    setSpec(newSpec)
+    canvasMap.forEach(fc => fc && applySpecToCanvas(fc))
+  }
   canvasMap.forEach(fc => {
     const tool = (fc as any)?._cropTool as CropTool | undefined
     if (tool?.isActive) tool.commit()
@@ -440,6 +451,7 @@ const handleProof = async (sku: string) => {
             {/* front */}
             <div className={section === 'front' ? box : 'hidden'}>
               <FabricCanvas
+                key={`c-${specKey}-0`}
                 pageIdx={0}
                 page={pages[0]}
                 onReady={fc => onReady(0, fc)}
@@ -452,6 +464,7 @@ const handleProof = async (sku: string) => {
             <div className={section === 'inside' ? 'flex gap-6' : 'hidden'}>
               <div className={box}>
                 <FabricCanvas
+                  key={`c-${specKey}-1`}
                   pageIdx={1}
                   page={pages[1]}
                   onReady={fc => onReady(1, fc)}
@@ -462,6 +475,7 @@ const handleProof = async (sku: string) => {
               </div>
               <div className={box}>
                 <FabricCanvas
+                  key={`c-${specKey}-2`}
                   pageIdx={2}
                   page={pages[2]}
                   onReady={fc => onReady(2, fc)}
@@ -474,6 +488,7 @@ const handleProof = async (sku: string) => {
             {/* back */}
             <div className={section === 'back' ? box : 'hidden'}>
               <FabricCanvas
+                key={`c-${specKey}-3`}
                 pageIdx={3}
                 page={pages[3]}
                 onReady={fc => onReady(3, fc)}

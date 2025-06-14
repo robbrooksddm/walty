@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import sharp from 'sharp'
 import { sanityPreview } from '@/sanity/lib/client'
+import { PRINT_SPECS, PrintSpec } from '@/lib/printSpecs'
 
 interface Overlay extends sharp.OverlayOptions {
   /** Global opacity for the overlay; sharp's types omit this */
@@ -9,11 +10,7 @@ interface Overlay extends sharp.OverlayOptions {
 
 export const dynamic = 'force-dynamic'
 
-const SPECS = {
-  'greeting-card-giant'  : { trimWidthIn: 9, trimHeightIn: 11.6667, bleedIn: 0.125, dpi: 300 },
-  'greeting-card-classic': { trimWidthIn: 5, trimHeightIn: 7, bleedIn: 0.125, dpi: 300 },
-  'greeting-card-mini'   : { trimWidthIn: 4, trimHeightIn: 6, bleedIn: 0.125, dpi: 300 },
-} as const
+
 
 function esc(s: string) {
   return s.replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]!))
@@ -32,17 +29,12 @@ export async function POST(req: NextRequest) {
     }
 
     const spec = sku
-      ? await sanityPreview.fetch<{
-          trimWidthIn: number
-          trimHeightIn: number
-          bleedIn: number
-          dpi: number
-        } | null>(
+      ? await sanityPreview.fetch<PrintSpec | null>(
           `*[_type=="cardProduct" && slug.current==$sku][0].printSpec`,
           { sku },
         )
       : null
-    const fallback = sku ? SPECS[sku as keyof typeof SPECS] : undefined
+    const fallback = sku ? PRINT_SPECS[sku as keyof typeof PRINT_SPECS] : undefined
     const finalSpec = spec ?? fallback
     if (!finalSpec) {
       return NextResponse.json({ error: 'spec not found' }, { status: 404 })
@@ -62,6 +54,9 @@ export async function POST(req: NextRequest) {
       const meta = await img.metadata()
       console.log('Fabric canvas px', meta.width, meta.height)
       console.log('Expected page px', width, height)
+      if (meta.width !== width || meta.height !== height) {
+        return NextResponse.json({ error: 'size mismatch' }, { status: 400 })
+      }
     } else {
       const composites: Overlay[] = []
       const page = pages[0] || {}

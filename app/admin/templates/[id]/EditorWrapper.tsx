@@ -10,7 +10,8 @@ import {useState}   from 'react'
 import {useRouter}  from 'next/navigation'
 
 import CardEditor   from '@/app/components/CardEditor'
-import type {TemplatePage, PrintSpec} from '@/app/components/FabricCanvas'
+import type {TemplatePage} from '@/app/components/FabricCanvas'
+import type {PrintSpec} from '@/lib/printSpecs'
 
 interface Props {
   templateId   : string

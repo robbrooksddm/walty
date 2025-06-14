@@ -15,15 +15,9 @@ import { fromSanity }        from '@/app/library/layerAdapters'
 import '@/lib/fabricDefaults'
 import { SEL_COLOR } from '@/lib/fabricDefaults';
 import { CropTool } from '@/lib/CropTool'
+import type { PrintSpec } from '@/lib/printSpecs'
 
 /* ---------- print spec ----------------------------------------- */
-export interface PrintSpec {
-  trimWidthIn: number
-  trimHeightIn: number
-  bleedIn: number
-  dpi: number
-}
-
 let currentSpec: PrintSpec = {
   trimWidthIn: 5,
   trimHeightIn: 7,
@@ -43,6 +37,20 @@ export const setPrintSpec = (spec: PrintSpec) => {
   console.log('FabricCanvas setSpec', spec.trimWidthIn, spec.trimHeightIn)
   currentSpec = spec
   recompute()
+}
+
+export const applySpecToCanvas = (fc: fabric.Canvas) => {
+  fc.setWidth(PAGE_W)
+  fc.setHeight(PAGE_H)
+  fc.setViewportTransform([SCALE, 0, 0, SCALE, 0, 0])
+  const container = fc.lowerCanvasEl.parentElement as HTMLElement | null
+  if (container) {
+    container.style.width = `${PREVIEW_W}px`
+    container.style.height = `${PREVIEW_H}px`
+    container.style.maxWidth = `${PREVIEW_W}px`
+    container.style.maxHeight = `${PREVIEW_H}px`
+  }
+  fc.requestRenderAll()
 }
 
 /* ---------- size helpers ---------------------------------------- */
