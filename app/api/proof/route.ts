@@ -76,6 +76,12 @@ export async function POST(req: NextRequest) {
       if (!meta.format || meta.format === 'unknown') {
         return NextResponse.json({ error: 'no images' }, { status: 400 })
       }
+      const inputRatio = (meta.width || 1) / (meta.height || 1)
+      const targetRatio = width / height
+      if (Math.abs(inputRatio - targetRatio) / targetRatio > 0.01) {
+        console.error('bad ratio', inputRatio, 'vs', targetRatio)
+        return NextResponse.json({ error: 'ratio mismatch' }, { status: 400 })
+      }
       img = sharp(buf).ensureAlpha()
       console.log('Fabric canvas px', meta.width, meta.height)
       console.log('Expected page px', width, height)

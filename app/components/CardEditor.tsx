@@ -71,12 +71,6 @@ export default function CardEditor({
   mode?: Mode
   onSave?: SaveFn
 }) {
-  if (printSpec) {
-    setPrintSpec(printSpec)
-    console.log('CardEditor received spec', printSpec)
-  } else {
-    console.warn('CardEditor missing printSpec')
-  }
   /* 1 ─ hydrate Zustand once ------------------------------------- */
   useEffect(() => {
     useEditor.getState().setPages(
@@ -109,6 +103,23 @@ export default function CardEditor({
   const onReady = (idx: number, fc: fabric.Canvas | null) =>
     setCanvasMap(list => { const next = [...list]; next[idx] = fc; return next })
   const activeFc = canvasMap[activeIdx]
+
+  useEffect(() => {
+    if (!printSpec) {
+      console.warn('CardEditor missing printSpec')
+      return
+    }
+    setPrintSpec(printSpec)
+    console.log('CardEditor received spec', printSpec)
+    const SCALE = 420 / pageW()
+    canvasMap.forEach(fc => {
+      if (!fc) return
+      fc.setWidth(pageW())
+      fc.setHeight(pageH())
+      fc.setViewportTransform([SCALE, 0, 0, SCALE, 0, 0])
+      fc.requestRenderAll()
+    })
+  }, [printSpec, canvasMap])
 
   const [thumbs, setThumbs] = useState<string[]>(['', '', '', ''])
 
