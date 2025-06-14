@@ -496,6 +496,7 @@ useEffect(() => {
 
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setMenuPos({ x: e.clientX, y: e.clientY });
   };
   fc.upperCanvasEl.addEventListener('contextmenu', ctxMenu);

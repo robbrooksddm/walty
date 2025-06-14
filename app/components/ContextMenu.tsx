@@ -35,11 +35,9 @@ export default function ContextMenu({ pos, locked, onAction, onClose }: Props) {
     const close = () => onClose();
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('mousedown', close);
-    window.addEventListener('contextmenu', close);
     window.addEventListener('keydown', esc);
     return () => {
       window.removeEventListener('mousedown', close);
-      window.removeEventListener('contextmenu', close);
       window.removeEventListener('keydown', esc);
     };
   }, [onClose]);
