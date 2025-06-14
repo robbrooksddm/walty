@@ -60,7 +60,10 @@ const mm = (n: number) => (n / 25.4) * currentSpec.dpi
 
 export const pageW = () => PAGE_W
 export const pageH = () => PAGE_H
-export const EXPORT_MULT = () => 1 / SCALE
+export const EXPORT_MULT = () => {
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+  return (1 / SCALE) / dpr
+}
 
 // 4 CSS-px padding used by the hover outline
 const dash = (gap: number) => [gap / SCALE, (gap - 2) / SCALE];

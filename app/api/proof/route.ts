@@ -62,6 +62,9 @@ export async function POST(req: NextRequest) {
       const meta = await img.metadata()
       console.log('Fabric canvas px', meta.width, meta.height)
       console.log('Expected page px', width, height)
+      if (meta.width !== width || meta.height !== height) {
+        img = img.resize(width, height)
+      }
     } else {
       const composites: Overlay[] = []
       const page = pages[0] || {}
