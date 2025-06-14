@@ -113,15 +113,25 @@ export async function POST(req: NextRequest) {
 
     let img = sharp({ create: { width, height, channels: 4, background: '#ffffff' } }).composite(composites)
 
+    const bleedW = finalSpec.trimWidthIn + finalSpec.bleedIn * 2
+    const bleedH = finalSpec.trimHeightIn + finalSpec.bleedIn * 2
+
     const masterRatio = width / height
-    const targetRatio =
-      (finalSpec.trimWidthIn + finalSpec.bleedIn * 2) /
-      (finalSpec.trimHeightIn + finalSpec.bleedIn * 2)
-    if (targetRatio < masterRatio) {
+    const targetRatio = bleedW / bleedH
+
+    if (targetRatio < masterRatio - 0.0001) {
       const cropW = Math.round(height * targetRatio)
       const offsetX = Math.floor((width - cropW) / 2)
-      img = img.extract({ left: offsetX, top: 0, width: cropW, height })
-               .extend({ left: 0, right: 0, top: 0, bottom: 0, background: '#ffffff' })
+
+      img = img
+        .extract({ left: offsetX, top: 0, width: cropW, height })
+        .extend({
+          left: Math.round(finalSpec.bleedIn * finalSpec.dpi),
+          right: Math.round(finalSpec.bleedIn * finalSpec.dpi),
+          top: 0,
+          bottom: 0,
+          background: '#ffffff',
+        })
     }
 
     const out = await img
