@@ -709,17 +709,21 @@ window.addEventListener('keydown', onKey)
   ;(fc as any)._editingRef = isEditing
   fcRef.current = fc; onReady(fc)
 
+    const disposed = { current: false }
     return () => {
+      if (disposed.current) return
+      disposed.current = true
       window.removeEventListener('keydown', onKey)
       if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
       window.removeEventListener('scroll', updateOffset)
       window.removeEventListener('resize', updateOffset)
       // tidy up crop‑tool listeners
-      fc.off('mouse:dblclick', dblHandler);
-      window.removeEventListener('keydown', keyCropHandler);
+      fc.off('mouse:dblclick', dblHandler)
+      window.removeEventListener('keydown', keyCropHandler)
       onReady(null)
       cropToolRef.current?.abort()
       fc.dispose()
+      fcRef.current = null
     }
 // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [])
