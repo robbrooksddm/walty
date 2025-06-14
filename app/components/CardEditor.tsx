@@ -279,6 +279,7 @@ const handlePreview = () => {
     console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
     console.log('Expected page px', pageW(), pageH())
     console.log('Export multiplier', EXPORT_MULT())
+    console.log('outgoing preview', fc.getWidth(), fc.getHeight(), EXPORT_MULT())
     imgs[i] = fc.toDataURL({
       format: 'png',
       quality: 1,
@@ -307,6 +308,7 @@ const handleProof = async (sku: string) => {
     console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
     console.log('Expected page px', pageW(), pageH())
     console.log('Export multiplier', EXPORT_MULT())
+    console.log('outgoing', sku, fc.getWidth(), fc.getHeight(), EXPORT_MULT())
     pageImages.push(
       fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT() })
     )
