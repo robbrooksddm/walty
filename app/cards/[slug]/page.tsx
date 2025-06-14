@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import { sanityFetch } from '@/lib/sanityClient'
+import { sanityPreview } from '@/sanity/lib/client'
 import { urlFor } from '@/sanity/lib/image'
 
 export default async function Product({ params }: { params: { slug: string } }) {
-  const tpl = await sanityFetch<{
+  const tpl = await sanityPreview.fetch<{
     title: string
     slug: { current: string }
     coverImage?: any
