@@ -1,7 +1,7 @@
 // app/components/toolbar/FontFamilySelect.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import Popover from "./Popover";
 
@@ -34,8 +34,21 @@ interface Props {
 export function FontFamilySelect({ value, onChange, disabled }: Props) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  const [query, setQuery] = useState("");
   const btnRef = useRef<HTMLButtonElement | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  itemRefs.current = [];
+
+  // reset search when opening
+  useEffect(() => {
+    if (open) setQuery("");
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase();
+    return FONTS.filter((f) => f.name.toLowerCase().includes(q));
+  }, [query]);
 
   // load Google fonts on mount
   useEffect(() => {
@@ -54,17 +67,17 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
   // keyboard navigation
   useEffect(() => {
     if (!open) return;
-    setActive(Math.max(0, FONTS.findIndex((f) => f.name === value)));
+    setActive(Math.max(0, filtered.findIndex((f) => f.name === value)));
     const handle = (e: KeyboardEvent) => {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setActive((i) => Math.min(i + 1, FONTS.length - 1));
+        setActive((i) => Math.min(i + 1, filtered.length - 1));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setActive((i) => Math.max(i - 1, 0));
       } else if (e.key === "Enter") {
         e.preventDefault();
-        const f = FONTS[active];
+        const f = filtered[active];
         if (f) onChange(f.name);
         setOpen(false);
         btnRef.current?.focus();
@@ -75,10 +88,13 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
     };
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
-  }, [open, active, value, onChange]);
+  }, [open, active, value, onChange, filtered]);
 
   useEffect(() => {
-    if (open) itemRefs.current[active]?.focus();
+    if (!open) return;
+    if (document.activeElement !== searchRef.current) {
+      itemRefs.current[active]?.focus();
+    }
   }, [open, active]);
 
   const current = FONTS.find((f) => f.name === value) || FONTS[0];
@@ -98,27 +114,41 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
       </button>
 
       <Popover anchor={btnRef.current} open={open} onClose={() => setOpen(false)}>
-        <ul className="max-h-60 overflow-y-auto p-1">
-          {FONTS.map((f, i) => (
-            <li key={f.name} className="my-0.5">
-              <button
-                ref={(el) => (itemRefs.current[i] = el)}
-                type="button"
-                onClick={() => {
-                  onChange(f.name);
-                  setOpen(false);
-                  btnRef.current?.focus();
-                }}
-                className={`w-full text-left px-3 py-1.5 rounded-md focus:outline-none hover:bg-[--walty-cream] focus:bg-[--walty-cream] ${
-                  value === f.name ? "bg-[--walty-cream]" : ""
-                }`}
-                style={{ fontFamily: f.family }}
-              >
-                {f.name}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="max-h-60 overflow-y-auto p-1">
+          <input
+            ref={searchRef}
+            autoFocus
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search fonts"
+            className="mb-1 w-full rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400/50"
+          />
+          <ul>
+            {filtered.map((f, i) => (
+              <li key={f.name} className="my-0.5">
+                <button
+                  ref={(el) => (itemRefs.current[i] = el)}
+                  type="button"
+                  onClick={() => {
+                    onChange(f.name);
+                    setOpen(false);
+                    btnRef.current?.focus();
+                  }}
+                  className={`w-full text-left px-3 py-1.5 rounded-md focus:outline-none hover:bg-[--walty-cream] focus:bg-[--walty-cream] ${
+                    value === f.name ? "bg-[--walty-cream]" : ""
+                  }`}
+                  style={{ fontFamily: f.family }}
+                >
+                  {f.name}
+                </button>
+              </li>
+            ))}
+            {filtered.length === 0 && (
+              <li className="p-2 text-sm text-gray-500">No fonts found</li>
+            )}
+          </ul>
+        </div>
       </Popover>
     </>
   );
