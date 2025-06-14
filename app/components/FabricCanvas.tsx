@@ -21,7 +21,12 @@ const disposedCanvases = new WeakSet<fabric.Canvas>()
 export const safeDispose = (fc: fabric.Canvas | null) => {
   if (!fc || disposedCanvases.has(fc)) return
   disposedCanvases.add(fc)
-  fc.dispose()
+  // Avoid Fabric's built‑in dispose because it removes the canvas
+  // elements from the DOM. React already cleans them up on unmount
+  // which caused "NotFoundError: removeChild" when we double‑removed
+  // them. Clearing and removing listeners is enough here.
+  fc.off()
+  fc.clear()
 }
 
 /* ---------- print spec ----------------------------------------- */
