@@ -27,7 +27,7 @@ export default async function AdminTemplatePage({
     `*[_type=="cardTemplate" && _id==$id][0]{
        _id,
        title,
-       product->{ printSpec },
+       "product": products[0]->{ printSpec },
        pages[]{
          _key,
          name,

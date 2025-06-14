@@ -42,7 +42,7 @@ export async function getTemplatePages(
     )
   ] | order(_updatedAt desc)[0]{
     coverImage,
-    product->{ printSpec },
+    "product": products[0]->{ printSpec },
     pages[]{
       layers[]{
         ...,                       // keep every native field

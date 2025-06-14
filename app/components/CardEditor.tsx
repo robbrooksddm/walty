@@ -71,11 +71,12 @@ export default function CardEditor({
   mode?: Mode
   onSave?: SaveFn
 }) {
-  if (!printSpec) {
-    printSpec = { trimWidthIn: 5, trimHeightIn: 7, bleedIn: 0.125, dpi: 300 }
+  if (printSpec) {
+    setPrintSpec(printSpec)
+    console.log('CardEditor received spec', printSpec)
+  } else {
+    console.warn('CardEditor missing printSpec')
   }
-  setPrintSpec(printSpec)
-  console.log('CardEditor received spec', printSpec)
   /* 1 ─ hydrate Zustand once ------------------------------------- */
   useEffect(() => {
     useEditor.getState().setPages(
