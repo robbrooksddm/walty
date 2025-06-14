@@ -121,6 +121,9 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Backspace") e.stopPropagation();
+            }}
             placeholder="Search fonts"
             className="mb-1 w-full rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400/50"
           />
