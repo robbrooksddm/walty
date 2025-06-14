@@ -558,8 +558,8 @@ useEffect(() => {
     croppingRef.current = state
     onCroppingChange?.(state)
   })
-  cropToolRef.current = crop
-  ;(fc as any)._cropTool = crop
+  cropToolRef.current = crop;
+  ;(fc as any)._cropTool = crop;
   (fc as any)._syncLayers = () => syncLayersFromCanvas(fc, pageIdx);
 
   // double‑click on an <image> starts cropping
