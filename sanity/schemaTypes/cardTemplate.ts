@@ -257,13 +257,4 @@ export default defineType({
       of: [{type: 'reference', to: [{type: 'relation'}]}],
     }),
   ],
-
-  /* —— publish guard —————————————————— */
-  validation: Rule =>
-    Rule.custom((doc: any) => {
-      if (doc.isLive && (!doc.products || doc.products.length === 0)) {
-        return 'Cannot publish: add at least one product and keep “Visible in store?” ON'
-      }
-      return true
-    }),
 })
