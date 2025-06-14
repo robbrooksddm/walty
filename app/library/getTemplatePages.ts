@@ -44,7 +44,7 @@ export async function getTemplatePages(
   ] | order(_updatedAt desc)[0]{
     coverImage,
     previewSpec,
-    "product": products[0]->{ printSpec-> },
+    "product": products[0]->{ "printSpec": coalesce(printSpec->, printSpec) },
     pages[]{
       layers[]{
         ...,                       // keep every native field
@@ -79,7 +79,7 @@ console.log(
   '\n',
 );
 
-  const spec = raw?.product?.printSpec as PrintSpec | undefined
+  const spec = (raw?.product?.printSpec || undefined) as PrintSpec | undefined
   const previewSpec = raw?.previewSpec as PreviewSpec | undefined
 
   const pagesOut = names.map((name, i) => ({
