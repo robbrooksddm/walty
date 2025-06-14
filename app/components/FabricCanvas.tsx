@@ -493,6 +493,12 @@ useEffect(() => {
     backgroundColor       : '#fff',
     preserveObjectStacking: true,
   });
+
+  const ctxMenu = (e: MouseEvent) => {
+    e.preventDefault();
+    setMenuPos({ x: e.clientX, y: e.clientY });
+  };
+  fc.upperCanvasEl.addEventListener('contextmenu', ctxMenu);
   /* --- keep Fabric’s wrapper the same size as the visible preview --- */
   const container = canvasRef.current!.parentElement as HTMLElement | null;
   if (container) {
@@ -769,6 +775,7 @@ window.addEventListener('keydown', onKey)
   fcRef.current = fc; onReady(fc)
 
     return () => {
+      fc.upperCanvasEl.removeEventListener('contextmenu', ctxMenu)
       window.removeEventListener('keydown', onKey)
       if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
       window.removeEventListener('scroll', updateOffset)
@@ -992,10 +999,6 @@ img.on('mouseup', () => {
         ref={canvasRef}
         width={PREVIEW_W}
         height={PREVIEW_H}
-        onContextMenu={e => {
-          e.preventDefault()
-          setMenuPos({ x: e.clientX, y: e.clientY })
-        }}
         style={{ width: PREVIEW_W, height: PREVIEW_H }}   // lock CSS size
         className="border shadow rounded"
       />
