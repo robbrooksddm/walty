@@ -72,7 +72,6 @@ export default function CardEditor({
   onSave?: SaveFn
 }) {
   if (!printSpec) {
-    console.warn('CardEditor missing printSpec – using Classic fallback')
     printSpec = { trimWidthIn: 5, trimHeightIn: 7, bleedIn: 0.125, dpi: 300 }
   }
   setPrintSpec(printSpec)
