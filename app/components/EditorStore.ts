@@ -3,16 +3,31 @@
  * 2025-06-15 • adds: undo / redo that stay in sync with Sanity
  *********************************************************************/
 import { create } from 'zustand'
-import type { Layer, TemplatePage } from './FabricCanvas'
+import type { Layer, TemplatePage, PrintSpec } from './FabricCanvas'
 
-/* ---------- shared page constants (matches FabricCanvas) --------- */
-const DPI       = 300
-const mm        = (n: number) => (n / 25.4) * DPI
-const TRIM_W_MM = 150
-const TRIM_H_MM = 214
-const BLEED_MM  = 3
-const PAGE_W    = Math.round(mm(TRIM_W_MM + BLEED_MM * 2))
-const PAGE_H    = Math.round(mm(TRIM_H_MM + BLEED_MM * 2))
+/* ---------- print specification ---------------------------------- */
+const DEFAULT_SPEC: PrintSpec = {
+  trimWidthIn : 5,
+  trimHeightIn: 7,
+  bleedIn     : 0.125,
+  dpi         : 300,
+}
+
+let currentSpec: PrintSpec = DEFAULT_SPEC
+let PAGE_W = 0
+let PAGE_H = 0
+
+const recompute = () => {
+  PAGE_W = Math.round((currentSpec.trimWidthIn + currentSpec.bleedIn * 2) * currentSpec.dpi)
+  PAGE_H = Math.round((currentSpec.trimHeightIn + currentSpec.bleedIn * 2) * currentSpec.dpi)
+}
+
+export const setEditorSpec = (spec: PrintSpec) => {
+  currentSpec = spec
+  recompute()
+}
+
+recompute()
 
 /* ---------- helpers ------------------------------------------------ */
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v))

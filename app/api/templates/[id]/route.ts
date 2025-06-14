@@ -9,18 +9,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sanityWriteClient as sanity } from '@/sanity/lib/client'
 import { toSanity } from '@/app/library/layerAdapters'
+import type { PrintSpec } from '@/app/components/FabricCanvas'
 
 const FALLBACK_NAMES = ['front', 'inner-L', 'inner-R', 'back'] as const
 
 /* ------------------------------------------------------------------ */
 /* shared helper – normalises the page array                           */
 /* ------------------------------------------------------------------ */
-function normalisePages(pagesRaw: any[]): { name: string; layers: any[] }[] {
+function normalisePages(
+  pagesRaw: any[],
+  spec: PrintSpec,
+): { name: string; layers: any[] }[] {
   return pagesRaw.map((p, i) => ({
     name:   typeof p?.name === 'string' && p.name.trim()
               ? p.name.trim()
               : FALLBACK_NAMES[i] ?? `page-${i}`,
-    layers: Array.isArray(p?.layers) ? p.layers.map(toSanity) : [],
+    layers: Array.isArray(p?.layers) ? p.layers.map(l => toSanity(l, spec)) : [],
   }))
 }
 
@@ -50,7 +54,18 @@ export async function PATCH(
       )
     }
 
-    const sanePages = normalisePages(pages)
+    const specRes = await sanity.fetch<{spec: PrintSpec | null}>(
+      `*[_type=="cardTemplate" && _id==$id][0]{"spec":products[0]->printSpec}`,
+      { id: params.id }
+    )
+    const spec = specRes?.spec || {
+      trimWidthIn : 5,
+      trimHeightIn: 7,
+      bleedIn     : 0.125,
+      dpi         : 300,
+    }
+
+    const sanePages = normalisePages(pages, spec)
     /* dev-log AFTER validation, so the console is tidy */
     console.log('▶ sanePages →', JSON.stringify(sanePages, null, 2))
 

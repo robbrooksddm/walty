@@ -60,7 +60,10 @@ const mm = (n: number) => (n / 25.4) * currentSpec.dpi
 
 export const pageW = () => PAGE_W
 export const pageH = () => PAGE_H
-export const EXPORT_MULT = () => 1 / SCALE
+export const EXPORT_MULT = () => {
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+  return (1 / SCALE) / dpr
+}
 
 // 4 CSS-px padding used by the hover outline
 const dash = (gap: number) => [gap / SCALE, (gap - 2) / SCALE];
@@ -747,7 +750,7 @@ window.addEventListener('keydown', onKey)
     /* bottom ➜ top keeps original z-order */
     for (let idx = 0; idx < page.layers.length; idx++) {
       const raw = page.layers[idx]
-      const ly: Layer | null = (raw as any).type ? raw as Layer : fromSanity(raw)
+      const ly: Layer | null = (raw as any).type ? raw as Layer : fromSanity(raw, currentSpec)
       if (!ly) continue
 
       if (ly.leftPct != null) ly.x = (ly.leftPct / 100) * PAGE_W

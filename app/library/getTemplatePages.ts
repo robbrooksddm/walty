@@ -77,15 +77,16 @@ console.log(
   '\n',
 );
 
+  const spec = raw?.product?.printSpec as PrintSpec | undefined
+
   const pagesOut = names.map((name, i) => ({
     name,
     layers: (pages[i]?.layers ?? [])
-      .map(fromSanity)
+      .map(l => fromSanity(l, spec))
       .filter(Boolean),
   })) as TemplatePage[]
 
   const coverImage = raw?.coverImage ? urlFor(raw.coverImage).url() : undefined
-  const spec = raw?.product?.printSpec as PrintSpec | undefined
 
   return { pages: pagesOut, coverImage, spec }
 }
