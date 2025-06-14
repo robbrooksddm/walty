@@ -132,9 +132,16 @@ export default function CardEditor({
   const updateThumbFromCanvas = (idx: number, fc: fabric.Canvas) => {
     try {
       fc.renderAll()
-      console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
-      console.log('Expected page px', pageW(), pageH())
-      console.log('Export multiplier', EXPORT_MULT())
+      const previewW = (fc as any).lowerCanvasEl?.clientWidth || 0
+      const canvasW  = fc.getWidth()
+      const mult     = canvasW / previewW
+      console.log('thumb export', {
+        previewWidth: previewW,
+        canvasWidth : canvasW,
+        pageW       : pageW(),
+        multiplier  : mult,
+        expectedMult: EXPORT_MULT(),
+      })
       const url = fc.toDataURL({
         format: 'jpeg',
         quality: 0.8,
@@ -293,16 +300,23 @@ const handlePreview = () => {
     const tool = (fc as any)._cropTool as CropTool | undefined
     if (tool?.isActive) tool.commit()
     fc.renderAll()
-    console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
-    console.log('Expected page px', pageW(), pageH())
-    console.log('Export multiplier', EXPORT_MULT())
-    const ratio = fc.getWidth() / pageW()
+    const previewW = (fc as any).lowerCanvasEl?.clientWidth || 0
+    const canvasW  = fc.getWidth()
+    const mult     = canvasW / previewW
+    console.log('preview export', {
+      previewWidth: previewW,
+      canvasWidth : canvasW,
+      pageW       : pageW(),
+      multiplier  : mult,
+      expectedMult: EXPORT_MULT(),
+    })
+    const ratio = canvasW / pageW()
     if (ratio < 0.95 || ratio > 1.05) {
       console.warn('preview multiplier off', ratio)
       imgs[i] = ''
       return
     }
-    console.log('outgoing preview', fc.getWidth(), fc.getHeight(), EXPORT_MULT())
+    console.log('outgoing preview', canvasW, fc.getHeight(), EXPORT_MULT())
     imgs[i] = fc.toDataURL({
       format: 'png',
       quality: 1,
@@ -328,16 +342,23 @@ const handleProof = async (sku: string) => {
   canvasMap.forEach(fc => {
     if (!fc) { pageImages.push(''); return }
     fc.renderAll()
-    console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
-    console.log('Expected page px', pageW(), pageH())
-    console.log('Export multiplier', EXPORT_MULT())
-    const ratio = fc.getWidth() / pageW()
+    const previewW = (fc as any).lowerCanvasEl?.clientWidth || 0
+    const canvasW  = fc.getWidth()
+    const mult     = canvasW / previewW
+    console.log('proof export', {
+      previewWidth: previewW,
+      canvasWidth : canvasW,
+      pageW       : pageW(),
+      multiplier  : mult,
+      expectedMult: EXPORT_MULT(),
+    })
+    const ratio = canvasW / pageW()
     if (ratio < 0.95 || ratio > 1.05) {
       console.warn('proof multiplier off', ratio)
       pageImages.push('')
       return
     }
-    console.log('outgoing', sku, fc.getWidth(), fc.getHeight(), EXPORT_MULT())
+    console.log('outgoing', sku, canvasW, fc.getHeight(), EXPORT_MULT())
     pageImages.push(
       fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT() })
     )
