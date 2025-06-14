@@ -747,7 +747,7 @@ window.addEventListener('keydown', onKey)
     /* bottom ➜ top keeps original z-order */
     for (let idx = 0; idx < page.layers.length; idx++) {
       const raw = page.layers[idx]
-      const ly: Layer | null = (raw as any).type ? raw as Layer : fromSanity(raw)
+      const ly: Layer | null = (raw as any).type ? raw as Layer : fromSanity(raw, currentSpec)
       if (!ly) continue
 
       if (ly.leftPct != null) ly.x = (ly.leftPct / 100) * PAGE_W

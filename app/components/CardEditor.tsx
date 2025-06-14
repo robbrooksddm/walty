@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useLayoutEffect } from 'react'
 import { fabric }                       from 'fabric'
 
-import { useEditor }                    from './EditorStore'
+import { useEditor, setEditorSpec }     from './EditorStore'
 if (typeof window !== 'undefined') (window as any).useEditor = useEditor // debug helper
 
 import LayerPanel                       from './LayerPanel'
@@ -73,6 +73,7 @@ export default function CardEditor({
 }) {
   if (printSpec) {
     setPrintSpec(printSpec)
+    setEditorSpec(printSpec)
     console.log('CardEditor received spec', printSpec)
   } else {
     console.warn('CardEditor missing printSpec')

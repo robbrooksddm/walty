@@ -6,16 +6,21 @@
  *********************************************************************/
 
 import { urlFor }     from '@/sanity/lib/image'
-import type { Layer } from '@/app/components/FabricCanvas'
+import type { Layer, PrintSpec } from '@/app/components/FabricCanvas'
 
-/* ---------- page constants (matches FabricCanvas) ---------------- */
-const DPI       = 300
-const mm        = (n: number) => (n / 25.4) * DPI
-const TRIM_W_MM = 150
-const TRIM_H_MM = 214
-const BLEED_MM  = 3
-const PAGE_W    = Math.round(mm(TRIM_W_MM + BLEED_MM * 2))
-const PAGE_H    = Math.round(mm(TRIM_H_MM + BLEED_MM * 2))
+
+/* ---------- helpers ---------------------------------------------- */
+const DEFAULT_SPEC: PrintSpec = {
+  trimWidthIn : 5,
+  trimHeightIn: 7,
+  bleedIn     : 0.125,
+  dpi         : 300,
+}
+
+const pageDims = (spec: PrintSpec = DEFAULT_SPEC) => ({
+  PAGE_W: Math.round((spec.trimWidthIn + spec.bleedIn * 2) * spec.dpi),
+  PAGE_H: Math.round((spec.trimHeightIn + spec.bleedIn * 2) * spec.dpi),
+})
 
 /* ───────── helpers ──────────────────────────────────────────────── */
 function isSanityRef(src:any): src is { _type:'image'; asset:{ _ref:string } } {
@@ -30,8 +35,9 @@ function isSanityRef(src:any): src is { _type:'image'; asset:{ _ref:string } } {
 /* ================================================================== */
 /* 1 ▸ Sanity → Fabric (fromSanity)                                   */
 /* ================================================================== */
-export function fromSanity(raw: any): Layer | null {
+export function fromSanity(raw: any, spec: PrintSpec = DEFAULT_SPEC): Layer | null {
   if (!raw?._type) return null
+  const { PAGE_W, PAGE_H } = pageDims(spec)
 
 /* ① AI face-swap placeholder ---------------------------------- */
 if (raw._type === 'aiLayer') {
@@ -125,7 +131,8 @@ if (raw._type === 'aiLayer') {
 /* ================================================================== */
 /* 2 ▸ Fabric → Sanity (toSanity)                                     */
 /* ================================================================== */
-export function toSanity(layer: Layer | any): any {
+export function toSanity(layer: Layer | any, spec: PrintSpec = DEFAULT_SPEC): any {
+  const { PAGE_W, PAGE_H } = pageDims(spec)
 
 /* ── keep AI placeholder as-is — strip all editor-only props ───────── */
 if (layer?._type === 'aiLayer') {
