@@ -182,8 +182,14 @@ export default function CardEditor({
   /* track cropping state per page */
   const [cropping, setCropping] =
     useState<[boolean, boolean, boolean, boolean]>([false, false, false, false])
-  const handleCroppingChange = (idx: number, state: boolean) =>
-    setCropping(prev => { const next = [...prev] as typeof prev; next[idx] = state; return next })
+  const handleCroppingChange = (idx: number, state: boolean) => {
+    setCropping(prev => {
+      const next = [...prev] as typeof prev
+      next[idx] = state
+      return next
+    })
+    if (idx === activeIdx) setCropMode(state)
+  }
 
   const isCropMode   = useEditor(s => s.isCropMode)
   const setCropMode  = useEditor(s => s.setCropMode)
@@ -303,6 +309,7 @@ const exitCrop = (commit: boolean) => {
 
 const setCropRatio = (r: number | null) => {
   const fc = canvasMap[activeIdx]
+  if (!fc) return
   const tool = (fc as any)?._cropTool as CropTool | undefined
   const frame = tool ? (tool as any).frame as fabric.Group | null : null
   const img = tool ? (tool as any).img as fabric.Image | null : null
