@@ -371,15 +371,31 @@ const setCropRatio = (r: number | null) => {
     if (cur > r) w = h * r
     else h = w / r
   }
+  if (img) {
+    const maxW = img.getScaledWidth()
+    const maxH = img.getScaledHeight()
+    w = Math.min(w, maxW)
+    h = Math.min(h, maxH)
+  }
   const rect = frame.item(0) as fabric.Rect
   rect.set({ left: 0, top: 0, width: w, height: h, scaleX: 1, scaleY: 1 })
+  let left = cX - w / 2
+  let top = cY - h / 2
+  if (img) {
+    const minL = img.left!
+    const minT = img.top!
+    const maxL = minL + img.getScaledWidth() - w
+    const maxT = minT + img.getScaledHeight() - h
+    left = Math.min(Math.max(left, minL), maxL)
+    top = Math.min(Math.max(top, minT), maxT)
+  }
   frame.set({
     width: w,
     height: h,
     scaleX: 1,
     scaleY: 1,
-    left: cX - w / 2,
-    top: cY - h / 2,
+    left,
+    top,
   })
   ;(frame as any)._calcBounds?.()
   ;(frame as any)._updateObjectsCoords?.()
