@@ -397,8 +397,6 @@ const setCropRatio = (r: number | null) => {
     left,
     top,
   })
-  ;(frame as any)._calcBounds?.()
-  ;(frame as any)._updateObjectsCoords?.()
   rect.setCoords()
   frame.setCoords()
   ;(tool as any).clampFrame?.()
