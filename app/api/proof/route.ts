@@ -10,12 +10,6 @@ interface Overlay extends sharp.OverlayOptions {
 
 export const dynamic = 'force-dynamic'
 
-const SPECS = {
-  'greeting-card-giant'  : { trimWidthIn: 9, trimHeightIn: 11.6667, bleedIn: 0.125, dpi: 300 },
-  'greeting-card-classic': { trimWidthIn: 5, trimHeightIn: 7, bleedIn: 0.125, dpi: 300 },
-  'greeting-card-mini'   : { trimWidthIn: 4, trimHeightIn: 6, bleedIn: 0.125, dpi: 300 },
-} as const
-
 function esc(s: string) {
   return s.replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]!))
 }
@@ -60,42 +54,36 @@ export async function POST(req: NextRequest) {
           { sku },
         )
       : null
-    const spec = specRes?.spec ?? null
-    const fallback = sku ? SPECS[sku as keyof typeof SPECS] : undefined
-    const finalSpec = spec ?? fallback
-    if (!finalSpec) {
-      return NextResponse.json({ error: 'spec not found' }, { status: 404 })
+    const finalSpec = specRes?.spec ?? null
+    if (
+      !finalSpec ||
+      !finalSpec.spreadLayout ||
+      typeof finalSpec.spreadLayout.spreadWidth !== 'number' ||
+      typeof finalSpec.spreadLayout.spreadHeight !== 'number'
+    ) {
+      return NextResponse.json(
+        { error: `Print spec not found/invalid for SKU ${sku}` },
+        { status: 500 },
+      )
     }
 
     const px = (n: number) => Math.round(n * finalSpec.dpi)
     const pageW = px(finalSpec.trimWidthIn + finalSpec.bleedIn * 2)
     const pageH = px(finalSpec.trimHeightIn + finalSpec.bleedIn * 2)
 
-    const defaultPanels = [
-      { name: 'front',   order: 0, bleed: { top: true, right: true, bottom: true, left: true } },
-      { name: 'inner-L', order: 1, bleed: { top: true, right: true, bottom: true, left: true } },
-      { name: 'inner-R', order: 2, bleed: { top: true, right: true, bottom: true, left: true } },
-      { name: 'back',    order: 3, bleed: { top: true, right: true, bottom: true, left: true } },
-    ]
-
-    const layout = finalSpec.spreadLayout ?? {
-      spreadWidth : (finalSpec.trimWidthIn + finalSpec.bleedIn * 2) * 2,
-      spreadHeight: (finalSpec.trimHeightIn + finalSpec.bleedIn * 2) * 2,
-      panels: defaultPanels,
-    }
-
-    const panels = Array.isArray(layout.panels) && layout.panels.length === 4
+    const layout = finalSpec.spreadLayout
+    const panels = Array.isArray(layout.panels)
       ? [...layout.panels].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-      : defaultPanels
+      : []
 
     const sheetW = px(layout.spreadWidth)
     const sheetH = px(layout.spreadHeight)
 
     const edge = {
-      top:    panels.slice(0, 2).some(p => p.bleed?.top !== false),
-      bottom: panels.slice(2).some(p => p.bleed?.bottom !== false),
-      left:   [panels[0], panels[2]].some(p => p.bleed?.left !== false),
-      right:  [panels[1], panels[3]].some(p => p.bleed?.right !== false),
+      top:    panels.slice(0, 2).some(p => p?.bleed?.top !== false),
+      bottom: panels.slice(2).some(p => p?.bleed?.bottom !== false),
+      left:   [panels[0], panels[2]].some(p => p?.bleed?.left !== false),
+      right:  [panels[1], panels[3]].some(p => p?.bleed?.right !== false),
     }
 
     const pageMap: Record<string, sharp.Sharp> = {}
