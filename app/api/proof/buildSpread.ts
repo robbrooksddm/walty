@@ -47,14 +47,13 @@ export async function buildSpread(
 
   const baseW = px(trimWidthIn + bleedIn * 2)
   const baseH = px(trimHeightIn + bleedIn * 2)
-  const sheetW = px(spreadLayout.spreadWidth + bleedIn * 2)
-  const sheetH = px(spreadLayout.spreadHeight + bleedIn * 2)
 
   const panels = [...spreadLayout.panels].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
   const crops: Buffer[] = []
   let pageWpx = 0
   let pageHpx = 0
+  const dims: { width: number; height: number }[] = []
 
   for (let i = 0; i < panels.length && i < pages.length; i++) {
     const panel = panels[i]
@@ -73,11 +72,11 @@ export async function buildSpread(
       .toBuffer()
     const meta = await sharp(outBuf).metadata()
 
-    console.log(`  extract ${panel.name}: ${width}×${height}`)
+    console.log(`  extract ${panel.name}: ${meta.width ?? width}×${meta.height ?? height}`)
 
     if (!pageWpx) {
-      pageWpx = width
-      pageHpx = height
+      pageWpx = meta.width ?? width
+      pageHpx = meta.height ?? height
     } else if (
       (meta.width && meta.width > pageWpx) ||
       (meta.height && meta.height > pageHpx)
@@ -88,7 +87,17 @@ export async function buildSpread(
     }
 
     crops[i] = outBuf
+    dims[i] = { width: meta.width ?? width, height: meta.height ?? height }
   }
+
+  const hasLayout =
+    spreadLayout &&
+    typeof spreadLayout.spreadWidth === 'number' &&
+    typeof spreadLayout.spreadHeight === 'number'
+  const sheetW = hasLayout
+    ? px(spreadLayout.spreadWidth)
+    : dims.reduce((acc, d) => acc + d.width, 0)
+  const sheetH = hasLayout ? px(spreadLayout.spreadHeight) : pageHpx
 
   console.log(`▶ buildSpread ${sheetW}×${sheetH}`)
 
@@ -102,12 +111,15 @@ export async function buildSpread(
   }).toColourspace('srgb')
 
   const comps: sharp.OverlayOptions[] = []
+  let currentX = 0
   for (let i = 0; i < panels.length && i < crops.length; i++) {
     const buf = crops[i]
     if (!buf) continue
-    const x = i * pageWpx
+    const width = dims[i]?.width ?? pageWpx
+    const x = currentX
     comps.push({ input: buf, left: x, top: 0 })
     console.log(`  paste ${panels[i].name} → [${x}, 0]`)
+    currentX += width
   }
 
   out = out.composite(comps)
