@@ -39,7 +39,6 @@ export async function POST(req: NextRequest) {
             trimHeightIn: number
             bleedIn: number
             dpi: number
-            panelOrder?: string[]
             spreadLayout?: {
               spreadWidth: number
               spreadHeight: number
@@ -56,7 +55,7 @@ export async function POST(req: NextRequest) {
             }
           } | null
         }>(
-          `*[_type=="cardProduct" && slug.current==$sku][0]{"spec":coalesce(printSpec->, printSpec){..., panelOrder}}`,
+          `*[_type=="cardProduct" && slug.current==$sku][0]{"spec":coalesce(printSpec->, printSpec)}`,
           { sku },
         )
       : null

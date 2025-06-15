@@ -57,7 +57,7 @@ export async function getTemplatePages(
       _id,
       title,
       "slug": slug.current,
-      "printSpec": coalesce(printSpec->, printSpec){..., panelOrder},
+      "printSpec": coalesce(printSpec->, printSpec),
       showSafeArea
     },
     pages[]{

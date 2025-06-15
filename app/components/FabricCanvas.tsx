@@ -23,7 +23,6 @@ export interface PrintSpec {
   trimHeightIn: number
   bleedIn: number
   dpi: number
-  panelOrder?: string[]
   spreadLayout?: {
     spreadWidth: number
     spreadHeight: number
@@ -51,7 +50,6 @@ let currentSpec: PrintSpec = {
   trimHeightIn: 7,
   bleedIn: 0.125,
   dpi: 300,
-  panelOrder: ['Outer rear', 'Outer front', 'Inside front', 'Inside back'],
 }
 
 let currentPreview: PreviewSpec = {
