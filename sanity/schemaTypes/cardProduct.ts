@@ -53,6 +53,15 @@ export default defineType({
     }),
 
     defineField({
+      name: 'showSafeArea',
+      type: 'boolean',
+      title: 'Show safe-area overlay',
+      initialValue: true,
+      description: 'Display the safe-area guide when editing templates',
+      validation: r => r.required(),
+    }),
+
+    defineField({
       name: 'pageCount',
       type: 'number',
       title: 'Pages',

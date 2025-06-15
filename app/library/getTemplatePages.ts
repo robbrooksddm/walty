@@ -22,6 +22,7 @@ export interface TemplateProduct {
   slug: string
   title: string
   printSpec?: PrintSpec
+  showSafeArea?: boolean
 }
 
 export interface TemplateData {
@@ -56,7 +57,8 @@ export async function getTemplatePages(
       _id,
       title,
       "slug": slug.current,
-      "printSpec": coalesce(printSpec->, printSpec)
+      "printSpec": coalesce(printSpec->, printSpec),
+      showSafeArea
     },
     pages[]{
       layers[]{

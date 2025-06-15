@@ -13,6 +13,7 @@ import FabricCanvas, {
   EXPORT_MULT,
   setPrintSpec,
   setPreviewSpec,
+  setSafeInset,
   PrintSpec,
   PreviewSpec,
   previewW,
@@ -96,6 +97,29 @@ export default function CardEditor({
   if (previewSpec) {
     setPreviewSpec(previewSpec)
   }
+  useEffect(() => {
+    if (!printSpec || !previewSpec || !products.length) return
+    const baseW = printSpec.trimWidthIn + printSpec.bleedIn * 2
+    const baseH = printSpec.trimHeightIn + printSpec.bleedIn * 2
+    const baseRatio = baseW / baseH
+    const ratios = products
+      .filter(p => p.showSafeArea)
+      .map(p => p.printSpec)
+      .filter(Boolean)
+      .map(s => (s!.trimWidthIn + s!.bleedIn * 2) / (s!.trimHeightIn + s!.bleedIn * 2))
+    if (!ratios.length) return
+    const minRatio = Math.min(...ratios)
+    let safeW = baseW
+    let safeH = baseH
+    if (minRatio < baseRatio) {
+      safeW = baseH * minRatio
+    } else if (minRatio > baseRatio) {
+      safeH = baseW / minRatio
+    }
+    const insetX = (baseW - safeW) / 2 + printSpec.bleedIn + 0.125
+    const insetY = (baseH - safeH) / 2 + printSpec.bleedIn + 0.125
+    setSafeInset(insetX, insetY)
+  }, [printSpec, previewSpec, products])
   /* 1 ─ hydrate Zustand once ------------------------------------- */
   useEffect(() => {
     useEditor.getState().setPages(

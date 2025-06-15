@@ -43,6 +43,11 @@ let currentPreview: PreviewSpec = {
   previewHeightPx: 580,
 }
 
+let safeInsetXIn = 0
+let safeInsetYIn = 0
+let SAFE_X = 0
+let SAFE_Y = 0
+
 function recompute() {
   PAGE_W = Math.round((currentSpec.trimWidthIn + currentSpec.bleedIn * 2) * currentSpec.dpi)
   PAGE_H = Math.round((currentSpec.trimHeightIn + currentSpec.bleedIn * 2) * currentSpec.dpi)
@@ -50,11 +55,19 @@ function recompute() {
   PREVIEW_H = currentPreview.previewHeightPx
   SCALE = PREVIEW_W / PAGE_W
   PAD = 4 / SCALE
+  SAFE_X = Math.round(safeInsetXIn * currentSpec.dpi)
+  SAFE_Y = Math.round(safeInsetYIn * currentSpec.dpi)
 }
 
 export const setPrintSpec = (spec: PrintSpec) => {
   console.log('FabricCanvas setSpec', spec.trimWidthIn, spec.trimHeightIn)
   currentSpec = spec
+  recompute()
+}
+
+export const setSafeInset = (xIn: number, yIn: number) => {
+  safeInsetXIn = xIn
+  safeInsetYIn = yIn
   recompute()
 }
 
@@ -369,15 +382,16 @@ const addGuides = (fc: fabric.Canvas, mode: Mode) => {
       { _guide: name },
     )
 
-  /* responsive safe-zone */
-  const safeX = PAGE_W * 0.1
-  const safeY = PAGE_H * 0.05
-  ;[
-    mk([safeX, safeY, PAGE_W - safeX, safeY], 'safe-zone', '#34d399'),
-    mk([PAGE_W - safeX, safeY, PAGE_W - safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
-    mk([PAGE_W - safeX, PAGE_H - safeY, safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
-    mk([safeX, PAGE_H - safeY, safeX, safeY], 'safe-zone', '#34d399'),
-  ].forEach(l => fc.add(l))
+  if (SAFE_X > 0 || SAFE_Y > 0) {
+    const safeX = SAFE_X
+    const safeY = SAFE_Y
+    ;[
+      mk([safeX, safeY, PAGE_W - safeX, safeY], 'safe-zone', '#34d399'),
+      mk([PAGE_W - safeX, safeY, PAGE_W - safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
+      mk([PAGE_W - safeX, PAGE_H - safeY, safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
+      mk([safeX, PAGE_H - safeY, safeX, safeY], 'safe-zone', '#34d399'),
+    ].forEach(l => fc.add(l))
+  }
 
   if (mode === 'staff') {
     const bleed = mm(currentSpec.bleedIn * 25.4)
