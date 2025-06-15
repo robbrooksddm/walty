@@ -97,9 +97,10 @@ console.log(
   '\n▶ getTemplatePages raw =\n',
   JSON.stringify(raw, null, 2),
   '\n',
-);
+)
 
   const spec = (raw?.products?.[0]?.printSpec || undefined) as PrintSpec | undefined
+  console.log('\u25BA getTemplatePages spec =', JSON.stringify(spec, null, 2))
   const previewSpec = raw?.previewSpec as PreviewSpec | undefined
 
   const pagesOut = names.map((name, i) => ({

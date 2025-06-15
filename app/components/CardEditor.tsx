@@ -90,7 +90,7 @@ export default function CardEditor({
   if (printSpec) {
     setPrintSpec(printSpec)
     setEditorSpec(printSpec)
-    console.log('CardEditor received spec', printSpec)
+    console.log('\u25BA CardEditor spec =', JSON.stringify(printSpec, null, 2))
   } else {
     console.warn('CardEditor missing printSpec')
   }
