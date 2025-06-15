@@ -19,6 +19,7 @@ export class CropTool {
   private frame   : fabric.Group | null = null
   private masks   : fabric.Rect[] = [];      // 4‑piece dim overlay
   private frameScaling = false;              // TRUE only while frame is being resized
+  private ratio: number | null = null
   /** original bitmap state before cropping */
   private orig: { left:number; top:number; cropX:number; cropY:number; width:number; height:number; } | null = null;
   /** clean‑up callbacks to run on `teardown()` */
@@ -30,6 +31,19 @@ export class CropTool {
     this.SCALE   = scale
     this.SEL     = selColour
     this.onChange= onChange
+  }
+
+  public setRatio (r: number | null) {
+    this.ratio = r
+    if (this.frame) {
+      this.fc.uniformScaling   = r !== null
+      this.frame.lockScalingX  = false
+      this.frame.lockScalingY  = false
+      this.frame.selectable    = true
+      this.frame.evented       = true
+      this.frame.hasControls   = true
+      this.fc.setActiveObject(this.frame)
+    }
   }
 
   /* ─────────────── public API ──────────────────────────────────── */
@@ -80,8 +94,9 @@ export class CropTool {
                   h: imgEl.naturalHeight || img.height! }
     const { cropX=0, cropY=0, width=nat.w, height=nat.h } = img
 
-    const prevLockUniScaling = img.lockUniScaling;
-    const prevCenteredScaling = img.centeredScaling;
+    const prevLockUniScaling = img.lockUniScaling
+    const prevCenteredScaling = img.centeredScaling
+    const prevHasBorders = img.hasBorders
     img.set({
       left  : (img.left ?? 0) - cropX * (img.scaleX ?? 1),
       top   : (img.top  ?? 0) - cropY * (img.scaleY ?? 1),
@@ -100,6 +115,7 @@ export class CropTool {
     this.cleanup.push(() => {
       img.lockUniScaling  = prevLockUniScaling
       img.centeredScaling = prevCenteredScaling
+      img.hasBorders      = prevHasBorders
     })
     /* hide the rotate ("mtr") and side controls while cropping */
     img.setControlsVisibility({
@@ -107,9 +123,9 @@ export class CropTool {
       ml : false, mr : false,      // hide middle-left / middle-right
       mt : false, mb : false       // hide middle-top / middle-bottom
     });
-    img.hasBorders  = true;            // always show border in crop mode
-    img.borderColor = this.SEL;        // same colour as crop window
-    img.borderDashArray = [];          // solid border
+    img.hasBorders  = false
+    img.borderColor = this.SEL          // keep consistent style if shown
+    img.borderDashArray = []           // solid border
 
     /* ② persistent crop window */
     const fx = (img.left ?? 0) + cropX * (img.scaleX ?? 1)
@@ -200,74 +216,7 @@ export class CropTool {
     this.masks.forEach(r => this.fc.add(r));
     // make sure crop elements stay on top
     this.frame.bringToFront();
-    const updateMasks = () => {
-      if (!this.frame) return;
-
-      /* -----------------------------------------------------------
-       * Coordinate spaces refresher
-       *   • Object positions (left/top) are in “world” coords.
-       *   • The viewport (what you actually see) is the rectangle
-       *     whose top‑left world‑coord is
-       *         viewLeft = -vpt[4] / vpt[0],
-       *         viewTop  = -vpt[5] / vpt[3].
-       *   • Its size in world units is canvasPx / zoom.
-       * ----------------------------------------------------------- */
-      const vpt = this.fc.viewportTransform || [1, 0, 0, 1, 0, 0];
-      const zoom = vpt[0] || 1;
-
-      const viewLeft = -vpt[4] / zoom;
-      const viewTop  = -vpt[5] / zoom;
-
-      const w = this.fc.getWidth()  / zoom;
-      const h = this.fc.getHeight() / zoom;
-
-      /* -----------------------------------------------------------
-       * Frame bounds in world (model) coordinates
-       *  – `left`/`top` are already world coords
-       *  – width/height must be multiplied by current scales
-       * ----------------------------------------------------------- */
-      const fL = this.frame.left!;
-      const fT = this.frame.top!;
-      const fW = this.frame.width!  * this.frame.scaleX!;
-      const fH = this.frame.height! * this.frame.scaleY!;
-      const fR = fL + fW;
-      const fB = fT + fH;
-
-      // Helper to clamp negative dims (Fabric ignores negative width/height)
-      const clamp = (x: number) => Math.max(0, x);
-
-      /* four stripes, clockwise from top */
-      this.masks[0].set({                      // top
-        left  : viewLeft,
-        top   : viewTop,
-        width : w,
-        height: clamp(fT - viewTop),
-      });
-
-      this.masks[1].set({                      // right
-        left  : fR,
-        top   : fT,
-        width : clamp(viewLeft + w - fR),
-        height: fH,
-      });
-
-      this.masks[2].set({                      // bottom
-        left  : viewLeft,
-        top   : fB,
-        width : w,
-        height: clamp(viewTop + h - fB),
-      });
-
-      this.masks[3].set({                      // left
-        left  : viewLeft,
-        top   : fT,
-        width : clamp(fL - viewLeft),
-        height: fH,
-      });
-
-      this.masks.forEach(m => m.setCoords());
-    };
-    updateMasks();
+    this.updateMasks();
 
     // Enforce minimum scale from the outset
     this.clamp(true);
@@ -370,7 +319,7 @@ export class CropTool {
         this.frame.hasControls = true;
         this.frame.setCoords();
       }
-      updateMasks();
+      this.updateMasks();
       // keep the mask in front of the photo for consistent dimming
       this.masks.forEach(m => m.bringToFront?.());
       this.frame?.bringToFront();
@@ -463,7 +412,7 @@ export class CropTool {
 
       this.clamp();                 // keep photo covering the window
       this.img.setCoords();
-      updateMasks();
+      this.updateMasks();
       // keep dim overlay & frame visible over the photo
       this.masks.forEach(m => m.bringToFront?.());
       this.frame?.bringToFront();
@@ -514,7 +463,7 @@ export class CropTool {
       if (t === this.img) this.clamp();          // keep entire photo filling the frame
       if (this.img)   this.img.hasControls = true;
       if (this.frame) this.frame.hasControls = true;
-      updateMasks();
+      this.updateMasks();
       this.fc.requestRenderAll();
     };
 
@@ -548,9 +497,9 @@ export class CropTool {
       .on('moving', () => {
         this.clampFrame();            // keep frame inside bitmap
         this.frame!.setCoords();
-        updateMasks(); 
+        this.updateMasks(); 
       })
-      .on('scaling', () => {
+      .on('scaling', (e: fabric.IEvent) => {
         // keep the pre‑determined opposite edges fixed
         const f = this.frame!;
         const w = f.width!  * f.scaleX!;
@@ -561,7 +510,7 @@ export class CropTool {
         if (anchorEdge.bottom !== undefined) f.top  = anchorEdge.bottom - h;
         this.clampFrame();            // keep window within bitmap limits
         this.frame!.setCoords();
-        updateMasks();
+        this.updateMasks();
         this.frameScaling = true;       // flag ON while corner is dragged
         // no extra requestRenderAll() – avoids double clear of contextTop    // flag ON while corner is being dragged
       })
@@ -576,7 +525,7 @@ export class CropTool {
         // restore both handle sets
         this.frame!.hasControls = true;
         if (this.img) this.img.hasControls = true;
-        updateMasks();
+        this.updateMasks();
         this.frameScaling = false;   // flag OFF once user releases the mouse
         this.fc.requestRenderAll();
       });
@@ -588,7 +537,7 @@ export class CropTool {
         // keep the photo within the crop window as it drags
         this.clamp();
         this.img!.setCoords();
-        updateMasks();        // automatic redraw already in flight
+        this.updateMasks();        // automatic redraw already in flight
       })
       .on('scaling', (e: fabric.IEvent) => {
         // defer min-size enforcement until 'scaled' to avoid jitter
@@ -647,7 +596,7 @@ export class CropTool {
         if (imgEdge.bottom !== undefined) i.top  = imgEdge.bottom - h;
 
         i.setCoords();
-        updateMasks();
+        this.updateMasks();
         this.frameScaling = true;       // ON while photo itself is scaling
         // Fabric’s own transform loop is already rendering each tick
       })
@@ -659,7 +608,7 @@ export class CropTool {
         // restore both handle sets now that the gesture is finished
         this.img!.hasControls = true;
         if (this.frame) this.frame.hasControls = true;
-        updateMasks();
+        this.updateMasks();
         this.fc.requestRenderAll();
       });
 
@@ -801,6 +750,35 @@ export class CropTool {
     img.minScaleLimit = Math.max(minSX, minSY)
     
     frame.setCoords()
+  }
+
+  private updateMasks = () => {
+    if (!this.frame) return
+
+    const vpt = this.fc.viewportTransform || [1, 0, 0, 1, 0, 0]
+    const zoom = vpt[0] || 1
+
+    const viewLeft = -vpt[4] / zoom
+    const viewTop  = -vpt[5] / zoom
+
+    const w = this.fc.getWidth()  / zoom
+    const h = this.fc.getHeight() / zoom
+
+    const fL = this.frame.left!
+    const fT = this.frame.top!
+    const fW = this.frame.width!  * this.frame.scaleX!
+    const fH = this.frame.height! * this.frame.scaleY!
+    const fR = fL + fW
+    const fB = fT + fH
+
+    const clamp = (x: number) => Math.max(0, x)
+
+    this.masks[0].set({ left:viewLeft, top:viewTop, width:w, height: clamp(fT - viewTop) })
+    this.masks[1].set({ left:fR, top:fT, width: clamp(viewLeft + w - fR), height:fH })
+    this.masks[2].set({ left:viewLeft, top:fB, width:w, height: clamp(viewTop + h - fB) })
+    this.masks[3].set({ left:viewLeft, top:fT, width: clamp(fL - viewLeft), height:fH })
+
+    this.masks.forEach(m => m.setCoords())
   }
 
     /** Minimum uniform scale so the image fully covers the crop window,

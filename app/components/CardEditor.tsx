@@ -356,24 +356,66 @@ const setCropRatio = (r: number | null) => {
   const frame = tool ? (tool as any).frame as fabric.Group | null : null
   const img = tool ? (tool as any).img as fabric.Image | null : null
   if (!tool || !tool.isActive || !frame) return
-  if (r === null || Number.isNaN(r)) {
-    frame.lockUniScaling = false
-    fc.requestRenderAll()
-    return
-  }
-  frame.lockUniScaling = true
+  const ratio = r === null || Number.isNaN(r) ? null : r
+  tool.setRatio?.(ratio)
+
   let w = frame.width! * frame.scaleX!
   let h = frame.height! * frame.scaleY!
   const cX = frame.left! + w / 2
   const cY = frame.top! + h / 2
-  const cur = w / h
-  if (Math.abs(cur - r) > 0.01) {
-    if (cur > r) w = h * r
-    else h = w / r
+
+  if (ratio !== null) {
+    const base = Math.max(w, h)
+    if (ratio >= 1) {
+      w = base
+      h = base / ratio
+    } else {
+      w = base * ratio
+      h = base
+    }
   }
-  frame.set({ width: w, height: h, scaleX: 1, scaleY: 1, left: cX - w / 2, top: cY - h / 2 })
+
+  if (img) {
+    const maxW = img.getScaledWidth()
+    const maxH = img.getScaledHeight()
+    const scale = Math.min(maxW / w, maxH / h, 1)
+    w *= scale
+    h *= scale
+  }
+
+  const rect = frame.item(0) as fabric.Rect
+  rect.set({ left: 0, top: 0, width: w, height: h, scaleX: 1, scaleY: 1 })
+  rect.setCoords()
+
+  frame.set({ width: w, height: h, scaleX: 1, scaleY: 1 })
+  const g = frame as any
+  if (g._calcBounds && g._updateObjectsCoords) {
+    g._calcBounds()
+    g._updateObjectsCoords()
+  }
+
+  let left = cX - w / 2
+  let top = cY - h / 2
+  if (img) {
+    const minL = img.left!
+    const minT = img.top!
+    const maxL = minL + img.getScaledWidth() - w
+    const maxT = minT + img.getScaledHeight() - h
+    left = Math.min(Math.max(left, minL), maxL)
+    top = Math.min(Math.max(top, minT), maxT)
+  }
+  frame.set({
+    scaleX: 1,
+    scaleY: 1,
+    left,
+    top,
+  })
+  rect.setCoords()
+  frame.setCoords()
   ;(tool as any).clampFrame?.()
   tool['clamp']?.(true)
+  ;(tool as any).updateMasks?.()
+  fc.setActiveObject(frame)
   fc.requestRenderAll()
 }
 
