@@ -374,6 +374,7 @@ const setCropRatio = (r: number | null) => {
   frame.set({ width: w, height: h, scaleX: 1, scaleY: 1, left: cX - w / 2, top: cY - h / 2 })
   ;(tool as any).clampFrame?.()
   tool['clamp']?.(true)
+  ;(tool as any).updateMasks?.()
   fc.requestRenderAll()
 }
 
