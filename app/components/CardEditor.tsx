@@ -356,24 +356,24 @@ const setCropRatio = (r: number | null) => {
   const frame = tool ? (tool as any).frame as fabric.Group | null : null
   const img = tool ? (tool as any).img as fabric.Image | null : null
   if (!tool || !tool.isActive || !frame) return
-  if (r === null || Number.isNaN(r)) {
-    frame.lockUniScaling = false
-    fc.requestRenderAll()
-    return
-  }
-  frame.lockUniScaling = true
+  const ratio = r === null || Number.isNaN(r) ? null : r
+  tool.setRatio?.(ratio)
+  frame.lockUniScaling = false
+
   let w = frame.width! * frame.scaleX!
   let h = frame.height! * frame.scaleY!
   const cX = frame.left! + w / 2
   const cY = frame.top! + h / 2
 
-  const base = Math.max(w, h)
-  if (r >= 1) {
-    w = base
-    h = base / r
-  } else {
-    w = base * r
-    h = base
+  if (ratio !== null) {
+    const base = Math.max(w, h)
+    if (ratio >= 1) {
+      w = base
+      h = base / ratio
+    } else {
+      w = base * ratio
+      h = base
+    }
   }
 
   if (img) {
@@ -403,8 +403,7 @@ const setCropRatio = (r: number | null) => {
     left,
     top,
   })
-  ;(frame as any)._calcBounds?.()
-  ;(frame as any)._updateObjectsCoords?.()
+  // refresh bounding boxes
   rect.setCoords()
   frame.setCoords()
   ;(tool as any).clampFrame?.()

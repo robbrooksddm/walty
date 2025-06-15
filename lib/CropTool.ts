@@ -19,6 +19,8 @@ export class CropTool {
   private frame   : fabric.Group | null = null
   private masks   : fabric.Rect[] = [];      // 4‑piece dim overlay
   private frameScaling = false;              // TRUE only while frame is being resized
+  private ratio: number | null = null
+  private frameStart: { w: number; h: number } | null = null
   /** original bitmap state before cropping */
   private orig: { left:number; top:number; cropX:number; cropY:number; width:number; height:number; } | null = null;
   /** clean‑up callbacks to run on `teardown()` */
@@ -30,6 +32,10 @@ export class CropTool {
     this.SCALE   = scale
     this.SEL     = selColour
     this.onChange= onChange
+  }
+
+  public setRatio (r: number | null) {
+    this.ratio = r
   }
 
   /* ─────────────── public API ──────────────────────────────────── */
@@ -239,6 +245,11 @@ export class CropTool {
         const right  = left + f.width!  * f.scaleX!;
         const bottom = top  + f.height! * f.scaleY!;
 
+        this.frameStart = {
+          w: f.width! * f.scaleX!,
+          h: f.height! * f.scaleY!,
+        }
+
         anchorEdge = {};               // reset
         switch (c) {
           case 'br':                   // dragging bottom‑right  → lock top & left
@@ -305,6 +316,7 @@ export class CropTool {
         this.frame.hasControls = true;
         this.frame.setCoords();
       }
+      this.frameStart = null;
       this.updateMasks();
       // keep the mask in front of the photo for consistent dimming
       this.masks.forEach(m => m.bringToFront?.());
@@ -485,9 +497,19 @@ export class CropTool {
         this.frame!.setCoords();
         this.updateMasks(); 
       })
-      .on('scaling', () => {
+      .on('scaling', (e: fabric.IEvent) => {
         // keep the pre‑determined opposite edges fixed
         const f = this.frame!;
+        if (this.ratio !== null && this.frameStart) {
+          const t = (e as any).transform;
+          const scaleX = t?.scaleX ?? f.scaleX!;
+          const w = this.frameStart.w * scaleX;
+          const h = w / this.ratio;
+          const scaleY = h / this.frameStart.h;
+          if (t) t.scaleY = scaleY;
+          f.scaleX = scaleX;
+          f.scaleY = scaleY;
+        }
         const w = f.width!  * f.scaleX!;
         const h = f.height! * f.scaleY!;
         if (anchorEdge.left   !== undefined) f.left = anchorEdge.left;
@@ -513,6 +535,7 @@ export class CropTool {
         if (this.img) this.img.hasControls = true;
         this.updateMasks();
         this.frameScaling = false;   // flag OFF once user releases the mouse
+        this.frameStart = null;
         this.fc.requestRenderAll();
       });
 
