@@ -3,6 +3,12 @@ import sharp from 'sharp'
 export interface Panel {
   name: string
   order: number
+  bleed?: {
+    top?: boolean
+    right?: boolean
+    bottom?: boolean
+    left?: boolean
+  }
 }
 
 export interface SpreadLayout {
@@ -41,6 +47,8 @@ export async function buildSpread(
 
   const baseW = px(trimWidthIn + bleedIn * 2)
   const baseH = px(trimHeightIn + bleedIn * 2)
+  const sheetW = px(spreadLayout.spreadWidth + bleedIn * 2)
+  const sheetH = px(spreadLayout.spreadHeight + bleedIn * 2)
 
   const panels = [...spreadLayout.panels].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
@@ -63,43 +71,43 @@ export async function buildSpread(
     const outBuf = await sharp(buf)
       .extract({ left: cropL, top: cropT, width, height })
       .toBuffer()
+    const meta = await sharp(outBuf).metadata()
 
     console.log(`  extract ${panel.name}: ${width}×${height}`)
 
+    if (!pageWpx) {
+      pageWpx = width
+      pageHpx = height
+    } else if (
+      (meta.width && meta.width > pageWpx) ||
+      (meta.height && meta.height > pageHpx)
+    ) {
+      throw new Error(
+        `page ${panel.name} is larger than ${pageWpx}×${pageHpx} px (got ${meta.width}×${meta.height})`,
+      )
+    }
+
     crops[i] = outBuf
-    if (!pageWpx) pageWpx = width
-    if (!pageHpx) pageHpx = height
   }
 
-  const canvasW = pageWpx * 2
-  const canvasH = pageHpx * 2
-
-  console.log(`▶ buildSpread ${canvasW}×${canvasH}`)
+  console.log(`▶ buildSpread ${sheetW}×${sheetH}`)
 
   let out = sharp({
     create: {
-      width: canvasW,
-      height: canvasH,
+      width: sheetW,
+      height: sheetH,
       channels: 4,
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     },
   }).toColourspace('srgb')
 
-  const posMap: Record<string, { left: number; top: number }> = {
-    'Outer rear':   { left: 0,       top: 0 },
-    'Outer front':  { left: pageWpx, top: 0 },
-    'Inside back':  { left: 0,       top: pageHpx },
-    'Inside front': { left: pageWpx, top: pageHpx },
-  }
-
   const comps: sharp.OverlayOptions[] = []
   for (let i = 0; i < panels.length && i < crops.length; i++) {
-    const panel = panels[i]
     const buf = crops[i]
-    const pos = posMap[panel.name]
-    if (!buf || !pos) continue
-    comps.push({ input: buf, left: pos.left, top: pos.top })
-    console.log(`  paste ${panel.name} → [${pos.left}, ${pos.top}]`)
+    if (!buf) continue
+    const x = i * pageWpx
+    comps.push({ input: buf, left: x, top: 0 })
+    console.log(`  paste ${panels[i].name} → [${x}, 0]`)
   }
 
   out = out.composite(comps)
