@@ -52,12 +52,23 @@ export default defineType({
           name: 'panels',
           type: 'array',
           title: 'Panels (placement order)',
+          initialValue: [
+            { name: 'Outer rear',  order: 0, bleed: { top: true, right: true, bottom: true, left: true } },
+            { name: 'Outer front', order: 1, bleed: { top: true, right: true, bottom: true, left: true } },
+            { name: 'Inside front', order: 2, bleed: { top: true, right: true, bottom: true, left: true } },
+            { name: 'Inside back', order: 3, bleed: { top: true, right: true, bottom: true, left: true } },
+          ],
           of: [
             defineArrayMember({
               type: 'object',
               fields: [
                 defineField({ name: 'name',  type: 'string', title: 'Page name' }),
-                defineField({ name: 'order', type: 'number', title: 'Order' }),
+                defineField({
+                  name: 'order',
+                  type: 'number',
+                  title: 'Order',
+                  validation: r => r.required().min(0).max(3),
+                }),
                 defineField({
                   name: 'bleed',
                   type: 'object',
@@ -73,7 +84,18 @@ export default defineType({
               ],
             }),
           ],
-          validation: r => r.length(4),
+          validation: r =>
+            r.length(4).custom(panels => {
+              if (!Array.isArray(panels)) return 'Missing panels'
+              const orders = panels.map(p => p.order)
+              if (orders.some(o => typeof o !== 'number')) {
+                return 'Each panel must define an order'
+              }
+              if (new Set(orders).size !== 4) {
+                return 'Panel orders must be unique'
+              }
+              return true
+            }),
         }),
       ],
     }),
