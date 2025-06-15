@@ -52,6 +52,7 @@ export default defineType({
       validation: Rule => Rule.required(),
     }),
 
+    /* toggle cropping guides for templates using this SKU */
     defineField({
       name: 'showSafeArea',
       type: 'boolean',
@@ -69,4 +70,4 @@ export default defineType({
       validation: R => R.required().integer().min(1).max(4),
     }),
   ],
-})
+
