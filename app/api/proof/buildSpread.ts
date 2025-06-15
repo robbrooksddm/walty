@@ -1,4 +1,4 @@
-import { createCanvas, loadImage } from 'canvas'
+import sharp from 'sharp'
 
 export interface Panel {
   name: string
@@ -37,32 +37,40 @@ export async function buildSpread(
 
   console.log(`▶ buildSpread ${spreadPxW}×${spreadPxH}`)
 
-  const canvas = createCanvas(spreadPxW, spreadPxH)
-  const ctx = canvas.getContext('2d')
-  ctx.clearRect(0, 0, spreadPxW, spreadPxH)
-
-  const panels = [...spreadLayout.panels].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
   const pageW = Math.floor(spreadPxW / 2)
   const pageH = Math.floor(spreadPxH / 2)
 
-  const posMap: Record<string, { x: number; y: number }> = {
-    'Outer rear' : { x: 0,      y: 0 },
-    'Outer front': { x: pageW,  y: 0 },
-    'Inside back': { x: 0,      y: pageH },
-    'Inside front':{ x: pageW,  y: pageH },
+  let out = sharp({
+    create: {
+      width: spreadPxW,
+      height: spreadPxH,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  }).toColourspace('srgb')
+
+  const panels = [...spreadLayout.panels].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+
+  const posMap: Record<string, { left: number; top: number }> = {
+    'Outer rear':   { left: 0,     top: 0 },
+    'Outer front':  { left: pageW, top: 0 },
+    'Inside back':  { left: 0,     top: pageH },
+    'Inside front': { left: pageW, top: pageH },
   }
 
+  const comps: sharp.OverlayOptions[] = []
   for (let i = 0; i < panels.length && i < pages.length; i++) {
     const panel = panels[i]
     const buf = pages[i]
     const pos = posMap[panel.name]
     if (!buf || !pos) continue
-    const img = await loadImage(buf)
-    ctx.drawImage(img, pos.x, pos.y, pageW, pageH)
-    console.log(`  paste ${panel.name} → [${pos.x}, ${pos.y}]`)
+    comps.push({ input: buf, left: pos.left, top: pos.top })
+    console.log(`  paste ${panel.name} → [${pos.left}, ${pos.top}]`)
   }
 
-  const blob = canvas.toBuffer('image/jpeg', { quality: 0.95 })
+  out = out.composite(comps)
+
+  const blob = await out.jpeg({ quality: 95, chromaSubsampling: '4:4:4' }).toBuffer()
   const filename = `${templateSlug}-${sku}.jpg`
 
   return { blob, filename, mime: 'image/jpeg' }
