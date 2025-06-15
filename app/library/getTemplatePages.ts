@@ -61,6 +61,7 @@ export async function getTemplatePages(
       showSafeArea
     },
     pages[]{
+      edgeBleed,
       layers[]{
         ...,                       // keep every native field
         // if this layer has a reference called “source”, pull it in-line:
