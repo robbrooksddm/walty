@@ -371,7 +371,18 @@ const setCropRatio = (r: number | null) => {
     if (cur > r) w = h * r
     else h = w / r
   }
-  frame.set({ width: w, height: h, scaleX: 1, scaleY: 1, left: cX - w / 2, top: cY - h / 2 })
+  const rect = frame.item(0) as fabric.Rect
+  rect.set({ width: w, height: h })
+  frame.set({
+    width: w,
+    height: h,
+    scaleX: 1,
+    scaleY: 1,
+    left: cX - w / 2,
+    top: cY - h / 2,
+  })
+  rect.setCoords()
+  frame.setCoords()
   ;(tool as any).clampFrame?.()
   tool['clamp']?.(true)
   ;(tool as any).updateMasks?.()
