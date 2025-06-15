@@ -526,7 +526,7 @@ const handleProofAll = async () => {
           onUndo={undo}
           onRedo={redo}
           onSave={handleSave}
-          onProof={mode === 'staff' ? handleProof : undefined}
+          onProof={mode === 'staff' ? handleProofAll : undefined}
           saving={saving}
           mode={mode}
         />
