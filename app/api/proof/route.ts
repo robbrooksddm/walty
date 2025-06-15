@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
               spreadHeight: number
               panels: {
                 name: string
+                page: string
                 order: number
                 bleed?: {
                   top?: boolean
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
     }
 
     const pageMap: Record<string, sharp.Sharp> = {}
-    const pageBuffers: Buffer[] = []
+    const bufferMap: Record<string, Buffer> = {}
     if (Array.isArray(pageImages)) {
       for (let i = 0; i < Math.min(4, pageImages.length); i++) {
         const data = pageImages[i]
@@ -101,13 +102,13 @@ export async function POST(req: NextRequest) {
         }
         const name = pages[i]?.name || `page-${i}`
         pageMap[name] = img
-        pageBuffers[i] = await img.jpeg({ quality: 100, chromaSubsampling: '4:4:4' }).toBuffer()
+        bufferMap[name] = await img.jpeg({ quality: 100, chromaSubsampling: '4:4:4' }).toBuffer()
       }
     }
 
     if (Array.isArray(layout.panels) && layout.panels.length === 4) {
       const { blob, filename: fName } = await buildSpread(
-        pageBuffers,
+        bufferMap,
         {
           dpi: finalSpec.dpi,
           spreadLayout: layout,
@@ -135,7 +136,7 @@ export async function POST(req: NextRequest) {
     ]
 
     panels.forEach((p, idx) => {
-      const img = pageMap[p.name]
+      const img = pageMap[p.page || p.name]
       if (!img) return
       comps.push({ input: img, left: positions[idx].left, top: positions[idx].top } as Overlay)
     })

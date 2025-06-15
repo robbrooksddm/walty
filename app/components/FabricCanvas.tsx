@@ -28,6 +28,7 @@ export interface PrintSpec {
     spreadHeight: number
     panels: {
       name: string
+      page: string
       order: number
       bleed?: {
         top?: boolean
