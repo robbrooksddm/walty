@@ -67,7 +67,7 @@ export default defineType({
                   name: 'order',
                   type: 'number',
                   title: 'Order',
-                  validation: r => r.required().min(0).max(3),
+                  validation: r => r.required().min(0),
                 }),
                 defineField({
                   name: 'bleed',
@@ -85,13 +85,13 @@ export default defineType({
             }),
           ],
           validation: r =>
-            r.length(4).custom(panels => {
+            r.custom(panels => {
               if (!Array.isArray(panels)) return 'Missing panels'
               const orders = panels.map(p => p.order)
               if (orders.some(o => typeof o !== 'number')) {
                 return 'Each panel must define an order'
               }
-              if (new Set(orders).size !== 4) {
+              if (orders.length !== new Set(orders).size) {
                 return 'Panel orders must be unique'
               }
               return true
