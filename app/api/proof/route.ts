@@ -120,7 +120,13 @@ export async function POST(req: NextRequest) {
     if (Array.isArray(layout.panels) && layout.panels.length === 4) {
       const { blob, filename: fName } = await buildSpread(
         pageBuffers,
-        { dpi: finalSpec.dpi, spreadLayout: layout },
+        {
+          dpi: finalSpec.dpi,
+          spreadLayout: layout,
+          trimWidthIn: finalSpec.trimWidthIn,
+          trimHeightIn: finalSpec.trimHeightIn,
+          bleedIn: finalSpec.bleedIn,
+        },
         esc(id),
         sku ?? 'proof',
       )
