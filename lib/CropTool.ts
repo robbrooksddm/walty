@@ -80,8 +80,9 @@ export class CropTool {
                   h: imgEl.naturalHeight || img.height! }
     const { cropX=0, cropY=0, width=nat.w, height=nat.h } = img
 
-    const prevLockUniScaling = img.lockUniScaling;
-    const prevCenteredScaling = img.centeredScaling;
+    const prevLockUniScaling = img.lockUniScaling
+    const prevCenteredScaling = img.centeredScaling
+    const prevHasBorders = img.hasBorders
     img.set({
       left  : (img.left ?? 0) - cropX * (img.scaleX ?? 1),
       top   : (img.top  ?? 0) - cropY * (img.scaleY ?? 1),
@@ -100,6 +101,7 @@ export class CropTool {
     this.cleanup.push(() => {
       img.lockUniScaling  = prevLockUniScaling
       img.centeredScaling = prevCenteredScaling
+      img.hasBorders      = prevHasBorders
     })
     /* hide the rotate ("mtr") and side controls while cropping */
     img.setControlsVisibility({
@@ -107,9 +109,9 @@ export class CropTool {
       ml : false, mr : false,      // hide middle-left / middle-right
       mt : false, mb : false       // hide middle-top / middle-bottom
     });
-    img.hasBorders  = true;            // always show border in crop mode
-    img.borderColor = this.SEL;        // same colour as crop window
-    img.borderDashArray = [];          // solid border
+    img.hasBorders  = false
+    img.borderColor = this.SEL          // keep consistent style if shown
+    img.borderDashArray = []           // solid border
 
     /* ② persistent crop window */
     const fx = (img.left ?? 0) + cropX * (img.scaleX ?? 1)
