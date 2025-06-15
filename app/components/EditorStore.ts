@@ -3,7 +3,31 @@
  * 2025-06-15 • adds: undo / redo that stay in sync with Sanity
  *********************************************************************/
 import { create } from 'zustand'
-import type { Layer, TemplatePage } from './FabricCanvas'
+import type { Layer, TemplatePage, PrintSpec } from './FabricCanvas'
+
+/* ---------- print specification ---------------------------------- */
+const DEFAULT_SPEC: PrintSpec = {
+  trimWidthIn : 5,
+  trimHeightIn: 7,
+  bleedIn     : 0.125,
+  dpi         : 300,
+}
+
+let currentSpec: PrintSpec = DEFAULT_SPEC
+let PAGE_W = 0
+let PAGE_H = 0
+
+const recompute = () => {
+  PAGE_W = Math.round((currentSpec.trimWidthIn + currentSpec.bleedIn * 2) * currentSpec.dpi)
+  PAGE_H = Math.round((currentSpec.trimHeightIn + currentSpec.bleedIn * 2) * currentSpec.dpi)
+}
+
+export const setEditorSpec = (spec: PrintSpec) => {
+  currentSpec = spec
+  recompute()
+}
+
+recompute()
 
 /* ---------- helpers ------------------------------------------------ */
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v))
@@ -140,6 +164,10 @@ export const useEditor = create<EditorState>((set, get) => ({
       x    : 100,
       y    : 100,
       width: 200,
+      leftPct:   (100 / PAGE_W) * 100,
+      topPct:    (100 / PAGE_H) * 100,
+      widthPct:  (200 / PAGE_W) * 100,
+      heightPct: (0 / PAGE_H) * 100,
     })
 
     set({ pages: nextPages })
@@ -163,6 +191,10 @@ export const useEditor = create<EditorState>((set, get) => ({
       x        : 100,
       y        : 100,
       width    : 300,
+      leftPct:   (100 / PAGE_W) * 100,
+      topPct:    (100 / PAGE_H) * 100,
+      widthPct:  (300 / PAGE_W) * 100,
+      heightPct: (300 / PAGE_H) * 100,
       srcUrl   : blobUrl,
       uploading: true,
     } as EditorLayer)

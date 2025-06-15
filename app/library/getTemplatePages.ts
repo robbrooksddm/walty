@@ -7,7 +7,7 @@
 import { sanityPreview } from '@/sanity/lib/client'
 import { urlFor } from '@/sanity/lib/image'
 import { fromSanity } from '@/app/library/layerAdapters'
-import type { TemplatePage } from '@/app/components/FabricCanvas'
+import type { TemplatePage, PrintSpec, PreviewSpec } from '@/app/components/FabricCanvas'
 
 /* ---------- 4-page fallback so the editor always mounts --------- */
 const EMPTY: TemplatePage[] = [
@@ -17,9 +17,20 @@ const EMPTY: TemplatePage[] = [
   {name: 'back',     layers: []},
 ]
 
+export interface TemplateProduct {
+  _id: string
+  slug: string
+  title: string
+  printSpec?: PrintSpec
+  showSafeArea?: boolean
+}
+
 export interface TemplateData {
   pages: TemplatePage[]
   coverImage?: string
+  spec?: PrintSpec
+  previewSpec?: PreviewSpec
+  products?: TemplateProduct[]
 }
 
 /**
@@ -39,8 +50,16 @@ export async function getTemplatePages(
       _id == $draftKey ||
       slug.current == $key
     )
-  ][0]{
+  ] | order(_updatedAt desc)[0]{
     coverImage,
+    previewSpec,
+    "products": products[]->{
+      _id,
+      title,
+      "slug": slug.current,
+      "printSpec": coalesce(printSpec->, printSpec),
+      showSafeArea
+    },
     pages[]{
       layers[]{
         ...,                       // keep every native field
@@ -56,11 +75,16 @@ export async function getTemplatePages(
 `
 
   const params = {
-    key:       idOrSlug,
-    draftKey:  idOrSlug.startsWith('drafts.') ? idOrSlug : `drafts.${idOrSlug}`,
+    key:      idOrSlug,
+    draftKey: idOrSlug.startsWith('drafts.') ? idOrSlug : `drafts.${idOrSlug}`,
   }
 
-  const raw = await sanityPreview.fetch<{pages?: any[]; coverImage?: any}>(query, params)
+  const raw = await sanityPreview.fetch<{
+    pages?: any[]
+    coverImage?: any
+    previewSpec?: PreviewSpec
+    products?: { _id: string; title: string; slug: string; printSpec?: PrintSpec }[]
+  }>(query, params)
 
   const pages = Array.isArray(raw?.pages) && raw.pages.length === 4
     ? raw.pages
@@ -73,16 +97,21 @@ console.log(
   '\n▶ getTemplatePages raw =\n',
   JSON.stringify(raw, null, 2),
   '\n',
-);
+)
+
+  const spec = (raw?.products?.[0]?.printSpec || undefined) as PrintSpec | undefined
+  console.log('\u25BA getTemplatePages spec =', JSON.stringify(spec, null, 2))
+  const previewSpec = raw?.previewSpec as PreviewSpec | undefined
 
   const pagesOut = names.map((name, i) => ({
     name,
     layers: (pages[i]?.layers ?? [])
-      .map(fromSanity)
+      .map(l => fromSanity(l, spec))
       .filter(Boolean),
   })) as TemplatePage[]
 
   const coverImage = raw?.coverImage ? urlFor(raw.coverImage).url() : undefined
+  const products = raw?.products as TemplateProduct[] | undefined
 
-  return { pages: pagesOut, coverImage }
+  return { pages: pagesOut, coverImage, spec, previewSpec, products }
 }

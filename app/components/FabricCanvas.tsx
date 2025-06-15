@@ -8,31 +8,134 @@
  *********************************************************************/
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { fabric }            from 'fabric'
 import { useEditor }         from './EditorStore'
 import { fromSanity }        from '@/app/library/layerAdapters'
 import '@/lib/fabricDefaults'
 import { SEL_COLOR } from '@/lib/fabricDefaults';
 import { CropTool } from '@/lib/CropTool'
+import ContextMenu from './ContextMenu'
+
+/* ---------- print spec ----------------------------------------- */
+export interface PrintSpec {
+  trimWidthIn: number
+  trimHeightIn: number
+  bleedIn: number
+  dpi: number
+  spreadLayout?: {
+    spreadWidth: number
+    spreadHeight: number
+    panels: {
+      name: string
+      page: string
+      order: number
+      bleed?: {
+        top?: boolean
+        right?: boolean
+        bottom?: boolean
+        left?: boolean
+      }
+    }[]
+  }
+}
+
+export interface PreviewSpec {
+  previewWidthPx: number
+  previewHeightPx: number
+  maxMobileWidthPx?: number
+}
+
+let currentSpec: PrintSpec = {
+  trimWidthIn: 5,
+  trimHeightIn: 7,
+  bleedIn: 0.125,
+  dpi: 300,
+}
+
+let currentPreview: PreviewSpec = {
+  previewWidthPx: 420,
+  previewHeightPx: 580,
+}
+
+let safeInsetXIn = 0
+let safeInsetYIn = 0
+let SAFE_X = 0
+let SAFE_Y = 0
+
+function recompute() {
+  PAGE_W = Math.round((currentSpec.trimWidthIn + currentSpec.bleedIn * 2) * currentSpec.dpi)
+  PAGE_H = Math.round((currentSpec.trimHeightIn + currentSpec.bleedIn * 2) * currentSpec.dpi)
+  PREVIEW_W = currentPreview.previewWidthPx
+  PREVIEW_H = currentPreview.previewHeightPx
+  SCALE = PREVIEW_W / PAGE_W
+  PAD = 4 / SCALE
+  // compute safe-zone after scaling so rounding happens in preview pixels
+  const safeXPreview = safeInsetXIn * currentSpec.dpi * SCALE
+  const safeYPreview = safeInsetYIn * currentSpec.dpi * SCALE
+  SAFE_X = Math.round(safeXPreview) / SCALE
+  SAFE_Y = Math.round(safeYPreview) / SCALE
+}
+
+export const setPrintSpec = (spec: PrintSpec) => {
+  console.log('FabricCanvas setSpec', spec.trimWidthIn, spec.trimHeightIn)
+  currentSpec = spec
+  recompute()
+}
+
+export const setSafeInset = (xIn: number, yIn: number) => {
+  safeInsetXIn = xIn
+  safeInsetYIn = yIn
+  recompute()
+}
+
+export const setPreviewSpec = (spec: PreviewSpec) => {
+  currentPreview = spec
+  recompute()
+}
 
 /* ---------- size helpers ---------------------------------------- */
-const DPI       = 300
-const mm        = (n: number) => (n / 25.4) * DPI
-const TRIM_W_MM = 150
-const TRIM_H_MM = 214
-const BLEED_MM  = 3
-const PAGE_W    = Math.round(mm(TRIM_W_MM + BLEED_MM * 2))
-const PAGE_H    = Math.round(mm(TRIM_H_MM + BLEED_MM * 2))
-const PREVIEW_W = 420
-const PREVIEW_H = Math.round(PAGE_H * PREVIEW_W / PAGE_W)
-const SCALE     = PREVIEW_W / PAGE_W
+let PREVIEW_W = currentPreview.previewWidthPx
+
+let PAGE_W = 0
+let PAGE_H = 0
+let PREVIEW_H = currentPreview.previewHeightPx
+let SCALE = 1
+let PAD = 4
+
+recompute()
+
+const mm = (n: number) => (n / 25.4) * currentSpec.dpi
+
+export const pageW = () => PAGE_W
+export const pageH = () => PAGE_H
+export const previewW = () => PREVIEW_W
+export const previewH = () => PREVIEW_H
+export const EXPORT_MULT = () => {
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+  return (1 / SCALE) / dpr
+}
 
 // 4 CSS-px padding used by the hover outline
-const PAD  = 4 / SCALE;
-
-/** turn  gap (px) → a dashed-array scaled to canvas units */
 const dash = (gap: number) => [gap / SCALE, (gap - 2) / SCALE];
+
+/* ---------- shared clipboard helpers ------------------------------ */
+type Clip = { json: any[]; nudge: number };
+export const clip: Clip = { json: [], nudge: 0 };
+
+export const allObjs = (o: fabric.Object) =>
+  (o as any).type === 'activeSelection'
+    ? [(o as any), ...((o as any)._objects as fabric.Object[])]
+    : [o];
+
+export const PROPS = [
+  'src', 'srcUrl', 'assetId', '__src',
+  'text', 'fontSize', 'fontFamily', 'fill',
+  'fontWeight', 'fontStyle', 'underline',
+  'textAlign', 'lineHeight', 'opacity', 'lines',
+  'scaleX', 'scaleY', 'width', 'height',
+  'locked', 'selectable', 'left', 'top',
+];
 
 
 
@@ -90,6 +193,16 @@ export interface Layer {
   width:  number
   height?: number
 
+  /** geometry relative to the full canvas (0–100 %) */
+  leftPct?:   number
+  topPct?:    number
+  widthPct?:  number
+  heightPct?: number
+
+  /** image flips */
+  flipX?:     boolean
+  flipY?:     boolean
+
   opacity?:   number
   scaleX?:    number
   scaleY?:    number
@@ -107,6 +220,8 @@ export interface Layer {
   underline?:   boolean
   textAlign?:   'left' | 'center' | 'right'
   lineHeight?:  number
+  /** Wrapped lines as computed by Fabric */
+  lines?:       string[]
 
   /* ---- AI placeholder bookkeeping ------------------------------- */
   _isAI?: boolean
@@ -181,6 +296,10 @@ const objToLayer = (o: fabric.Object): Layer => {
       x         : t.left || 0,
       y         : t.top  || 0,
       width     : t.width || 200,
+      leftPct   : ((t.left || 0) / PAGE_W) * 100,
+      topPct    : ((t.top  || 0) / PAGE_H) * 100,
+      widthPct  : ((t.width || 200) / PAGE_W) * 100,
+      heightPct : (t.getScaledHeight() / PAGE_H) * 100,
       fontSize  : t.fontSize,
       fontFamily: t.fontFamily,
       fontWeight: t.fontWeight,
@@ -192,6 +311,7 @@ const objToLayer = (o: fabric.Object): Layer => {
       opacity   : t.opacity,
       scaleX    : t.scaleX,
       scaleY    : t.scaleY,
+      lines     : t.textLines as string[],
     }
   }
   const i = o as fabric.Image
@@ -209,9 +329,15 @@ const objToLayer = (o: fabric.Object): Layer => {
     y      : i.top   || 0,
     width  : i.getScaledWidth(),
     height : i.getScaledHeight(),
+    leftPct  : ((i.left  || 0) / PAGE_W) * 100,
+    topPct   : ((i.top   || 0) / PAGE_H) * 100,
+    widthPct : (i.getScaledWidth()  / PAGE_W) * 100,
+    heightPct: (i.getScaledHeight() / PAGE_H) * 100,
     opacity: i.opacity,
     scaleX : i.scaleX,
     scaleY : i.scaleY,
+    flipX  : (i as any).flipX,
+    flipY  : (i as any).flipY,
   }
 
   if (i.cropX != null) layer.cropX = i.cropX
@@ -231,8 +357,7 @@ const syncLayersFromCanvas = (fc: fabric.Canvas, pageIdx: number) => {
       !(o as any)._backdrop &&
       !(o as any).excludeFromExport &&
       (o as any).type !== 'activeSelection'      // skip wrapper
-    )
-    .reverse();                                  // bottom → top
+    );                                           // bottom → top
 
   /* remember original src on pasted images */
   objs.forEach(o => {
@@ -252,22 +377,49 @@ const syncLayersFromCanvas = (fc: fabric.Canvas, pageIdx: number) => {
 };
 
 /* ---------- guides ---------------------------------------------- */
-const addGuides = (fc: fabric.Canvas) => {
+type Mode = 'staff' | 'customer'
+type GuideName = 'safe-zone' | 'bleed'
+
+const addGuides = (fc: fabric.Canvas, mode: Mode) => {
   fc.getObjects().filter(o => (o as any)._guide).forEach(o => fc.remove(o))
-  const inset = mm(8 + BLEED_MM)
   const strokeW = mm(0.5)
-  const dash = [mm(3)]
-  const mk = (xy: [number, number, number, number]) =>
-    Object.assign(new fabric.Line(xy, {
-      stroke: '#34d399', strokeWidth: strokeW, strokeDashArray: dash,
-      selectable: false, evented: false, excludeFromExport: true,
-    }), { _guide: true })
-  ;[
-    mk([inset, inset, PAGE_W - inset, inset]),
-    mk([PAGE_W - inset, inset, PAGE_W - inset, PAGE_H - inset]),
-    mk([PAGE_W - inset, PAGE_H - inset, inset, PAGE_H - inset]),
-    mk([inset, PAGE_H - inset, inset, inset]),
-  ].forEach(l => fc.add(l))
+  const mk = (
+    xy: [number, number, number, number],
+    name: GuideName,
+    color: string,
+  ) =>
+    Object.assign(
+      new fabric.Line(xy, {
+        stroke: color,
+        strokeWidth: strokeW,
+        strokeDashArray: dash(6),
+        selectable: false,
+        evented: false,
+        excludeFromExport: true,
+      }),
+      { _guide: name },
+    )
+
+  if (SAFE_X > 0 || SAFE_Y > 0) {
+    const safeX = SAFE_X
+    const safeY = SAFE_Y
+    ;[
+      mk([safeX, safeY, PAGE_W - safeX, safeY], 'safe-zone', '#34d399'),
+      mk([PAGE_W - safeX, safeY, PAGE_W - safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
+      mk([PAGE_W - safeX, PAGE_H - safeY, safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
+      mk([safeX, PAGE_H - safeY, safeX, safeY], 'safe-zone', '#34d399'),
+    ].forEach(l => fc.add(l))
+  }
+
+  if (mode === 'staff') {
+    const bleed = mm(currentSpec.bleedIn * 25.4)
+    ;[
+      mk([bleed, bleed, PAGE_W - bleed, bleed], 'bleed', '#f87171'),
+      mk([PAGE_W - bleed, bleed, PAGE_W - bleed, PAGE_H - bleed], 'bleed', '#f87171'),
+      mk([PAGE_W - bleed, PAGE_H - bleed, bleed, PAGE_H - bleed], 'bleed', '#f87171'),
+      mk([bleed, PAGE_H - bleed, bleed, bleed], 'bleed', '#f87171'),
+    ].forEach(l => fc.add(l))
+  }
 }
 
 /* ---------- white backdrop -------------------------------------- */
@@ -298,9 +450,10 @@ interface Props {
   onReady    : (fc: fabric.Canvas | null) => void
   isCropping?: boolean
   onCroppingChange?: (state: boolean) => void
+  mode?: Mode
 }
 
-export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange }: Props) {
+export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, mode = 'customer' }: Props) {
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const maskRectsRef = useRef<fabric.Rect[]>([]);
@@ -311,21 +464,127 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const cropToolRef = useRef<CropTool | null>(null)
   const croppingRef = useRef(false)
 
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
+
 
 
   const setPageLayers = useEditor(s => s.setPageLayers)
   const updateLayer   = useEditor(s => s.updateLayer)
 
+  const handleMenuAction = (a: import('./ContextMenu').MenuAction) => {
+    const fc = fcRef.current
+    if (!fc) return
+    const active = fc.getActiveObject() as fabric.Object | undefined
+    switch (a) {
+      case 'add':
+        useEditor.getState().addText()
+        break
+      case 'cut':
+        if (active) {
+          clip.json = [active.toJSON(PROPS)]
+          clip.nudge = 0
+          allObjs(active).forEach(o => fc.remove(o))
+          syncLayersFromCanvas(fc, pageIdx)
+        }
+        break
+      case 'copy':
+        if (active) {
+          clip.json = [active.toJSON(PROPS)]
+          clip.nudge = 0
+        }
+        break
+      case 'paste':
+        if (clip.json.length) {
+          clip.nudge += 10
+          fabric.util.enlivenObjects(clip.json, objs => {
+            const root = objs[0]
+            root.set({ left: (root.left ?? 0) + clip.nudge, top: (root.top ?? 0) + clip.nudge })
+            root.setCoords()
+            if ((root as any).type === 'group') {
+              const g = root as fabric.Group
+              const kids = g._objects as fabric.Object[]
+              kids.forEach(o => fc.add(o))
+              fc.remove(g)
+              const sel = new fabric.ActiveSelection(kids, { canvas: fc } as any)
+              fc.setActiveObject(sel)
+            } else {
+              fc.add(root)
+              fc.setActiveObject(root)
+            }
+            fc.requestRenderAll()
+            syncLayersFromCanvas(fc, pageIdx)
+          }, '')
+        }
+        break
+      case 'duplicate':
+        if (active) {
+          clip.json = [active.toJSON(PROPS)]
+          clip.nudge += 10
+          fabric.util.enlivenObjects(clip.json, objs => {
+            const root = objs[0]
+            root.set({ left: (root.left ?? 0) + clip.nudge, top: (root.top ?? 0) + clip.nudge })
+            root.setCoords()
+            if ((root as any).type === 'group') {
+              const g = root as fabric.Group
+              const kids = g._objects as fabric.Object[]
+              kids.forEach(o => fc.add(o))
+              fc.remove(g)
+              const sel = new fabric.ActiveSelection(kids, { canvas: fc } as any)
+              fc.setActiveObject(sel)
+            } else {
+              fc.add(root)
+              fc.setActiveObject(root)
+            }
+            fc.requestRenderAll()
+            syncLayersFromCanvas(fc, pageIdx)
+          }, '')
+        }
+        break
+      case 'delete':
+        if (active) {
+          allObjs(active).forEach(o => fc.remove(o))
+          syncLayersFromCanvas(fc, pageIdx)
+        }
+        break
+      case 'crop':
+        document.dispatchEvent(new Event('start-crop'))
+        break
+      case 'lock':
+        if (active) {
+          const next = !(active as any).locked
+          ;(active as any).locked = next
+          active.set({
+            lockMovementX: next,
+            lockMovementY: next,
+            lockScalingX : next,
+            lockScalingY : next,
+            lockRotation : next,
+          })
+          fc.requestRenderAll()
+          updateLayer(pageIdx, (active as any).layerIdx, { locked: next })
+        }
+        break
+    }
+    setMenuPos(null)
+  }
+
 /* ---------- mount once --------------------------------------- */
 useEffect(() => {
   if (!canvasRef.current) return
 
-  // Create Fabric using the <canvas> element’s own dimensions (420 × ??)
+  // Create Fabric using the <canvas> element’s own dimensions
   // – we’ll work in full‑size page units and simply scale the viewport.
   const fc = new fabric.Canvas(canvasRef.current!, {
     backgroundColor       : '#fff',
     preserveObjectStacking: true,
   });
+
+  const ctxMenu = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenuPos({ x: e.clientX, y: e.clientY });
+  };
+  fc.upperCanvasEl.addEventListener('contextmenu', ctxMenu);
   /* --- keep Fabric’s wrapper the same size as the visible preview --- */
   const container = canvasRef.current!.parentElement as HTMLElement | null;
   if (container) {
@@ -335,7 +594,7 @@ useEffect(() => {
     container.style.maxHeight = `${PREVIEW_H}px`;
   }
   addBackdrop(fc);
-  // keep the preview scaled to 420 px wide
+  // keep the preview scaled to the configured width
   fc.setViewportTransform([SCALE, 0, 0, SCALE, 0, 0]);
 
   /* keep event coordinates aligned with any scroll/resize */
@@ -425,7 +684,7 @@ fc.on('mouse:over', e => {
   fc.requestRenderAll()
 })
 
-addGuides(fc)                                 // green safe-zone guides
+addGuides(fc, mode)                           // add guides based on mode
   /* ── 4.5 ▸ Fabric ➜ Zustand sync ──────────────────────────── */
   fc.on('object:modified', e=>{
     isEditing.current = true
@@ -437,11 +696,15 @@ addGuides(fc)                                 // green safe-zone guides
       y      : t.top,
       scaleX : t.scaleX,
       scaleY : t.scaleY,
+      leftPct  : ((t.left  || 0) / PAGE_W) * 100,
+      topPct   : ((t.top   || 0) / PAGE_H) * 100,
     }
     if (t.type === 'image') Object.assign(d, {
       width  : t.getScaledWidth(),
       height : t.getScaledHeight(),
       opacity: t.opacity,
+      widthPct : (t.getScaledWidth()  / PAGE_W) * 100,
+      heightPct: (t.getScaledHeight() / PAGE_H) * 100,
       ...(t.cropX != null && { cropX: t.cropX }),
       ...(t.cropY != null && { cropY: t.cropY }),
       ...(t.width  != null && { cropW: t.width  }),
@@ -458,6 +721,9 @@ addGuides(fc)                                 // green safe-zone guides
       textAlign  : t.textAlign,
       lineHeight : t.lineHeight,
       opacity    : t.opacity,
+      widthPct  : (t.getScaledWidth()  / PAGE_W) * 100,
+      heightPct : (t.getScaledHeight() / PAGE_H) * 100,
+      lines     : t.textLines as string[],
     })
     updateLayer(pageIdx, t.layerIdx, d)
     setTimeout(()=>{ isEditing.current = false })
@@ -480,31 +746,16 @@ addGuides(fc)                                 // green safe-zone guides
       opacity    : t.opacity,
       width      : t.getScaledWidth(),
       height     : t.getScaledHeight(),
+      lines      : t.textLines as string[],
+      leftPct    : ((t.left || 0) / PAGE_W) * 100,
+      topPct     : ((t.top  || 0) / PAGE_H) * 100,
+      widthPct   : (t.getScaledWidth()  / PAGE_W) * 100,
+      heightPct  : (t.getScaledHeight() / PAGE_H) * 100,
     })
     setTimeout(()=>{ isEditing.current = false })
   })
 
 /* ───────────────── clipboard & keyboard shortcuts ────────────────── */
-
-/** Raw serialised objects we keep on the “clipboard” */
-type Clip = { json: any[]; nudge: number }
-const clip: Clip = { json: [], nudge: 0 }
-
-/** Small helper – return the wrapper itself (if any) and its children */
-const allObjs = (o: fabric.Object) =>
-  (o as any).type === 'activeSelection'
-    ? [(o as any), ...(o as any)._objects as fabric.Object[]]
-    : [o]
-
-/** Extra props we must keep when serialising */
-const PROPS = [
-  'src', 'srcUrl', 'assetId', '__src',               // images
-  'text', 'fontSize', 'fontFamily', 'fill',          // text
-  'fontWeight', 'fontStyle', 'underline',
-  'textAlign', 'lineHeight', 'opacity',
-  'scaleX', 'scaleY', 'width', 'height',
-  'locked', 'selectable', 'left', 'top',
-]
 
 const onKey = (e: KeyboardEvent) => {
   const active = fc.getActiveObject() as fabric.Object | undefined
@@ -610,6 +861,7 @@ window.addEventListener('keydown', onKey)
   fcRef.current = fc; onReady(fc)
 
     return () => {
+      fc.upperCanvasEl.removeEventListener('contextmenu', ctxMenu)
       window.removeEventListener('keydown', onKey)
       if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
       window.removeEventListener('scroll', updateOffset)
@@ -653,10 +905,15 @@ window.addEventListener('keydown', onKey)
     hoverRef.current && fc.add(hoverRef.current)
 
     /* bottom ➜ top keeps original z-order */
-    for (let idx = page.layers.length - 1; idx >= 0; idx--) {
+    for (let idx = 0; idx < page.layers.length; idx++) {
       const raw = page.layers[idx]
-      const ly: Layer | null = (raw as any).type ? raw as Layer : fromSanity(raw)
+      const ly: Layer | null = (raw as any).type ? raw as Layer : fromSanity(raw, currentSpec)
       if (!ly) continue
+
+      if (ly.leftPct != null) ly.x = (ly.leftPct / 100) * PAGE_W
+      if (ly.topPct  != null) ly.y = (ly.topPct  / 100) * PAGE_H
+      if (ly.widthPct  != null) ly.width  = (ly.widthPct  / 100) * PAGE_W
+      if (ly.heightPct != null) ly.height = (ly.heightPct / 100) * PAGE_H
 
 /* ---------- IMAGES --------------------------------------------- */
 if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
@@ -691,10 +948,15 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
 
           /* shared props */
           img.set({
-            left: ly.x, top: ly.y, originX: 'left', originY: 'top',
+            left      : ly.x,
+            top       : ly.y,
+            originX   : 'left',
+            originY   : 'top',
             selectable: ly.selectable ?? true,
-            evented: ly.editable ?? true,
-            opacity: ly.opacity ?? 1,
+            evented   : ly.editable ?? true,
+            opacity   : ly.opacity ?? 1,
+            flipX     : ly.flipX ?? false,
+            flipY     : ly.flipY ?? false,
           })
 
           /* ---------- AI placeholder extras -------------------------------- */
@@ -769,9 +1031,7 @@ img.on('mouseup', () => {
 
           /* keep z-order */
           ;(img as any).layerIdx = idx
-          const pos = fc.getObjects().findIndex(o =>
-            (o as any).layerIdx !== undefined && (o as any).layerIdx < idx)
-          fc.insertAt(img, pos === -1 ? fc.getObjects().length : pos, false)
+          fc.insertAt(img, idx, false)
           img.setCoords()
           fc.requestRenderAll()
           document.dispatchEvent(
@@ -803,11 +1063,11 @@ img.on('mouseup', () => {
           lockScalingFlip: true,
         })
         ;(tb as any).layerIdx = idx
-        fc.add(tb)
+        fc.insertAt(tb, idx, false)
       }
     }
 
-    addGuides(fc)
+    addGuides(fc, mode)
     hoverRef.current?.bringToFront()
     fc.requestRenderAll();
     hydrating.current = false
@@ -820,12 +1080,22 @@ img.on('mouseup', () => {
 
   /* ---------- render ----------------------------------------- */
   return (
-    <canvas
-      ref={canvasRef}
-      width={PREVIEW_W}
-      height={PREVIEW_H}
-      style={{ width: PREVIEW_W, height: PREVIEW_H }}   // lock CSS size
-      className="border shadow rounded"
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        width={PREVIEW_W}
+        height={PREVIEW_H}
+        style={{ width: PREVIEW_W, height: PREVIEW_H }}   // lock CSS size
+        className="border shadow rounded"
+      />
+      {menuPos && (
+        <ContextMenu
+          pos={menuPos}
+          locked={!!(fcRef.current?.getActiveObject() as any)?.locked}
+          onAction={handleMenuAction}
+          onClose={() => setMenuPos(null)}
+        />
+      )}
+    </>
   )
 }
