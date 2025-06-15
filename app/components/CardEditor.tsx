@@ -347,10 +347,13 @@ const collectProofData = () => {
   const pageImages: string[] = []
   canvasMap.forEach(fc => {
     if (!fc) { pageImages.push(''); return }
+    const guides = fc.getObjects().filter(o => (o as any)._guide)
+    guides.forEach(g => g.set('visible', false))
     fc.renderAll()
     pageImages.push(
       fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT() })
     )
+    guides.forEach(g => g.set('visible', true))
   })
   return { pages, pageImages }
 }
