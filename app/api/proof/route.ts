@@ -53,14 +53,31 @@ export async function POST(req: NextRequest) {
     }
 
     const page = pages[0] || {}
-    const bleedTop    = page?.edgeBleed?.top    === false ? 0 : finalSpec.bleedIn
-    const bleedRight  = page?.edgeBleed?.right  === false ? 0 : finalSpec.bleedIn
-    const bleedBottom = page?.edgeBleed?.bottom === false ? 0 : finalSpec.bleedIn
-    const bleedLeft   = page?.edgeBleed?.left   === false ? 0 : finalSpec.bleedIn
+    const hasTopBleed    = page?.edgeBleed?.top    !== false
+    const hasRightBleed  = page?.edgeBleed?.right  !== false
+    const hasBottomBleed = page?.edgeBleed?.bottom !== false
+    const hasLeftBleed   = page?.edgeBleed?.left   !== false
 
     const px = (inches: number) => Math.round(inches * finalSpec.dpi)
-    const width  = px(finalSpec.trimWidthIn  + bleedLeft + bleedRight)
-    const height = px(finalSpec.trimHeightIn + bleedTop  + bleedBottom)
+
+    const fullW = px(finalSpec.trimWidthIn  + finalSpec.bleedIn * 2)
+    const fullH = px(finalSpec.trimHeightIn + finalSpec.bleedIn * 2)
+
+    const canvasW = fullW
+    const canvasH = fullH
+
+    const cropLeft   = hasLeftBleed   ? 0 : px(finalSpec.bleedIn)
+    const cropRight  = hasRightBleed  ? 0 : px(finalSpec.bleedIn)
+    const cropTop    = hasTopBleed    ? 0 : px(finalSpec.bleedIn)
+    const cropBottom = hasBottomBleed ? 0 : px(finalSpec.bleedIn)
+
+    const bleedLeft   = hasLeftBleed   ? finalSpec.bleedIn : 0
+    const bleedRight  = hasRightBleed  ? finalSpec.bleedIn : 0
+    const bleedTop    = hasTopBleed    ? finalSpec.bleedIn : 0
+    const bleedBottom = hasBottomBleed ? finalSpec.bleedIn : 0
+
+    const finalW = canvasW - cropLeft - cropRight
+    const finalH = canvasH - cropTop  - cropBottom
 
     const clamp = (n:number, min:number, max:number) => Math.max(min, Math.min(max, n))
     let img: sharp.Sharp
@@ -71,24 +88,24 @@ export async function POST(req: NextRequest) {
       img = sharp(buf).ensureAlpha()
       const meta = await img.metadata()
       console.log('Fabric canvas px', meta.width, meta.height)
-      console.log('Expected page px', width, height)
-      if (meta.width !== width || meta.height !== height) {
-        img = img.resize(width, height)
+      console.log('Expected page px', canvasW, canvasH)
+      if (meta.width !== canvasW || meta.height !== canvasH) {
+        img = img.resize(canvasW, canvasH)
       }
     } else {
       const composites: Overlay[] = []
       const layers = Array.isArray(page.layers) ? page.layers : []
 
       for (const ly of layers) {
-        let x = ly.leftPct != null ? (ly.leftPct / 100) * width  : ly.x
-      let y = ly.topPct  != null ? (ly.topPct  / 100) * height : ly.y
-      let w = ly.widthPct  != null ? (ly.widthPct  / 100) * width  : ly.width
-      let h = ly.heightPct != null ? (ly.heightPct / 100) * height : ly.height
+        let x = ly.leftPct != null ? (ly.leftPct / 100) * canvasW : ly.x
+        let y = ly.topPct  != null ? (ly.topPct  / 100) * canvasH : ly.y
+        let w = ly.widthPct  != null ? (ly.widthPct  / 100) * canvasW : ly.width
+        let h = ly.heightPct != null ? (ly.heightPct / 100) * canvasH : ly.height
 
-      x = clamp(Math.round(x || 0), 0, width)
-      y = clamp(Math.round(y || 0), 0, height)
-      if (w != null) w = clamp(Math.round(w), 1, width - x)
-      if (h != null) h = clamp(Math.round(h), 1, height - y)
+        x = clamp(Math.round(x || 0), 0, canvasW)
+        y = clamp(Math.round(y || 0), 0, canvasH)
+        if (w != null) w = clamp(Math.round(w), 1, canvasW - x)
+        if (h != null) h = clamp(Math.round(h), 1, canvasH - y)
 
       if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
         try {
@@ -99,7 +116,7 @@ export async function POST(req: NextRequest) {
           let imgSharp = sharp(buf).ensureAlpha()
           const meta = await imgSharp.metadata()
           console.log('Fabric canvas px', meta.width, meta.height)
-          console.log('Expected page px', width, height)
+          console.log('Expected page px', canvasW, canvasH)
           if (ly.cropW != null && ly.cropH != null) {
             const left = Math.max(0, Math.round(ly.cropX ?? 0))
             const top = Math.max(0, Math.round(ly.cropY ?? 0))
@@ -137,21 +154,25 @@ export async function POST(req: NextRequest) {
       }
       }
 
-      img = sharp({ create: { width, height, channels: 4, background: '#ffffff' } }).composite(composites)
+      img = sharp({ create: { width: canvasW, height: canvasH, channels: 4, background: '#ffffff' } }).composite(composites)
+    }
+
+    if (cropLeft || cropRight || cropTop || cropBottom) {
+      img = img.extract({ left: cropLeft, top: cropTop, width: finalW, height: finalH })
     }
 
     const bleedW = finalSpec.trimWidthIn + bleedLeft + bleedRight
     const bleedH = finalSpec.trimHeightIn + bleedTop + bleedBottom
 
-    const masterRatio = width / height
+    const masterRatio = finalW / finalH
     const targetRatio = bleedW / bleedH
 
     if (targetRatio < masterRatio - 0.0001) {
-      const cropW = Math.round(height * targetRatio)
-      const offsetX = Math.floor((width - cropW) / 2)
+      const cropW = Math.round(finalH * targetRatio)
+      const offsetX = Math.floor((finalW - cropW) / 2)
 
       img = img
-        .extract({ left: offsetX, top: 0, width: cropW, height })
+        .extract({ left: offsetX, top: 0, width: cropW, height: finalH })
         .extend({
           left: Math.round(bleedLeft  * finalSpec.dpi),
           right: Math.round(bleedRight * finalSpec.dpi),
