@@ -9,6 +9,8 @@ import { fabric } from 'fabric'
  */
 export function enableSnapGuides(fc: fabric.Canvas, width: number, height: number) {
   const SNAP = 4
+  // how strongly to pull the object toward a snapped position (0‑1)
+  const PULL = 0.35
   let guides: fabric.Line[] = []
   let cache: { l:number; r:number; t:number; b:number; cx:number; cy:number }[] = []
 
@@ -64,6 +66,8 @@ export function enableSnapGuides(fc: fabric.Canvas, width: number, height: numbe
   }
 
   const snap = (obj: fabric.Object, apply = true) => {
+    // `apply` true → gently pull the object toward the line
+    // `apply` false → just show the guides
     const a = metrics(obj.getBoundingRect(true, true))
     let newLeft = obj.left ?? 0
     let newTop  = obj.top  ?? 0
@@ -72,13 +76,13 @@ export function enableSnapGuides(fc: fabric.Canvas, width: number, height: numbe
 
     const checkX = (diff: number, pos: number) => {
       if (snapX === null && Math.abs(diff) < SNAP) {
-        if (apply) newLeft -= diff
+        if (apply) newLeft -= diff * PULL
         snapX = pos
       }
     }
     const checkY = (diff: number, pos: number) => {
       if (snapY === null && Math.abs(diff) < SNAP) {
-        if (apply) newTop -= diff
+        if (apply) newTop -= diff * PULL
         snapY = pos
       }
     }
