@@ -23,6 +23,7 @@ import TextToolbar                      from './TextToolbar'
 import ImageToolbar                     from './ImageToolbar'
 import EditorCommands                   from './EditorCommands'
 import SelfieDrawer                     from './SelfieDrawer'
+import CropDrawer                      from './CropDrawer'
 import PreviewModal                    from './PreviewModal'
 import { CropTool }                     from '@/lib/CropTool'
 import WaltyEditorHeader                from './WaltyEditorHeader'
@@ -224,8 +225,17 @@ export default function CardEditor({
   /* track cropping state per page */
   const [cropping, setCropping] =
     useState<[boolean, boolean, boolean, boolean]>([false, false, false, false])
-  const handleCroppingChange = (idx: number, state: boolean) =>
-    setCropping(prev => { const next = [...prev] as typeof prev; next[idx] = state; return next })
+  const handleCroppingChange = (idx: number, state: boolean) => {
+    setCropping(prev => {
+      const next = [...prev] as typeof prev
+      next[idx] = state
+      return next
+    })
+    if (idx === activeIdx) setCropMode(state)
+  }
+
+  const isCropMode   = useEditor(s => s.isCropMode)
+  const setCropMode  = useEditor(s => s.setCropMode)
 
   /* 5 ─ save ------------------------------------------------------ */
   const [saving, setSaving] = useState(false)
@@ -293,6 +303,24 @@ useEffect(() => {
   return () => document.removeEventListener('open-selfie-drawer', open)
 }, [])
 
+// start-crop → begin crop tool and enter crop mode
+useEffect(() => {
+  const handler = () => {
+    const fc = canvasMap[activeIdx]
+    if (!fc) return
+    const obj = fc.getActiveObject() as any
+    if (!obj || obj.type !== 'image') return
+    const tool = (fc as any)._cropTool as CropTool | undefined
+    if (tool && !tool.isActive) {
+      tool.begin(obj)
+      setCropping(prev => { const n = [...prev] as typeof prev; n[activeIdx] = true; return n })
+      setCropMode(true)
+    }
+  }
+  document.addEventListener('start-crop', handler)
+  return () => document.removeEventListener('start-crop', handler)
+}, [canvasMap, activeIdx])
+
 /* 6 b – when the user picks one of the generated variants ----------- */
 const handleSwap = (url: string) => {
   const pageIdx = activeIdx                         // current page
@@ -310,6 +338,86 @@ const handleSwap = (url: string) => {
   })
 
   setDrawerOpen(false)
+}
+
+const exitCrop = (commit: boolean) => {
+  const fc = canvasMap[activeIdx]
+  const tool = (fc as any)?._cropTool as CropTool | undefined
+  if (tool?.isActive) {
+    commit ? tool.commit() : tool.cancel()
+  }
+  setCropping(prev => { const n = [...prev] as typeof prev; n[activeIdx] = false; return n })
+  setCropMode(false)
+}
+
+const setCropRatio = (r: number | null) => {
+  const fc = canvasMap[activeIdx]
+  if (!fc) return
+  const tool = (fc as any)?._cropTool as CropTool | undefined
+  const frame = tool ? (tool as any).frame as fabric.Group | null : null
+  const img = tool ? (tool as any).img as fabric.Image | null : null
+  if (!tool || !tool.isActive || !frame) return
+  const ratio = r === null || Number.isNaN(r) ? null : r
+  tool.setRatio?.(ratio)
+
+  let w = frame.width! * frame.scaleX!
+  let h = frame.height! * frame.scaleY!
+  const cX = frame.left! + w / 2
+  const cY = frame.top! + h / 2
+
+  if (ratio !== null) {
+    const base = Math.max(w, h)
+    if (ratio >= 1) {
+      w = base
+      h = base / ratio
+    } else {
+      w = base * ratio
+      h = base
+    }
+  }
+
+  if (img) {
+    const maxW = img.getScaledWidth()
+    const maxH = img.getScaledHeight()
+    const scale = Math.min(maxW / w, maxH / h, 1)
+    w *= scale
+    h *= scale
+  }
+
+  const rect = frame.item(0) as fabric.Rect
+  rect.set({ left: 0, top: 0, width: w, height: h, scaleX: 1, scaleY: 1 })
+  rect.setCoords()
+
+  frame.set({ width: w, height: h, scaleX: 1, scaleY: 1 })
+  const g = frame as any
+  if (g._calcBounds && g._updateObjectsCoords) {
+    g._calcBounds()
+    g._updateObjectsCoords()
+  }
+
+  let left = cX - w / 2
+  let top = cY - h / 2
+  if (img) {
+    const minL = img.left!
+    const minT = img.top!
+    const maxL = minL + img.getScaledWidth() - w
+    const maxT = minT + img.getScaledHeight() - h
+    left = Math.min(Math.max(left, minL), maxL)
+    top = Math.min(Math.max(top, minT), maxT)
+  }
+  frame.set({
+    scaleX: 1,
+    scaleY: 1,
+    left,
+    top,
+  })
+  rect.setCoords()
+  frame.setCoords()
+  ;(tool as any).clampFrame?.()
+  tool['clamp']?.(true)
+  ;(tool as any).updateMasks?.()
+  fc.setActiveObject(frame)
+  fc.requestRenderAll()
 }
 
 /* generate images and show preview */
@@ -456,15 +564,17 @@ const handleProofAll = async () => {
         height={72}                          /* match the design */
       />
 
-      <EditorCommands
-        onUndo={undo}
-        onRedo={redo}
-        onSave={handleSave}
-        onProof={mode === 'staff' ? handleProofAll : undefined}
-        saving={saving}
-        mode={mode}
-      />
-
+      {!isCropMode && (
+        <EditorCommands
+          onUndo={undo}
+          onRedo={redo}
+          onSave={handleSave}
+          onProof={mode === 'staff' ? handleProofAll : undefined}
+          saving={saving}
+          mode={mode}
+        />
+      )}
+      
       <div className="flex flex-1 relative bg-[--walty-cream] lg:max-w-6xl mx-auto">
         {/* global overlays */}
         <CoachMark
@@ -480,14 +590,20 @@ const handleProofAll = async () => {
           onUseSelected={handleSwap}
           placeholderId={aiPlaceholderId}   /* ← NEW prop */
         />
+        <CropDrawer
+          open={isCropMode}
+          onCancel={() => exitCrop(false)}
+          onApply={() => exitCrop(true)}
+          onRatio={setCropRatio}
+        />
 
 
         {/* sidebar */}
-        <LayerPanel />
+        {!isCropMode && <LayerPanel />}
 
         {/* main */}
         <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[868px]">
-          {activeType === 'text' ? (
+          {!isCropMode && (activeType === 'text' ? (
             <TextToolbar
               canvas={activeFc}
               addText={addText}
@@ -509,7 +625,7 @@ const handleProofAll = async () => {
                 height: 'var(--walty-toolbar-h)',
               }}
             />
-          )}
+          ))}
 
                     {/* canvases */}
           <div className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6">
