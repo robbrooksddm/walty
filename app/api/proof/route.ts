@@ -39,6 +39,20 @@ export async function POST(req: NextRequest) {
             trimHeightIn: number
             bleedIn: number
             dpi: number
+            spreadLayout?: {
+              spreadWidth: number
+              spreadHeight: number
+              panels: {
+                name: string
+                order: number
+                bleed?: {
+                  top?: boolean
+                  right?: boolean
+                  bottom?: boolean
+                  left?: boolean
+                }
+              }[]
+            }
           } | null
         }>(
           `*[_type=="cardProduct" && slug.current==$sku][0]{"spec":coalesce(printSpec->, printSpec)}`,
@@ -52,140 +66,85 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'spec not found' }, { status: 404 })
     }
 
-    const page = pages[0] || {}
-    const hasTopBleed    = page?.edgeBleed?.top    !== false
-    const hasRightBleed  = page?.edgeBleed?.right  !== false
-    const hasBottomBleed = page?.edgeBleed?.bottom !== false
-    const hasLeftBleed   = page?.edgeBleed?.left   !== false
+    const px = (n: number) => Math.round(n * finalSpec.dpi)
+    const pageW = px(finalSpec.trimWidthIn + finalSpec.bleedIn * 2)
+    const pageH = px(finalSpec.trimHeightIn + finalSpec.bleedIn * 2)
 
-    const px = (inches: number) => Math.round(inches * finalSpec.dpi)
+    const defaultPanels = [
+      { name: 'front',   order: 0, bleed: { top: true, right: true, bottom: true, left: true } },
+      { name: 'inner-L', order: 1, bleed: { top: true, right: true, bottom: true, left: true } },
+      { name: 'inner-R', order: 2, bleed: { top: true, right: true, bottom: true, left: true } },
+      { name: 'back',    order: 3, bleed: { top: true, right: true, bottom: true, left: true } },
+    ]
 
-    const fullW = px(finalSpec.trimWidthIn  + finalSpec.bleedIn * 2)
-    const fullH = px(finalSpec.trimHeightIn + finalSpec.bleedIn * 2)
+    const layout = finalSpec.spreadLayout ?? {
+      spreadWidth : (finalSpec.trimWidthIn + finalSpec.bleedIn * 2) * 2,
+      spreadHeight: (finalSpec.trimHeightIn + finalSpec.bleedIn * 2) * 2,
+      panels: defaultPanels,
+    }
 
-    const canvasW = fullW
-    const canvasH = fullH
+    const panels = Array.isArray(layout.panels) && layout.panels.length === 4
+      ? [...layout.panels].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      : defaultPanels
 
-    const cropLeft   = hasLeftBleed   ? 0 : px(finalSpec.bleedIn)
-    const cropRight  = hasRightBleed  ? 0 : px(finalSpec.bleedIn)
-    const cropTop    = hasTopBleed    ? 0 : px(finalSpec.bleedIn)
-    const cropBottom = hasBottomBleed ? 0 : px(finalSpec.bleedIn)
+    const sheetW = px(layout.spreadWidth)
+    const sheetH = px(layout.spreadHeight)
 
-    const bleedLeft   = hasLeftBleed   ? finalSpec.bleedIn : 0
-    const bleedRight  = hasRightBleed  ? finalSpec.bleedIn : 0
-    const bleedTop    = hasTopBleed    ? finalSpec.bleedIn : 0
-    const bleedBottom = hasBottomBleed ? finalSpec.bleedIn : 0
+    const edge = {
+      top:    panels.slice(0, 2).some(p => p.bleed?.top !== false),
+      bottom: panels.slice(2).some(p => p.bleed?.bottom !== false),
+      left:   [panels[0], panels[2]].some(p => p.bleed?.left !== false),
+      right:  [panels[1], panels[3]].some(p => p.bleed?.right !== false),
+    }
 
-    const finalW = canvasW - cropLeft - cropRight
-    const finalH = canvasH - cropTop  - cropBottom
-
-    const clamp = (n:number, min:number, max:number) => Math.max(min, Math.min(max, n))
-    let img: sharp.Sharp
-
-    if (Array.isArray(pageImages) && typeof pageImages[0] === 'string' && pageImages[0]) {
-      const m = pageImages[0].match(/^data:image\/\w+;base64,/)
-      const buf = Buffer.from(pageImages[0].replace(m ? m[0] : '', ''), 'base64')
-      img = sharp(buf).ensureAlpha()
-      const meta = await img.metadata()
-      console.log('Fabric canvas px', meta.width, meta.height)
-      console.log('Expected page px', canvasW, canvasH)
-      if (meta.width !== canvasW || meta.height !== canvasH) {
-        img = img.resize(canvasW, canvasH)
-      }
-    } else {
-      const composites: Overlay[] = []
-      const layers = Array.isArray(page.layers) ? page.layers : []
-
-      for (const ly of layers) {
-        let x = ly.leftPct != null ? (ly.leftPct / 100) * canvasW : ly.x
-        let y = ly.topPct  != null ? (ly.topPct  / 100) * canvasH : ly.y
-        let w = ly.widthPct  != null ? (ly.widthPct  / 100) * canvasW : ly.width
-        let h = ly.heightPct != null ? (ly.heightPct / 100) * canvasH : ly.height
-
-        x = clamp(Math.round(x || 0), 0, canvasW)
-        y = clamp(Math.round(y || 0), 0, canvasH)
-        if (w != null) w = clamp(Math.round(w), 1, canvasW - x)
-        if (h != null) h = clamp(Math.round(h), 1, canvasH - y)
-
-      if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
-        try {
-          const url = ly.srcUrl || ly.src
-          if (typeof url !== 'string' || !/^https?:/i.test(url)) continue
-          const res = await fetch(url)
-          const buf = Buffer.from(await res.arrayBuffer())
-          let imgSharp = sharp(buf).ensureAlpha()
-          const meta = await imgSharp.metadata()
-          console.log('Fabric canvas px', meta.width, meta.height)
-          console.log('Expected page px', canvasW, canvasH)
-          if (ly.cropW != null && ly.cropH != null) {
-            const left = Math.max(0, Math.round(ly.cropX ?? 0))
-            const top = Math.max(0, Math.round(ly.cropY ?? 0))
-            const cw = Math.round(ly.cropW)
-            const ch = Math.round(ly.cropH)
-            imgSharp = imgSharp.extract({ left, top, width: cw, height: ch })
-          }
-          if (ly.flipY) imgSharp = imgSharp.flip()
-          if (ly.flipX) imgSharp = imgSharp.flop()
-          const img = await imgSharp.resize(w, h, { fit: 'fill' }).toBuffer()
-          composites.push({ input: img, left: x, top: y, opacity: ly.opacity ?? 1 } as Overlay)
-        } catch (err) {
-          console.error('img', err)
+    const pageMap: Record<string, sharp.Sharp> = {}
+    if (Array.isArray(pageImages)) {
+      for (let i = 0; i < Math.min(4, pageImages.length); i++) {
+        const data = pageImages[i]
+        if (!data) continue
+        const m = data.match(/^data:image\/\w+;base64,/)
+        const buf = Buffer.from(data.replace(m ? m[0] : '', ''), 'base64')
+        let img = sharp(buf).ensureAlpha()
+        const meta = await img.metadata()
+        if (meta.width !== pageW || meta.height !== pageH) {
+          img = img.resize(pageW, pageH)
         }
-      } else if (ly.type === 'text' && ly.text) {
-        const fs = ly.fontSize || 20
-        const lh = (ly.lineHeight ?? 1.2) * fs
-        const linesRaw = Array.isArray(ly.lines)
-          ? ly.lines
-          : String(ly.text || '').split('\n')
-        const lines = linesRaw.map(esc)
-        const anchor = ly.textAlign === 'center' ? 'middle'
-                     : ly.textAlign === 'right' ? 'end' : 'start'
-        const anchorX = ly.textAlign === 'center' ? '50%'
-                        : ly.textAlign === 'right' ? '100%' : '0'
-        const pad = Math.round(fs * 0.2)
-        const svgW = w ?? Math.round(fs * Math.max(...linesRaw.map(l => l.length)) * 0.6)
-        const svgH = (h ?? Math.round(lh * linesRaw.length)) + pad * 2
-        const tspans = lines.map((t,i)=>`<tspan x='${anchorX}' dy='${i?lh:0}'>${t}</tspan>`).join('')
-        const svg = `<?xml version='1.0' encoding='UTF-8'?>`+
-          `<svg xmlns='http://www.w3.org/2000/svg' width='${svgW}' height='${svgH}'>`+
-          `<text x='${anchorX}' y='${pad}' dominant-baseline='text-before-edge' text-anchor='${anchor}' font-family='${ly.fontFamily || 'Helvetica'}' font-size='${fs}' font-weight='${ly.fontWeight || ''}' font-style='${ly.fontStyle || ''}' fill='${ly.fill || '#000'}' ${ly.underline ? "style='text-decoration:underline'" : ''} opacity='${ly.opacity ?? 1}'>${tspans}</text>`+
-          `</svg>`
-        composites.push({ input: Buffer.from(svg), left: x, top: y, opacity: ly.opacity ?? 1 } as Overlay)
+        const name = pages[i]?.name || `page-${i}`
+        pageMap[name] = img
       }
-      }
-
-      img = sharp({ create: { width: canvasW, height: canvasH, channels: 4, background: '#ffffff' } }).composite(composites)
     }
 
-    if (cropLeft || cropRight || cropTop || cropBottom) {
-      img = img.extract({ left: cropLeft, top: cropTop, width: finalW, height: finalH })
+    const comps: Overlay[] = []
+    const positions = [
+      { left: 0,      top: 0 },
+      { left: pageW,  top: 0 },
+      { left: 0,      top: pageH },
+      { left: pageW,  top: pageH },
+    ]
+
+    panels.forEach((p, idx) => {
+      const img = pageMap[p.name]
+      if (!img) return
+      comps.push({ input: img, left: positions[idx].left, top: positions[idx].top } as Overlay)
+    })
+
+    let outImg = sharp({ create: { width: sheetW, height: sheetH, channels: 4, background: '#ffffff' } }).composite(comps)
+
+    const cropL = edge.left ? 0 : px(finalSpec.bleedIn)
+    const cropR = edge.right ? 0 : px(finalSpec.bleedIn)
+    const cropT = edge.top ? 0 : px(finalSpec.bleedIn)
+    const cropB = edge.bottom ? 0 : px(finalSpec.bleedIn)
+
+    if (cropL || cropR || cropT || cropB) {
+      outImg = outImg.extract({ left: cropL, top: cropT, width: sheetW - cropL - cropR, height: sheetH - cropT - cropB })
     }
 
-    const bleedW = finalSpec.trimWidthIn + bleedLeft + bleedRight
-    const bleedH = finalSpec.trimHeightIn + bleedTop + bleedBottom
+    const out = await outImg.jpeg({ quality: 95, chromaSubsampling: '4:4:4' }).toBuffer()
 
-    const masterRatio = finalW / finalH
-    const targetRatio = bleedW / bleedH
-
-    if (targetRatio < masterRatio - 0.0001) {
-      const cropW = Math.round(finalH * targetRatio)
-      const offsetX = Math.floor((finalW - cropW) / 2)
-
-      img = img
-        .extract({ left: offsetX, top: 0, width: cropW, height: finalH })
-        .extend({
-          left: Math.round(bleedLeft  * finalSpec.dpi),
-          right: Math.round(bleedRight * finalSpec.dpi),
-          top: 0,
-          bottom: 0,
-          background: '#ffffff',
-        })
-    }
-
-    const out = await img
-      .jpeg({ quality: 95, chromaSubsampling: '4:4:4' })
-      .toBuffer()
-    const name = filename && typeof filename === 'string' ? filename : 'proof.jpg'
+    const name =
+      typeof filename === 'string' && filename
+        ? filename
+        : `${id}-${sku ?? 'proof'}.jpg`
     return new NextResponse(out, {
       headers: {
         'content-type': 'image/jpeg',

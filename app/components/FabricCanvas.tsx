@@ -23,6 +23,20 @@ export interface PrintSpec {
   trimHeightIn: number
   bleedIn: number
   dpi: number
+  spreadLayout?: {
+    spreadWidth: number
+    spreadHeight: number
+    panels: {
+      name: string
+      order: number
+      bleed?: {
+        top?: boolean
+        right?: boolean
+        bottom?: boolean
+        left?: boolean
+      }
+    }[]
+  }
 }
 
 export interface PreviewSpec {
@@ -219,12 +233,6 @@ export interface Layer {
 export interface TemplatePage {
   name:   string
   layers: Layer[]
-  edgeBleed?: {
-    top?: boolean
-    right?: boolean
-    bottom?: boolean
-    left?: boolean
-  }
 }
 /* ----------another helper --------------------------------------------- */
 const discardSelection = (fc: fabric.Canvas) => {

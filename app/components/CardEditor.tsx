@@ -90,7 +90,7 @@ export default function CardEditor({
   if (printSpec) {
     setPrintSpec(printSpec)
     setEditorSpec(printSpec)
-    console.log('CardEditor received spec', printSpec)
+    console.log('\u25BA CardEditor spec =', JSON.stringify(printSpec, null, 2))
   } else {
     console.warn('CardEditor missing printSpec')
   }
@@ -157,6 +157,7 @@ export default function CardEditor({
 
   const updateThumbFromCanvas = (idx: number, fc: fabric.Canvas) => {
     try {
+      if (!(fc as any).lowerCanvasEl) return
       fc.renderAll()
       console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
       console.log('Expected page px', pageW(), pageH())
