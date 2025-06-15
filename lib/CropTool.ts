@@ -36,7 +36,15 @@ export class CropTool {
 
   public setRatio (r: number | null) {
     this.ratio = r
-    if (this.frame) this.frame.lockUniScaling = false
+    if (this.frame) {
+      this.frame.lockUniScaling = false
+      this.frame.lockScalingX  = false
+      this.frame.lockScalingY  = false
+      this.frame.selectable    = true
+      this.frame.evented       = true
+      this.frame.hasControls   = true
+      this.fc.setActiveObject(this.frame)
+    }
   }
 
   /* ─────────────── public API ──────────────────────────────────── */
