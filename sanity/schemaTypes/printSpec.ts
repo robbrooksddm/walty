@@ -53,16 +53,31 @@ export default defineType({
           type: 'array',
           title: 'Panels (placement order)',
           initialValue: [
-            { name: 'Outer rear',  order: 0, bleed: { top: true, right: true, bottom: true, left: true } },
-            { name: 'Outer front', order: 1, bleed: { top: true, right: true, bottom: true, left: true } },
-            { name: 'Inside front', order: 2, bleed: { top: true, right: true, bottom: true, left: true } },
-            { name: 'Inside back', order: 3, bleed: { top: true, right: true, bottom: true, left: true } },
+            { name: 'Outer rear',  page: 'back',    order: 0, bleed: { top: true, right: true, bottom: true, left: true } },
+            { name: 'Outer front', page: 'front',   order: 1, bleed: { top: true, right: true, bottom: true, left: true } },
+            { name: 'Inside front', page: 'inner-R', order: 2, bleed: { top: true, right: true, bottom: true, left: true } },
+            { name: 'Inside back', page: 'inner-L',  order: 3, bleed: { top: true, right: true, bottom: true, left: true } },
           ],
           of: [
             defineArrayMember({
               type: 'object',
               fields: [
-                defineField({ name: 'name',  type: 'string', title: 'Page name' }),
+                defineField({ name: 'name',  type: 'string', title: 'Panel name' }),
+                defineField({
+                  name: 'page',
+                  type: 'string',
+                  title: 'Card page',
+                  options: {
+                    list: [
+                      { title: 'Front cover', value: 'front' },
+                      { title: 'Inner left',  value: 'inner-L' },
+                      { title: 'Inner right', value: 'inner-R' },
+                      { title: 'Back cover',  value: 'back' },
+                    ],
+                    layout: 'dropdown',
+                  },
+                  validation: r => r.required(),
+                }),
                 defineField({
                   name: 'order',
                   type: 'number',

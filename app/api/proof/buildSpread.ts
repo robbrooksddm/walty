@@ -2,6 +2,7 @@ import sharp from 'sharp'
 
 export interface Panel {
   name: string
+  page: string
   order: number
   bleed?: {
     top?: boolean
@@ -35,7 +36,7 @@ export interface SpreadResult {
  * Assemble the four page buffers into a full spread.
  */
 export async function buildSpread(
-  pages: Buffer[],
+  pageMap: Record<string, Buffer>,
   spec: BuildSpreadSpec,
   templateSlug: string,
   sku: string,
@@ -58,9 +59,9 @@ export async function buildSpread(
 
   const crops: Buffer[] = []
 
-  for (let i = 0; i < panels.length && i < pages.length; i++) {
+  for (let i = 0; i < panels.length; i++) {
     const panel = panels[i]
-    const buf = pages[i]
+    const buf = pageMap[panel.page || panel.name]
     if (!buf) continue
     const bleed = panel.bleed ?? {}
     const cropL = bleed.left === false ? bleedPx : 0
