@@ -19,13 +19,12 @@ const FALLBACK_NAMES = ['front', 'inner-L', 'inner-R', 'back'] as const
 function normalisePages(
   pagesRaw: any[],
   spec: PrintSpec,
-): { name: string; layers: any[]; edgeBleed?: any }[] {
+): { name: string; layers: any[] }[] {
   return pagesRaw.map((p, i) => ({
     name:   typeof p?.name === 'string' && p.name.trim()
               ? p.name.trim()
               : FALLBACK_NAMES[i] ?? `page-${i}`,
     layers: Array.isArray(p?.layers) ? p.layers.map(l => toSanity(l, spec)) : [],
-    ...(p?.edgeBleed && { edgeBleed: p.edgeBleed }),
   }))
 }
 

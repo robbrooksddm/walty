@@ -162,18 +162,6 @@ export default defineType({
           fields: [
             defineField({name: 'name', type: 'string', hidden: true}),
             defineField({name: 'layers', type: 'array', of: layerMembers}),
-            defineField({
-              name: 'edgeBleed',
-              type: 'object',
-              title: 'Bleed edges',
-              options: { columns: 4 },
-              fields: [
-                defineField({ name: 'top',    type: 'boolean', title: 'Top',    initialValue: true }),
-                defineField({ name: 'right',  type: 'boolean', title: 'Right',  initialValue: true }),
-                defineField({ name: 'bottom', type: 'boolean', title: 'Bottom', initialValue: true }),
-                defineField({ name: 'left',   type: 'boolean', title: 'Left',   initialValue: true }),
-              ],
-            }),
           ],
           preview: {
              /* grab both the asset ref and the url from the first *image* layer */

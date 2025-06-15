@@ -61,7 +61,6 @@ export async function getTemplatePages(
       showSafeArea
     },
     pages[]{
-      edgeBleed,
       layers[]{
         ...,                       // keep every native field
         // if this layer has a reference called “source”, pull it in-line:
@@ -108,7 +107,6 @@ console.log(
     layers: (pages[i]?.layers ?? [])
       .map(l => fromSanity(l, spec))
       .filter(Boolean),
-    edgeBleed: pages[i]?.edgeBleed,
   })) as TemplatePage[]
 
   const coverImage = raw?.coverImage ? urlFor(raw.coverImage).url() : undefined
