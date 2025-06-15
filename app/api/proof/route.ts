@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import sharp from 'sharp'
 import { sanityPreview } from '@/sanity/lib/client'
+import { buildSpread } from './buildSpread'
 
 interface Overlay extends sharp.OverlayOptions {
   /** Global opacity for the overlay; sharp's types omit this */
@@ -98,6 +99,7 @@ export async function POST(req: NextRequest) {
     }
 
     const pageMap: Record<string, sharp.Sharp> = {}
+    const pageBuffers: Buffer[] = []
     if (Array.isArray(pageImages)) {
       for (let i = 0; i < Math.min(4, pageImages.length); i++) {
         const data = pageImages[i]
@@ -111,7 +113,23 @@ export async function POST(req: NextRequest) {
         }
         const name = pages[i]?.name || `page-${i}`
         pageMap[name] = img
+        pageBuffers[i] = await img.jpeg({ quality: 100, chromaSubsampling: '4:4:4' }).toBuffer()
       }
+    }
+
+    if (Array.isArray(layout.panels) && layout.panels.length === 4) {
+      const { blob, filename: fName } = await buildSpread(
+        pageBuffers,
+        { dpi: finalSpec.dpi, spreadLayout: layout },
+        esc(id),
+        sku ?? 'proof',
+      )
+      return new NextResponse(blob, {
+        headers: {
+          'content-type': 'image/jpeg',
+          'content-disposition': `attachment; filename="${fName}"`,
+        },
+      })
     }
 
     const comps: Overlay[] = []
