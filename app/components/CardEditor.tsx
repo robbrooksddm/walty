@@ -385,12 +385,7 @@ const setCropRatio = (r: number | null) => {
 
   const rect = frame.item(0) as fabric.Rect
   rect.set({ left: 0, top: 0, width: w, height: h, scaleX: 1, scaleY: 1 })
-
-  // Refresh group bounds so outline and handles stay aligned
-  const calc = (frame as any)._calcBounds as (() => void) | undefined
-  const upd  = (frame as any)._updateObjectsCoords as (() => void) | undefined
-  calc?.call(frame)
-  upd?.call(frame)
+  rect.setCoords()
 
   frame.set({ width: w, height: h, scaleX: 1, scaleY: 1 })
 

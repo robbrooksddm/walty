@@ -36,7 +36,7 @@ export class CropTool {
   public setRatio (r: number | null) {
     this.ratio = r
     if (this.frame) {
-      this.frame.lockUniScaling = r !== null
+      this.fc.uniformScaling   = r !== null
       this.frame.lockScalingX  = false
       this.frame.lockScalingY  = false
       this.frame.selectable    = true
