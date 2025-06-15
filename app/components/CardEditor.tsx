@@ -388,6 +388,11 @@ const setCropRatio = (r: number | null) => {
   rect.setCoords()
 
   frame.set({ width: w, height: h, scaleX: 1, scaleY: 1 })
+  const g = frame as any
+  if (g._calcBounds && g._updateObjectsCoords) {
+    g._calcBounds()
+    g._updateObjectsCoords()
+  }
 
   let left = cX - w / 2
   let top = cY - h / 2
