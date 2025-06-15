@@ -50,10 +50,13 @@ export async function buildSpread(
 
   const panels = [...spreadLayout.panels].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
+  const sheetW = px(spreadLayout.spreadWidth)
+  const sheetH = px(spreadLayout.spreadHeight)
+
+  const pageWpx = Math.round(sheetW / panels.length)
+  const pageHpx = sheetH
+
   const crops: Buffer[] = []
-  let pageWpx = 0
-  let pageHpx = 0
-  const dims: { width: number; height: number }[] = []
 
   for (let i = 0; i < panels.length && i < pages.length; i++) {
     const panel = panels[i]
@@ -67,37 +70,12 @@ export async function buildSpread(
     const width = baseW - cropL - cropR
     const height = baseH - cropT - cropB
 
-    const outBuf = await sharp(buf)
-      .extract({ left: cropL, top: cropT, width, height })
-      .toBuffer()
-    const meta = await sharp(outBuf).metadata()
-
+    let img = sharp(buf).extract({ left: cropL, top: cropT, width, height })
+    const meta = await img.metadata()
     console.log(`  extract ${panel.name}: ${meta.width ?? width}×${meta.height ?? height}`)
-
-    if (!pageWpx) {
-      pageWpx = meta.width ?? width
-      pageHpx = meta.height ?? height
-    } else if (
-      (meta.width && meta.width > pageWpx) ||
-      (meta.height && meta.height > pageHpx)
-    ) {
-      throw new Error(
-        `page ${panel.name} is larger than ${pageWpx}×${pageHpx} px (got ${meta.width}×${meta.height})`,
-      )
-    }
-
-    crops[i] = outBuf
-    dims[i] = { width: meta.width ?? width, height: meta.height ?? height }
+    img = img.resize(pageWpx, pageHpx)
+    crops[i] = await img.toBuffer()
   }
-
-  const hasLayout =
-    spreadLayout &&
-    typeof spreadLayout.spreadWidth === 'number' &&
-    typeof spreadLayout.spreadHeight === 'number'
-  const sheetW = hasLayout
-    ? px(spreadLayout.spreadWidth)
-    : dims.reduce((acc, d) => acc + d.width, 0)
-  const sheetH = hasLayout ? px(spreadLayout.spreadHeight) : pageHpx
 
   console.log(`▶ buildSpread ${sheetW}×${sheetH}`)
 
@@ -111,15 +89,12 @@ export async function buildSpread(
   }).toColourspace('srgb')
 
   const comps: sharp.OverlayOptions[] = []
-  let currentX = 0
   for (let i = 0; i < panels.length && i < crops.length; i++) {
     const buf = crops[i]
     if (!buf) continue
-    const width = dims[i]?.width ?? pageWpx
-    const x = currentX
+    const x = i * pageWpx
     comps.push({ input: buf, left: x, top: 0 })
     console.log(`  paste ${panels[i].name} → [${x}, 0]`)
-    currentX += width
   }
 
   out = out.composite(comps)
