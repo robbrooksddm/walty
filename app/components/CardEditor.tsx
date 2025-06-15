@@ -372,7 +372,7 @@ const setCropRatio = (r: number | null) => {
     else h = w / r
   }
   const rect = frame.item(0) as fabric.Rect
-  rect.set({ width: w, height: h })
+  rect.set({ left: 0, top: 0, width: w, height: h, scaleX: 1, scaleY: 1 })
   frame.set({
     width: w,
     height: h,
@@ -381,6 +381,8 @@ const setCropRatio = (r: number | null) => {
     left: cX - w / 2,
     top: cY - h / 2,
   })
+  ;(frame as any)._calcBounds?.()
+  ;(frame as any)._updateObjectsCoords?.()
   rect.setCoords()
   frame.setCoords()
   ;(tool as any).clampFrame?.()
