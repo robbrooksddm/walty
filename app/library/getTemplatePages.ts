@@ -107,6 +107,7 @@ console.log(
     layers: (pages[i]?.layers ?? [])
       .map(l => fromSanity(l, spec))
       .filter(Boolean),
+    edgeBleed: pages[i]?.edgeBleed,
   })) as TemplatePage[]
 
   const coverImage = raw?.coverImage ? urlFor(raw.coverImage).url() : undefined

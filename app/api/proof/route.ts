@@ -52,9 +52,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'spec not found' }, { status: 404 })
     }
 
+    const page = pages[0] || {}
+    const bleedTop    = page?.edgeBleed?.top    === false ? 0 : finalSpec.bleedIn
+    const bleedRight  = page?.edgeBleed?.right  === false ? 0 : finalSpec.bleedIn
+    const bleedBottom = page?.edgeBleed?.bottom === false ? 0 : finalSpec.bleedIn
+    const bleedLeft   = page?.edgeBleed?.left   === false ? 0 : finalSpec.bleedIn
+
     const px = (inches: number) => Math.round(inches * finalSpec.dpi)
-    const width  = px(finalSpec.trimWidthIn  + finalSpec.bleedIn * 2)
-    const height = px(finalSpec.trimHeightIn + finalSpec.bleedIn * 2)
+    const width  = px(finalSpec.trimWidthIn  + bleedLeft + bleedRight)
+    const height = px(finalSpec.trimHeightIn + bleedTop  + bleedBottom)
 
     const clamp = (n:number, min:number, max:number) => Math.max(min, Math.min(max, n))
     let img: sharp.Sharp
@@ -71,7 +77,6 @@ export async function POST(req: NextRequest) {
       }
     } else {
       const composites: Overlay[] = []
-      const page = pages[0] || {}
       const layers = Array.isArray(page.layers) ? page.layers : []
 
       for (const ly of layers) {
@@ -135,8 +140,8 @@ export async function POST(req: NextRequest) {
       img = sharp({ create: { width, height, channels: 4, background: '#ffffff' } }).composite(composites)
     }
 
-    const bleedW = finalSpec.trimWidthIn + finalSpec.bleedIn * 2
-    const bleedH = finalSpec.trimHeightIn + finalSpec.bleedIn * 2
+    const bleedW = finalSpec.trimWidthIn + bleedLeft + bleedRight
+    const bleedH = finalSpec.trimHeightIn + bleedTop + bleedBottom
 
     const masterRatio = width / height
     const targetRatio = bleedW / bleedH
@@ -148,8 +153,8 @@ export async function POST(req: NextRequest) {
       img = img
         .extract({ left: offsetX, top: 0, width: cropW, height })
         .extend({
-          left: Math.round(finalSpec.bleedIn * finalSpec.dpi),
-          right: Math.round(finalSpec.bleedIn * finalSpec.dpi),
+          left: Math.round(bleedLeft  * finalSpec.dpi),
+          right: Math.round(bleedRight * finalSpec.dpi),
           top: 0,
           bottom: 0,
           background: '#ffffff',

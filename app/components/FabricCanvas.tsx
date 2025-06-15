@@ -219,6 +219,12 @@ export interface Layer {
 export interface TemplatePage {
   name:   string
   layers: Layer[]
+  edgeBleed?: {
+    top?: boolean
+    right?: boolean
+    bottom?: boolean
+    left?: boolean
+  }
 }
 /* ----------another helper --------------------------------------------- */
 const discardSelection = (fc: fabric.Canvas) => {
