@@ -29,8 +29,7 @@ export function enableSnapGuides(fc: fabric.Canvas, width: number, height: numbe
   const drawV = (x: number) => {
     const ln = new fabric.Line([x, 0, x, height], {
       stroke: '#2BB0A5',
-      strokeWidth: 2,
-      strokeDashArray: [4, 2],
+      strokeWidth: 3,
       selectable: false,
       evented: false,
       excludeFromExport: true,
@@ -43,8 +42,7 @@ export function enableSnapGuides(fc: fabric.Canvas, width: number, height: numbe
   const drawH = (y: number) => {
     const ln = new fabric.Line([0, y, width, y], {
       stroke: '#2BB0A5',
-      strokeWidth: 2,
-      strokeDashArray: [4, 2],
+      strokeWidth: 3,
       selectable: false,
       evented: false,
       excludeFromExport: true,
@@ -65,7 +63,7 @@ export function enableSnapGuides(fc: fabric.Canvas, width: number, height: numbe
       .map(o => metrics(o.getBoundingRect(true, true)))
   }
 
-  const snap = (obj: fabric.Object) => {
+  const snap = (obj: fabric.Object, apply = true) => {
     const a = metrics(obj.getBoundingRect(true, true))
     let newLeft = obj.left ?? 0
     let newTop  = obj.top  ?? 0
@@ -74,13 +72,13 @@ export function enableSnapGuides(fc: fabric.Canvas, width: number, height: numbe
 
     const checkX = (diff: number, pos: number) => {
       if (snapX === null && Math.abs(diff) < SNAP) {
-        newLeft -= diff
+        if (apply) newLeft -= diff
         snapX = pos
       }
     }
     const checkY = (diff: number, pos: number) => {
       if (snapY === null && Math.abs(diff) < SNAP) {
-        newTop -= diff
+        if (apply) newTop -= diff
         snapY = pos
       }
     }
@@ -119,8 +117,10 @@ export function enableSnapGuides(fc: fabric.Canvas, width: number, height: numbe
     if (snapX !== null) drawV(snapX)
     if (snapY !== null) drawH(snapY)
 
-    obj.set({ left: newLeft, top: newTop })
-    obj.setCoords()
+    if (apply) {
+      obj.set({ left: newLeft, top: newTop })
+      obj.setCoords()
+    }
   }
 
   fc.on('object:moving', e => {
@@ -135,7 +135,7 @@ export function enableSnapGuides(fc: fabric.Canvas, width: number, height: numbe
     if (!obj) return
     if (!cache.length) buildCache(obj)
     removeGuides()
-    snap(obj)
+    snap(obj, false)
   })
   fc.on('mouse:up', () => {
     removeGuides()
