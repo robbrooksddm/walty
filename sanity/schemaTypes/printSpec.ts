@@ -1,4 +1,4 @@
-import {defineType, defineField} from 'sanity'
+import {defineType, defineField, defineArrayMember} from 'sanity'
 
 export default defineType({
   name: 'printSpec',
@@ -32,18 +32,6 @@ export default defineType({
       validation: r => r.required().min(72),
     }),
     defineField({
-      name: 'edgeBleed',
-      type: 'object',
-      title: 'Bleed edges',
-      options: { columns: 4 },
-      fields: [
-        defineField({ name: 'top',    type: 'boolean', title: 'Top',    initialValue: true }),
-        defineField({ name: 'right',  type: 'boolean', title: 'Right',  initialValue: true }),
-        defineField({ name: 'bottom', type: 'boolean', title: 'Bottom', initialValue: true }),
-        defineField({ name: 'left',   type: 'boolean', title: 'Left',   initialValue: true }),
-      ],
-    }),
-    defineField({
       name: 'spreadLayout',
       type: 'object',
       title: 'Spread layout',
@@ -61,16 +49,30 @@ export default defineType({
           validation: r => r.required().positive(),
         }),
         defineField({
-          name: 'foldX',
-          type: 'number',
-          title: 'Fold position X (inches)',
-          validation: r => r.required().min(0),
-        }),
-        defineField({
-          name: 'panelOrder',
+          name: 'panels',
           type: 'array',
-          title: 'Panel order (left → right)',
-          of: [{ type: 'string' }],
+          title: 'Panels (placement order)',
+          of: [
+            defineArrayMember({
+              type: 'object',
+              fields: [
+                defineField({ name: 'name',  type: 'string', title: 'Page name' }),
+                defineField({ name: 'order', type: 'number', title: 'Order' }),
+                defineField({
+                  name: 'bleed',
+                  type: 'object',
+                  title: 'Bleed edges',
+                  options: { columns: 4 },
+                  fields: [
+                    defineField({ name: 'top',    type: 'boolean', title: 'Top',    initialValue: true }),
+                    defineField({ name: 'right',  type: 'boolean', title: 'Right',  initialValue: true }),
+                    defineField({ name: 'bottom', type: 'boolean', title: 'Bottom', initialValue: true }),
+                    defineField({ name: 'left',   type: 'boolean', title: 'Left',   initialValue: true }),
+                  ],
+                }),
+              ],
+            }),
+          ],
           validation: r => r.length(4),
         }),
       ],

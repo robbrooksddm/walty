@@ -39,17 +39,19 @@ export async function POST(req: NextRequest) {
             trimHeightIn: number
             bleedIn: number
             dpi: number
-            edgeBleed?: {
-              top?: boolean
-              right?: boolean
-              bottom?: boolean
-              left?: boolean
-            }
             spreadLayout?: {
               spreadWidth: number
               spreadHeight: number
-              foldX: number
-              panelOrder: string[]
+              panels: {
+                name: string
+                order: number
+                bleed?: {
+                  top?: boolean
+                  right?: boolean
+                  bottom?: boolean
+                  left?: boolean
+                }
+              }[]
             }
           } | null
         }>(
@@ -68,18 +70,32 @@ export async function POST(req: NextRequest) {
     const pageW = px(finalSpec.trimWidthIn + finalSpec.bleedIn * 2)
     const pageH = px(finalSpec.trimHeightIn + finalSpec.bleedIn * 2)
 
+    const defaultPanels = [
+      { name: 'front',   order: 0, bleed: { top: true, right: true, bottom: true, left: true } },
+      { name: 'inner-L', order: 1, bleed: { top: true, right: true, bottom: true, left: true } },
+      { name: 'inner-R', order: 2, bleed: { top: true, right: true, bottom: true, left: true } },
+      { name: 'back',    order: 3, bleed: { top: true, right: true, bottom: true, left: true } },
+    ]
+
     const layout = finalSpec.spreadLayout ?? {
       spreadWidth : (finalSpec.trimWidthIn + finalSpec.bleedIn * 2) * 2,
       spreadHeight: (finalSpec.trimHeightIn + finalSpec.bleedIn * 2) * 2,
-      foldX: finalSpec.trimWidthIn + finalSpec.bleedIn,
-      panelOrder: ['front', 'inner-L', 'inner-R', 'back'],
+      panels: defaultPanels,
     }
+
+    const panels = Array.isArray(layout.panels) && layout.panels.length === 4
+      ? [...layout.panels].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      : defaultPanels
 
     const sheetW = px(layout.spreadWidth)
     const sheetH = px(layout.spreadHeight)
-    const foldPx = px(layout.foldX)
 
-    const edge = finalSpec.edgeBleed ?? { top: true, right: true, bottom: true, left: true }
+    const edge = {
+      top:    panels.slice(0, 2).some(p => p.bleed?.top !== false),
+      bottom: panels.slice(2).some(p => p.bleed?.bottom !== false),
+      left:   [panels[0], panels[2]].some(p => p.bleed?.left !== false),
+      right:  [panels[1], panels[3]].some(p => p.bleed?.right !== false),
+    }
 
     const pageMap: Record<string, sharp.Sharp> = {}
     if (Array.isArray(pageImages)) {
@@ -100,14 +116,14 @@ export async function POST(req: NextRequest) {
 
     const comps: Overlay[] = []
     const positions = [
-      { left: 0, top: 0 },
-      { left: foldPx, top: 0 },
-      { left: 0, top: pageH },
-      { left: foldPx, top: pageH },
+      { left: 0,      top: 0 },
+      { left: pageW,  top: 0 },
+      { left: 0,      top: pageH },
+      { left: pageW,  top: pageH },
     ]
 
-    layout.panelOrder.forEach((name, idx) => {
-      const img = pageMap[name]
+    panels.forEach((p, idx) => {
+      const img = pageMap[p.name]
       if (!img) return
       comps.push({ input: img, left: positions[idx].left, top: positions[idx].top } as Overlay)
     })
@@ -125,7 +141,10 @@ export async function POST(req: NextRequest) {
 
     const out = await outImg.jpeg({ quality: 95, chromaSubsampling: '4:4:4' }).toBuffer()
 
-    const name = filename && typeof filename === 'string' ? filename : 'proof.jpg'
+    const name =
+      typeof filename === 'string' && filename
+        ? filename
+        : `${id}-${sku ?? 'proof'}.jpg`
     return new NextResponse(out, {
       headers: {
         'content-type': 'image/jpeg',

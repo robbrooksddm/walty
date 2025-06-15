@@ -23,17 +23,19 @@ export interface PrintSpec {
   trimHeightIn: number
   bleedIn: number
   dpi: number
-  edgeBleed?: {
-    top?: boolean
-    right?: boolean
-    bottom?: boolean
-    left?: boolean
-  }
   spreadLayout?: {
     spreadWidth: number
     spreadHeight: number
-    foldX: number
-    panelOrder: string[]
+    panels: {
+      name: string
+      order: number
+      bleed?: {
+        top?: boolean
+        right?: boolean
+        bottom?: boolean
+        left?: boolean
+      }
+    }[]
   }
 }
 
