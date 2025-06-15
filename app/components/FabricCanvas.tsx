@@ -55,8 +55,11 @@ function recompute() {
   PREVIEW_H = currentPreview.previewHeightPx
   SCALE = PREVIEW_W / PAGE_W
   PAD = 4 / SCALE
-  SAFE_X = Math.round(safeInsetXIn * currentSpec.dpi)
-  SAFE_Y = Math.round(safeInsetYIn * currentSpec.dpi)
+  // compute safe-zone after scaling so rounding happens in preview pixels
+  const safeXPreview = safeInsetXIn * currentSpec.dpi * SCALE
+  const safeYPreview = safeInsetYIn * currentSpec.dpi * SCALE
+  SAFE_X = Math.round(safeXPreview) / SCALE
+  SAFE_Y = Math.round(safeYPreview) / SCALE
 }
 
 export const setPrintSpec = (spec: PrintSpec) => {
