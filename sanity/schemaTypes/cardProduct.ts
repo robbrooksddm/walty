@@ -59,6 +59,7 @@ export default defineType({
       title: 'Show safe-area overlay',
       initialValue: true,
       description: 'Display the safe-area guide when editing templates',
+      options: {layout: 'switch'},
       validation: r => r.required(),
     }),
 
