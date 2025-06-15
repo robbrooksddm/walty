@@ -157,6 +157,7 @@ export default function CardEditor({
 
   const updateThumbFromCanvas = (idx: number, fc: fabric.Canvas) => {
     try {
+      if (!(fc as any).lowerCanvasEl) return
       fc.renderAll()
       console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
       console.log('Expected page px', pageW(), pageH())

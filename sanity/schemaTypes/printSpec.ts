@@ -32,6 +32,19 @@ export default defineType({
       validation: r => r.required().min(72),
     }),
     defineField({
+      name: 'panelOrder',
+      type: 'array',
+      title: 'Panel order',
+      initialValue: [
+        'Outer rear',
+        'Outer front',
+        'Inside front',
+        'Inside back',
+      ],
+      of: [{ type: 'string' }],
+      validation: r => r.required().min(4).max(4),
+    }),
+    defineField({
       name: 'spreadLayout',
       type: 'object',
       title: 'Spread layout',

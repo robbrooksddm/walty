@@ -15,6 +15,7 @@ const DEFAULT_SPEC: PrintSpec = {
   trimHeightIn: 7,
   bleedIn     : 0.125,
   dpi         : 300,
+  panelOrder  : ['Outer rear', 'Outer front', 'Inside front', 'Inside back'],
 }
 
 const pageDims = (spec?: PrintSpec | null) => {

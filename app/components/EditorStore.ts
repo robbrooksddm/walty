@@ -11,6 +11,7 @@ const DEFAULT_SPEC: PrintSpec = {
   trimHeightIn: 7,
   bleedIn     : 0.125,
   dpi         : 300,
+  panelOrder  : ['Outer rear', 'Outer front', 'Inside front', 'Inside back'],
 }
 
 let currentSpec: PrintSpec = DEFAULT_SPEC
