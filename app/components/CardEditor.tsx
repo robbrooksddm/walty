@@ -355,8 +355,8 @@ const collectProofData = () => {
   return { pages, pageImages }
 }
 
-/* download proof for a single product */
-const downloadProof = async (
+/* fetch proof blob for one product */
+const fetchProofBlob = async (
   sku: string,
   filename: string,
   pages: any[],
@@ -369,30 +369,35 @@ const downloadProof = async (
       body   : JSON.stringify({ pages, pageImages, sku, id: templateId, filename }),
     })
     if (res.ok) {
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      a.style.display = 'none'
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
+      return await res.blob()
     }
   } catch (err) {
     console.error('proof', err)
   }
+  return null
 }
 
 /* download proofs for all products */
 const handleProofAll = async () => {
   if (!products.length) return
   const { pages, pageImages } = collectProofData()
+  const JSZip = (await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm')).default
+  const zip = new JSZip()
   for (const p of products) {
     const name = `${p.slug}.jpg`
-    await downloadProof(p.slug, name, pages, pageImages)
+    const blob = await fetchProofBlob(p.slug, name, pages, pageImages)
+    if (blob) zip.file(name, blob)
   }
+  const out = await zip.generateAsync({ type: 'blob' })
+  const url = URL.createObjectURL(out)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'proofs.zip'
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
   /* 7 ─ coach-mark ----------------------------------------------- */
