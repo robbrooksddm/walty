@@ -385,6 +385,8 @@ const setCropRatio = (r: number | null) => {
   }
   const rect = frame.item(0) as fabric.Rect
   rect.set({ left: 0, top: 0, width: w, height: h, scaleX: 1, scaleY: 1 })
+  ;(frame as any)._calcBounds?.(true)
+  ;(frame as any)._updateObjectsCoords?.()
   let left = cX - w / 2
   let top = cY - h / 2
   if (img) {
