@@ -21,10 +21,9 @@ export function enableSnapGuides(fc: fabric.Canvas, width: number, height: numbe
     cy: r.top + r.height / 2,
   })
 
-  const clearGuides = () => {
+  const removeGuides = () => {
     guides.forEach(g => fc.remove(g))
     guides = []
-    cache = []
   }
 
   const drawV = (x: number) => {
@@ -36,6 +35,7 @@ export function enableSnapGuides(fc: fabric.Canvas, width: number, height: numbe
       evented: false,
       excludeFromExport: true,
     })
+    ;(ln as any)._guide = true
     fc.add(ln)
     guides.push(ln)
   }
@@ -49,6 +49,7 @@ export function enableSnapGuides(fc: fabric.Canvas, width: number, height: numbe
       evented: false,
       excludeFromExport: true,
     })
+    ;(ln as any)._guide = true
     fc.add(ln)
     guides.push(ln)
   }
@@ -126,16 +127,22 @@ export function enableSnapGuides(fc: fabric.Canvas, width: number, height: numbe
     const obj = e.target as fabric.Object | undefined
     if (!obj) return
     if (!cache.length) buildCache(obj)
-    clearGuides()
+    removeGuides()
     snap(obj)
   })
   fc.on('object:scaling', e => {
     const obj = e.target as fabric.Object | undefined
     if (!obj) return
     if (!cache.length) buildCache(obj)
-    clearGuides()
+    removeGuides()
     snap(obj)
   })
-  fc.on('mouse:up', clearGuides)
-  fc.on('object:modified', clearGuides)
+  fc.on('mouse:up', () => {
+    removeGuides()
+    cache = []
+  })
+  fc.on('object:modified', () => {
+    removeGuides()
+    cache = []
+  })
 }
