@@ -358,12 +358,6 @@ const setCropRatio = (r: number | null) => {
   if (!tool || !tool.isActive || !frame) return
   const ratio = r === null || Number.isNaN(r) ? null : r
   tool.setRatio?.(ratio)
-  frame.lockUniScaling = false
-  frame.lockScalingX  = false
-  frame.lockScalingY  = false
-  frame.selectable    = true
-  frame.evented       = true
-  frame.hasControls   = true
 
   let w = frame.width! * frame.scaleX!
   let h = frame.height! * frame.scaleY!
