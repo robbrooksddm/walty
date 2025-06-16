@@ -1,10 +1,11 @@
 /* components/site/WaltyNav.tsx – tighter 64 px top row */
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Search, User, ShoppingBag, Crown } from "lucide-react";
+import BasketPopover from "./BasketPopover";
 
 export default function WaltyNav() {
   /* show shadow when scrolled */
@@ -15,6 +16,9 @@ export default function WaltyNav() {
     window.addEventListener("scroll", toggle, { passive: true });
     return () => window.removeEventListener("scroll", toggle);
   }, []);
+
+  const basketRef = useRef<HTMLButtonElement | null>(null);
+  const [basketOpen, setBasketOpen] = useState(false);
 
   return (
     <header
@@ -42,21 +46,20 @@ export default function WaltyNav() {
 
           {/* orange icons – 34 px */}
           <nav className="flex items-center gap-16 text-[14px] font-sans ml-auto">
-            {[
-              { href: "/premium", label: "Premium", Icon: Crown },
-              { href: "/account", label: "Account", Icon: User },
-              { href: "/basket",  label: "Basket",  Icon: ShoppingBag },
-            ].map(({ href, label, Icon }) => (
-              <Link
-                key={label}
-                href={href}
-                className="flex flex-col items-center gap-1 hover:text-[--walty-teal]"
-              >
-                <Icon className="w-[30px] h-[30px] stroke-[--walty-orange]" />
-                {label}
-              </Link>
-            ))}
+            <Link href="/premium" className="flex flex-col items-center gap-1 hover:text-[--walty-teal]">
+              <Crown className="w-[30px] h-[30px] stroke-[--walty-orange]" />
+              Premium
+            </Link>
+            <Link href="/account" className="flex flex-col items-center gap-1 hover:text-[--walty-teal]">
+              <User className="w-[30px] h-[30px] stroke-[--walty-orange]" />
+              Account
+            </Link>
+            <button ref={basketRef} onClick={() => setBasketOpen((o) => !o)} className="flex flex-col items-center gap-1 hover:text-[--walty-teal]">
+              <ShoppingBag className="w-[30px] h-[30px] stroke-[--walty-orange]" />
+              Basket
+            </button>
           </nav>
+          <BasketPopover anchor={basketRef.current} open={basketOpen} onClose={() => setBasketOpen(false)} />
         </div>
 
         {/* ── row B : filters ──────────────────────────────── */}

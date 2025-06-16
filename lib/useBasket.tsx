@@ -10,11 +10,15 @@ export interface BasketItem {
 interface BasketContextValue {
   items: BasketItem[];
   addItem: (sku: string) => void;
+  removeItem: (sku: string) => void;
+  updateQty: (sku: string, qty: number) => void;
 }
 
 const BasketContext = createContext<BasketContextValue>({
   items: [],
   addItem: () => {},
+  removeItem: () => {},
+  updateQty: () => {},
 });
 
 export function BasketProvider({ children }: { children: React.ReactNode }) {
@@ -48,8 +52,18 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const removeItem = (sku: string) => {
+    setItems((prev) => prev.filter((it) => it.sku !== sku));
+  };
+
+  const updateQty = (sku: string, qty: number) => {
+    setItems((prev) =>
+      prev.map((it) => (it.sku === sku ? { ...it, qty } : it))
+    );
+  };
+
   return (
-    <BasketContext.Provider value={{ items, addItem }}>
+    <BasketContext.Provider value={{ items, addItem, removeItem, updateQty }}>
       {children}
     </BasketContext.Provider>
   );
