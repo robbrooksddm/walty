@@ -25,7 +25,7 @@ function normalisePages(
               ? p.name.trim()
               : FALLBACK_NAMES[i] ?? `page-${i}`,
     layers: Array.isArray(p?.layers)
-      ? p.layers.map((l) => toSanity(l as Layer, spec))
+      ? p.layers.map((l: Layer) => toSanity(l, spec))
       : [],
   }))
 }
