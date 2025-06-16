@@ -585,8 +585,14 @@ useEffect(() => {
   // guard Fabric's rendering after cleanup
   const origRenderAll = fc.renderAll.bind(fc)
   const origRequestRenderAll = fc.requestRenderAll.bind(fc)
-  fc.renderAll = () => { if (!disposedRef.current) origRenderAll() }
-  fc.requestRenderAll = () => { if (!disposedRef.current) origRequestRenderAll() }
+  fc.renderAll = () => {
+    if (disposedRef.current) return fc
+    return origRenderAll()
+  }
+  fc.requestRenderAll = () => {
+    if (disposedRef.current) return fc
+    return origRequestRenderAll()
+  }
 
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();

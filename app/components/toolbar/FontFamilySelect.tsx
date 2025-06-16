@@ -147,7 +147,7 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
             {filtered.map((f, i) => (
               <li key={f.name} className="my-0.5">
                 <button
-                  ref={(el) => {
+                  ref={(el): void => {
                     itemRefs.current[i] = el
                   }}
                   type="button"
