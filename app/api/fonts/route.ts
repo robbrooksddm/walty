@@ -8,7 +8,9 @@ export async function GET(req: NextRequest) {
   if (!key) {
     return NextResponse.json({ error: 'Missing GOOGLE_FONTS_API_KEY' }, { status: 500 })
   }
-  const res = await fetch(`https://www.googleapis.com/webfonts/v1/webfonts?key=${key}`)
+  const res = await fetch(
+    `https://www.googleapis.com/webfonts/v1/webfonts?key=${key}&fields=items(family,category)`
+  )
   if (!res.ok) {
     return NextResponse.json({ error: 'Failed to fetch Google Fonts' }, { status: 500 })
   }
