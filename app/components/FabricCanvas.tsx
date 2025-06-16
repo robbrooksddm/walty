@@ -457,6 +457,7 @@ interface Props {
 export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, mode = 'customer' }: Props) {
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const fcRef        = useRef<fabric.Canvas | null>(null)
+  const disposedRef  = useRef(false)
   const maskRectsRef = useRef<fabric.Rect[]>([]);
   const hoverRef     = useRef<fabric.Rect | null>(null)
   const hydrating    = useRef(false)
@@ -571,6 +572,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
 
 /* ---------- mount once --------------------------------------- */
 useEffect(() => {
+  disposedRef.current = false
   if (!canvasRef.current) return
 
   // Create Fabric using the <canvas> element’s own dimensions
@@ -876,6 +878,7 @@ window.addEventListener('keydown', onKey)
       window.removeEventListener('keydown', keyCropHandler);
       onReady(null)
       cropToolRef.current?.abort()
+      disposedRef.current = true
       fc.dispose()
     }
 // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -930,6 +933,7 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
   const opts = srcUrl.startsWith('http') ? { crossOrigin: 'anonymous' } : undefined;
 
   fabric.Image.fromURL(srcUrl, rawImg => {
+    if (disposedRef.current) return
     const img = rawImg instanceof fabric.Image ? rawImg : new fabric.Image(rawImg);
 
     // keep original asset info so objToLayer can round-trip it
