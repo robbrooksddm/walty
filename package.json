@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "next lint",
     "purge:assets": "tsx ./scripts/purge-assets.ts",
-    "purge:once": "tsx scripts/purgeTempAssets.ts"
+    "purge:once": "tsx scripts/purgeTempAssets.ts",
+    "migrate:printSpecs": "tsx scripts/migratePrintSpecs.ts"
   },
   "dependencies": {
     "@headlessui/react": "2.2.2",
@@ -21,6 +22,7 @@
     "@sanity/vision": "^3.88.1",
     "fabric": "^5.3.0",
     "groq": "^3.38.2",
+    "jszip": "^3.10.1",
     "konva": "^9.3.20",
     "lucide-react": "^0.511.0",
     "next": "14.2.4",
@@ -30,6 +32,7 @@
     "react-dom": "18.2.0",
     "react-icons": "^5.5.0",
     "react-konva": "^19.0.3",
+    "react-virtuoso": "^4.12.7",
     "sanity": "^3.88.1",
     "sanity-plugin-media": "^3.0.2",
     "sharp": "^0.34.1",

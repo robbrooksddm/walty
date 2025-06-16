@@ -3,18 +3,33 @@
 import { useEffect, useRef, useState, useLayoutEffect } from 'react'
 import { fabric }                       from 'fabric'
 
-import { useEditor }                    from './EditorStore'
+import { useEditor, setEditorSpec }     from './EditorStore'
 if (typeof window !== 'undefined') (window as any).useEditor = useEditor // debug helper
 
 import LayerPanel                       from './LayerPanel'
-import FabricCanvas                      from './FabricCanvas'
+import FabricCanvas, {
+  pageW,
+  pageH,
+  EXPORT_MULT,
+  setPrintSpec,
+  setPreviewSpec,
+  setSafeInset,
+  PrintSpec,
+  PreviewSpec,
+  previewW,
+  previewH,
+} from './FabricCanvas'
 import TextToolbar                      from './TextToolbar'
 import ImageToolbar                     from './ImageToolbar'
 import EditorCommands                   from './EditorCommands'
 import SelfieDrawer                     from './SelfieDrawer'
+import CropDrawer                      from './CropDrawer'
+import PreviewModal                    from './PreviewModal'
+import AddToBasketDialog               from './AddToBasketDialog'
 import { CropTool }                     from '@/lib/CropTool'
 import WaltyEditorHeader                from './WaltyEditorHeader'
 import type { TemplatePage }            from './FabricCanvas'
+import type { TemplateProduct }         from '@/app/library/getTemplatePages'
 
 
 /* ---------- helpers ------------------------------------------------ */
@@ -52,20 +67,61 @@ function CoachMark({ anchor, onClose }: { anchor: DOMRect | null; onClose: () =>
         </button>
         <div className="absolute -left-2 top-6 w-0 h-0 border-y-8 border-y-transparent border-r-[12px] border-r-gray-800" />
       </div>
-    </div>
-  )
+  </div>
+ )
 }
 
 /* ────────────────────────────────────────────────────────────────── */
 export default function CardEditor({
   initialPages,
+  templateId,
+  printSpec,
+  previewSpec,
+  products = [],
   mode = 'customer',
   onSave,
 }: {
   initialPages: TemplatePage[] | undefined
+  templateId?: string
+  printSpec?: PrintSpec
+  previewSpec?: PreviewSpec
+  products?: TemplateProduct[]
   mode?: Mode
   onSave?: SaveFn
 }) {
+  if (printSpec) {
+    setPrintSpec(printSpec)
+    setEditorSpec(printSpec)
+    console.log('\u25BA CardEditor spec =', JSON.stringify(printSpec, null, 2))
+  } else {
+    console.warn('CardEditor missing printSpec')
+  }
+  if (previewSpec) {
+    setPreviewSpec(previewSpec)
+  }
+  useEffect(() => {
+    if (!printSpec || !previewSpec || !products.length) return
+    const baseW = printSpec.trimWidthIn + printSpec.bleedIn * 2
+    const baseH = printSpec.trimHeightIn + printSpec.bleedIn * 2
+    const baseRatio = baseW / baseH
+    const ratios = products
+      .filter(p => p.showSafeArea)
+      .map(p => p.printSpec)
+      .filter(Boolean)
+      .map(s => (s!.trimWidthIn + s!.bleedIn * 2) / (s!.trimHeightIn + s!.bleedIn * 2))
+    if (!ratios.length) return
+    const minRatio = Math.min(...ratios)
+    let safeW = baseW
+    let safeH = baseH
+    if (minRatio < baseRatio) {
+      safeW = baseH * minRatio
+    } else if (minRatio > baseRatio) {
+      safeH = baseW / minRatio
+    }
+    const insetX = (baseW - safeW) / 2 + printSpec.bleedIn + 0.125
+    const insetY = (baseH - safeH) / 2 + printSpec.bleedIn + 0.125
+    setSafeInset(insetX, insetY)
+  }, [printSpec, previewSpec, products])
   /* 1 ─ hydrate Zustand once ------------------------------------- */
   useEffect(() => {
     useEditor.getState().setPages(
@@ -103,8 +159,16 @@ export default function CardEditor({
 
   const updateThumbFromCanvas = (idx: number, fc: fabric.Canvas) => {
     try {
+      if (!(fc as any).lowerCanvasEl) return
       fc.renderAll()
-      const url = fc.toDataURL({ format: 'jpeg', quality: 0.8 })
+      console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
+      console.log('Expected page px', pageW(), pageH())
+      console.log('Export multiplier', EXPORT_MULT())
+      const url = fc.toDataURL({
+        format: 'jpeg',
+        quality: 0.8,
+        multiplier: EXPORT_MULT(),
+      })
       setThumbs(prev => {
         const next = [...prev]
         next[idx] = url
@@ -162,8 +226,17 @@ export default function CardEditor({
   /* track cropping state per page */
   const [cropping, setCropping] =
     useState<[boolean, boolean, boolean, boolean]>([false, false, false, false])
-  const handleCroppingChange = (idx: number, state: boolean) =>
-    setCropping(prev => { const next = [...prev] as typeof prev; next[idx] = state; return next })
+  const handleCroppingChange = (idx: number, state: boolean) => {
+    setCropping(prev => {
+      const next = [...prev] as typeof prev
+      next[idx] = state
+      return next
+    })
+    if (idx === activeIdx) setCropMode(state)
+  }
+
+  const isCropMode   = useEditor(s => s.isCropMode)
+  const setCropMode  = useEditor(s => s.setCropMode)
 
   /* 5 ─ save ------------------------------------------------------ */
   const [saving, setSaving] = useState(false)
@@ -184,7 +257,14 @@ export default function CardEditor({
       const fc = canvasMap[0]
       if (fc) {
         try {
-          const dataUrl = fc.toDataURL({ format: 'jpeg', quality: 0.8 })
+          console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
+          console.log('Expected page px', pageW(), pageH())
+          console.log('Export multiplier', EXPORT_MULT())
+          const dataUrl = fc.toDataURL({
+            format: 'jpeg',
+            quality: 0.8,
+            multiplier: EXPORT_MULT(),
+          })
           const res = await fetch(dataUrl)
           const blob = await res.blob()
           const form = new FormData()
@@ -207,6 +287,13 @@ export default function CardEditor({
 const [drawerOpen, setDrawerOpen]           = useState(false)
 const [aiPlaceholderId, setAiPlaceholderId] = useState<string | null>(null)
 
+/* preview modal state */
+const [previewOpen, setPreviewOpen] = useState(false)
+const [previewImgs, setPreviewImgs] = useState<string[]>([])
+
+/* add-to-basket modal state */
+const [basketOpen, setBasketOpen] = useState(false)
+
 /* listen for the event FabricCanvas now emits */
 useEffect(() => {
   const open = (e: Event) => {
@@ -219,6 +306,24 @@ useEffect(() => {
   document.addEventListener('open-selfie-drawer', open)
   return () => document.removeEventListener('open-selfie-drawer', open)
 }, [])
+
+// start-crop → begin crop tool and enter crop mode
+useEffect(() => {
+  const handler = () => {
+    const fc = canvasMap[activeIdx]
+    if (!fc) return
+    const obj = fc.getActiveObject() as any
+    if (!obj || obj.type !== 'image') return
+    const tool = (fc as any)._cropTool as CropTool | undefined
+    if (tool && !tool.isActive) {
+      tool.begin(obj)
+      setCropping(prev => { const n = [...prev] as typeof prev; n[activeIdx] = true; return n })
+      setCropMode(true)
+    }
+  }
+  document.addEventListener('start-crop', handler)
+  return () => document.removeEventListener('start-crop', handler)
+}, [canvasMap, activeIdx])
 
 /* 6 b – when the user picks one of the generated variants ----------- */
 const handleSwap = (url: string) => {
@@ -237,6 +342,180 @@ const handleSwap = (url: string) => {
   })
 
   setDrawerOpen(false)
+}
+
+const exitCrop = (commit: boolean) => {
+  const fc = canvasMap[activeIdx]
+  const tool = (fc as any)?._cropTool as CropTool | undefined
+  if (tool?.isActive) {
+    commit ? tool.commit() : tool.cancel()
+  }
+  setCropping(prev => { const n = [...prev] as typeof prev; n[activeIdx] = false; return n })
+  setCropMode(false)
+}
+
+const setCropRatio = (r: number | null) => {
+  const fc = canvasMap[activeIdx]
+  if (!fc) return
+  const tool = (fc as any)?._cropTool as CropTool | undefined
+  const frame = tool ? (tool as any).frame as fabric.Group | null : null
+  const img = tool ? (tool as any).img as fabric.Image | null : null
+  if (!tool || !tool.isActive || !frame) return
+  const ratio = r === null || Number.isNaN(r) ? null : r
+  tool.setRatio?.(ratio)
+
+  let w = frame.width! * frame.scaleX!
+  let h = frame.height! * frame.scaleY!
+  const cX = frame.left! + w / 2
+  const cY = frame.top! + h / 2
+
+  if (ratio !== null) {
+    const base = Math.max(w, h)
+    if (ratio >= 1) {
+      w = base
+      h = base / ratio
+    } else {
+      w = base * ratio
+      h = base
+    }
+  }
+
+  if (img) {
+    const maxW = img.getScaledWidth()
+    const maxH = img.getScaledHeight()
+    const scale = Math.min(maxW / w, maxH / h, 1)
+    w *= scale
+    h *= scale
+  }
+
+  const rect = frame.item(0) as fabric.Rect
+  rect.set({ left: 0, top: 0, width: w, height: h, scaleX: 1, scaleY: 1 })
+  rect.setCoords()
+
+  frame.set({ width: w, height: h, scaleX: 1, scaleY: 1 })
+  const g = frame as any
+  if (g._calcBounds && g._updateObjectsCoords) {
+    g._calcBounds()
+    g._updateObjectsCoords()
+  }
+
+  let left = cX - w / 2
+  let top = cY - h / 2
+  if (img) {
+    const minL = img.left!
+    const minT = img.top!
+    const maxL = minL + img.getScaledWidth() - w
+    const maxT = minT + img.getScaledHeight() - h
+    left = Math.min(Math.max(left, minL), maxL)
+    top = Math.min(Math.max(top, minT), maxT)
+  }
+  frame.set({
+    scaleX: 1,
+    scaleY: 1,
+    left,
+    top,
+  })
+  rect.setCoords()
+  frame.setCoords()
+  ;(tool as any).clampFrame?.()
+  tool['clamp']?.(true)
+  ;(tool as any).updateMasks?.()
+  fc.setActiveObject(frame)
+  fc.requestRenderAll()
+}
+
+/* generate images and show preview */
+const handlePreview = () => {
+  const imgs: string[] = []
+  canvasMap.forEach((fc, i) => {
+    if (!fc) return
+    const tool = (fc as any)._cropTool as CropTool | undefined
+    if (tool?.isActive) tool.commit()
+    fc.renderAll()
+    console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
+    console.log('Expected page px', pageW(), pageH())
+    console.log('Export multiplier', EXPORT_MULT())
+    imgs[i] = fc.toDataURL({
+      format: 'png',
+      quality: 1,
+      multiplier: EXPORT_MULT(),
+    })
+  })
+  setPreviewImgs(imgs)
+  setPreviewOpen(true)
+}
+
+/* helper – gather pages and rendered images once */
+const collectProofData = () => {
+  canvasMap.forEach(fc => {
+    const tool = (fc as any)?._cropTool as CropTool | undefined
+    if (tool?.isActive) tool.commit()
+  })
+  canvasMap.forEach(fc => {
+    const sync = (fc as any)?._syncLayers as (() => void) | undefined
+    if (sync) sync()
+  })
+
+  const pages = useEditor.getState().pages
+  const pageImages: string[] = []
+  canvasMap.forEach(fc => {
+    if (!fc) { pageImages.push(''); return }
+    const guides = fc.getObjects().filter(o => (o as any)._guide)
+    guides.forEach(g => g.set('visible', false))
+    fc.renderAll()
+    pageImages.push(
+      fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT() })
+    )
+    guides.forEach(g => g.set('visible', true))
+  })
+  return { pages, pageImages }
+}
+
+/* fetch proof blob for one product */
+const fetchProofBlob = async (
+  sku: string,
+  filename: string,
+  pages: any[],
+  pageImages: string[],
+) => {
+  try {
+    const res = await fetch('/api/proof', {
+      method : 'POST',
+      headers: { 'content-type': 'application/json' },
+      body   : JSON.stringify({ pages, pageImages, sku, id: templateId, filename }),
+    })
+    if (res.ok) {
+      return await res.blob()
+    }
+  } catch (err) {
+    console.error('proof', err)
+  }
+  return null
+}
+
+/* download proofs for all products */
+const handleProofAll = async () => {
+  if (!products.length) return
+  const { pages, pageImages } = collectProofData()
+  
+  const JSZip = (await import('jszip')).default
+
+  const zip = new JSZip()
+  for (const p of products) {
+    const name = `${p.slug}.jpg`
+    const blob = await fetchProofBlob(p.slug, name, pages, pageImages)
+    if (blob) zip.file(name, blob)
+  }
+  const out = await zip.generateAsync({ type: 'blob' })
+  const url = URL.createObjectURL(out)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'proofs.zip'
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
   /* 7 ─ coach-mark ----------------------------------------------- */
@@ -271,7 +550,8 @@ const handleSwap = (url: string) => {
     )
   }
 
-  const box = 'flex-shrink-0 w-[420px]'
+  const boxWidth = previewW()
+  const box = `flex-shrink-0`
 
   /* ---------------- UI ------------------------------------------ */
   return (
@@ -280,18 +560,22 @@ const handleSwap = (url: string) => {
       style={{ paddingTop: "calc(var(--walty-header-h) + var(--walty-toolbar-h))" }}
     >
       <WaltyEditorHeader                     /* ② mount new component */
-        onPreview={() => console.log("preview")}
-        onAddToBasket={() => console.log("basket")}
+        onPreview={handlePreview}
+        onAddToBasket={() => setBasketOpen(true)}
         height={72}                          /* match the design */
       />
 
-      <EditorCommands
-        onUndo={undo}
-        onRedo={redo}
-        onSave={handleSave}
-        saving={saving}
-      />
-
+      {!isCropMode && (
+        <EditorCommands
+          onUndo={undo}
+          onRedo={redo}
+          onSave={handleSave}
+          onProof={mode === 'staff' ? handleProofAll : undefined}
+          saving={saving}
+          mode={mode}
+        />
+      )}
+      
       <div className="flex flex-1 relative bg-[--walty-cream] lg:max-w-6xl mx-auto">
         {/* global overlays */}
         <CoachMark
@@ -307,14 +591,20 @@ const handleSwap = (url: string) => {
           onUseSelected={handleSwap}
           placeholderId={aiPlaceholderId}   /* ← NEW prop */
         />
+        <CropDrawer
+          open={isCropMode}
+          onCancel={() => exitCrop(false)}
+          onApply={() => exitCrop(true)}
+          onRatio={setCropRatio}
+        />
 
 
         {/* sidebar */}
-        <LayerPanel />
+        {!isCropMode && <LayerPanel />}
 
         {/* main */}
-        <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[840px]">
-          {activeType === 'text' ? (
+        <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[868px]">
+          {!isCropMode && (activeType === 'text' ? (
             <TextToolbar
               canvas={activeFc}
               addText={addText}
@@ -336,49 +626,53 @@ const handleSwap = (url: string) => {
                 height: 'var(--walty-toolbar-h)',
               }}
             />
-          )}
+          ))}
 
                     {/* canvases */}
           <div className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6">
             {/* front */}
-            <div className={section === 'front' ? box : 'hidden'}>
+            <div className={section === 'front' ? box : 'hidden'} style={{ width: boxWidth }}>
               <FabricCanvas
                 pageIdx={0}
                 page={pages[0]}
                 onReady={fc => onReady(0, fc)}
                 isCropping={cropping[0]}
                 onCroppingChange={state => handleCroppingChange(0, state)}
+                mode={mode}
               />
             </div>
             {/* inside */}
             <div className={section === 'inside' ? 'flex gap-6' : 'hidden'}>
-              <div className={box}>
+              <div className={box} style={{ width: boxWidth }}>
                 <FabricCanvas
                   pageIdx={1}
                   page={pages[1]}
                   onReady={fc => onReady(1, fc)}
                   isCropping={cropping[1]}
                   onCroppingChange={state => handleCroppingChange(1, state)}
+                  mode={mode}
                 />
               </div>
-              <div className={box}>
+              <div className={box} style={{ width: boxWidth }}>
                 <FabricCanvas
                   pageIdx={2}
                   page={pages[2]}
                   onReady={fc => onReady(2, fc)}
                   isCropping={cropping[2]}
                   onCroppingChange={state => handleCroppingChange(2, state)}
+                  mode={mode}
                 />
               </div>
             </div>
             {/* back */}
-            <div className={section === 'back' ? box : 'hidden'}>
+            <div className={section === 'back' ? box : 'hidden'} style={{ width: boxWidth }}>
               <FabricCanvas
                 pageIdx={3}
                 page={pages[3]}
                 onReady={fc => onReady(3, fc)}
                 isCropping={cropping[3]}
                 onCroppingChange={state => handleCroppingChange(3, state)}
+                mode={mode}
               />
             </div>
           </div>
@@ -413,6 +707,15 @@ const handleSwap = (url: string) => {
           </div>
         </div>
       </div>
+      <PreviewModal
+        open={previewOpen}
+        images={previewImgs}
+        onClose={() => setPreviewOpen(false)}
+      />
+      <AddToBasketDialog
+        open={basketOpen}
+        onClose={() => setBasketOpen(false)}
+      />
     </div>
   )
 }

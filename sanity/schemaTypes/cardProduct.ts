@@ -27,6 +27,14 @@ export default defineType({
       validation: (Rule) => Rule.required(),
     }),
 
+    /* which mockup images define the preview */
+    defineField({
+      name : 'mockup',
+      type : 'reference',
+      title: 'Preview mockup',
+      to   : [{type: 'productMockup'}],
+    }),
+
     /* commercial bits */
     defineField({
       name : 'price',
@@ -35,10 +43,33 @@ export default defineType({
       validation: (Rule) => Rule.required().positive(),
     }),
 
-    /* print specs – the editor can read these if you ever show guides
-       per product */
-    defineField({name:'trimWidthMm',  type:'number', title:'Trim width (mm)',  validation:(R)=>R.required()}),
-    defineField({name:'trimHeightMm', type:'number', title:'Trim height (mm)', validation:(R)=>R.required()}),
-    defineField({name:'pageCount',    type:'number', title:'Pages',            initialValue:4, validation:(R)=>R.required().integer().min(1).max(4)}),
+    /* how the product should be printed */
+    defineField({
+      name: 'printSpec',
+      title: 'Print specification',
+      type: 'reference',
+      to: [{ type: 'printSpec' }],
+      validation: Rule => Rule.required(),
+    }),
+
+    /* toggle cropping guides for templates using this SKU */
+    defineField({
+      name: 'showSafeArea',
+      type: 'boolean',
+      title: 'Show safe-area overlay',
+      initialValue: true,
+      description: 'Display the safe-area guide when editing templates',
+      options: {layout: 'switch'},
+      validation: r => r.required(),
+    }),
+
+    defineField({
+      name: 'pageCount',
+      type: 'number',
+      title: 'Pages',
+      initialValue: 4,
+      validation: R => R.required().integer().min(1).max(4),
+    }),
   ],
+
 })
