@@ -8,6 +8,8 @@ import { Search, User, ShoppingBag, Crown } from "lucide-react";
 import BasketPopover from "./BasketPopover";
 import { useBasket } from "@/lib/useBasket";
 
+const dropdownLabels = ["Birthday for", "Age", "Style", "Interests", "Sample", "Sample", "Sample", "Sample", "Sample"];
+
 export default function WaltyNav() {
   /* show shadow when scrolled */
   useEffect(() => {
@@ -20,6 +22,10 @@ export default function WaltyNav() {
 
   const basketRef = useRef<HTMLButtonElement | null>(null);
   const [basketOpen, setBasketOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const { items } = useBasket();
   const itemCount = items.reduce((t, it) => t + it.qty, 0);
 
@@ -63,7 +69,7 @@ export default function WaltyNav() {
               className="relative flex flex-col items-center gap-1 hover:text-[--walty-teal]"
             >
               <ShoppingBag className="w-[30px] h-[30px] stroke-[--walty-orange]" />
-              {itemCount > 0 && (
+              {mounted && itemCount > 0 && (
                 <span
                   className="absolute -top-1 -right-2 rounded-full bg-[--walty-orange] text-[--walty-cream] text-[10px] leading-none px-1"
                 >
@@ -77,17 +83,19 @@ export default function WaltyNav() {
         </div>
 
         {/* ── row B : filters ──────────────────────────────── */}
-        <nav className="overflow-x-auto whitespace-nowrap">
-          <ul className="flex gap-14 py-2 font-serif text-[17px] font-semibold">
-            {["Birthday for", "Age", "Style", "Interests","Sample", "Sample", "Sample", "Sample", "Sample"].map((label) => (
-              <li key={label}>
-                <button className="flex items-center gap-1 hover:text-[--walty-orange]">
-                  {label} <span className="translate-y-[1px]">▾</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        {mounted && (
+          <nav className="overflow-x-auto whitespace-nowrap">
+            <ul className="flex gap-14 py-2 font-serif text-[17px] font-semibold">
+              {dropdownLabels.map((label) => (
+                <li key={label}>
+                  <button className="flex items-center gap-1 hover:text-[--walty-orange]">
+                    {label} <span className="translate-y-[1px]">▾</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
       </div>
 
       {/* full-width divider */}
