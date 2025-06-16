@@ -497,7 +497,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
       case 'paste':
         if (clip.json.length) {
           clip.nudge += 10
-          fabric.util.enlivenObjects(clip.json, objs => {
+          fabric.util.enlivenObjects(clip.json, (objs: fabric.Object[]) => {
             const root = objs[0]
             root.set({ left: (root.left ?? 0) + clip.nudge, top: (root.top ?? 0) + clip.nudge })
             root.setCoords()
@@ -521,7 +521,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
         if (active) {
           clip.json = [active.toJSON(PROPS)]
           clip.nudge += 10
-          fabric.util.enlivenObjects(clip.json, objs => {
+          fabric.util.enlivenObjects(clip.json, (objs: fabric.Object[]) => {
             const root = objs[0]
             root.set({ left: (root.left ?? 0) + clip.nudge, top: (root.top ?? 0) + clip.nudge })
             root.setCoords()
@@ -575,10 +575,9 @@ useEffect(() => {
 
   // Create Fabric using the <canvas> element’s own dimensions
   // – we’ll work in full‑size page units and simply scale the viewport.
-  const fc = new fabric.Canvas(canvasRef.current!, {
-    backgroundColor       : '#fff',
-    preserveObjectStacking: true,
-  });
+  const fc = new fabric.Canvas(canvasRef.current!) as fabric.Canvas & { upperCanvasEl: HTMLCanvasElement };
+  fc.backgroundColor = '#fff';
+  fc.preserveObjectStacking = true;
 
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();

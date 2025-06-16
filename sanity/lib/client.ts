@@ -1,6 +1,6 @@
 /*────────────────────────────────────────────────────────────
   sanity/lib/client.ts
-  ────────────────────────────────────────────────────────────*/
+  ────────────────────────────────────────────────────────────**/
 
 import {createClient} from '@sanity/client'
 
@@ -24,7 +24,6 @@ export const sanity = createClient({
   projectId,
   dataset,
   apiVersion : '2023-10-01',
-  perspective: 'published',   // ⇠ only published docs
   useCdn     : true,          // ⇠ fastest / cached
 })
 
@@ -36,7 +35,6 @@ export const sanityPreview = createClient({
   dataset,
   apiVersion : '2023-10-01',
   token      : readToken,     // Viewer token
-  perspective: 'previewDrafts',
   useCdn     : false,         // drafts never reach the CDN
 })
 
@@ -48,6 +46,5 @@ export const sanityWriteClient = createClient({
   dataset,
   apiVersion : '2023-10-01',
   token      : writeToken,    // Contributor token
-  perspective: 'previewDrafts',
   useCdn     : false,
 })
