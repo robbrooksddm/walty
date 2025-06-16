@@ -4,12 +4,14 @@ import Basket from './Basket';
 import AddressDrawer from './AddressDrawer';
 import Summary from './Summary';
 import PaymentPlaceholder from './PaymentPlaceholder';
+import { CARD_SIZES } from './sizeOptions';
 
 export interface CartItem {
   id: string;
   coverUrl: string;
   title: string;
   sku: string;
+  variant: string;
   qty: number;
   price: number;
   addressId?: string;
@@ -58,6 +60,16 @@ export default function CheckoutClient({
     setCartItems((prev) => prev.map((it) => (it.id === id ? { ...it, qty } : it)));
   };
 
+  const updateVariant = (id: string, variant: string) => {
+    const size = CARD_SIZES.find((s) => s.id === variant);
+    if (!size) return;
+    setCartItems((prev) =>
+      prev.map((it) =>
+        it.id === id ? { ...it, variant, price: size.price } : it,
+      ),
+    );
+  };
+
   const updateItemAddress = (id: string, addressId: string) => {
     setCartItems((prev) =>
       prev.map((it) => (it.id === id ? { ...it, addressId } : it)),
@@ -99,6 +111,7 @@ export default function CheckoutClient({
             addresses={addresses}
             onQtyChange={updateQty}
             onAddressChange={updateItemAddress}
+            onVariantChange={updateVariant}
             onAddNew={openDrawer}
           />
         </div>

@@ -8,6 +8,7 @@ export default function CheckoutPage() {
       coverUrl: '/templates/daisy/daisy-front-cover.jpg',
       title: 'Birthday Card',
       sku: 'BDY-001',
+      variant: 'classic',
       qty: 1,
       price: 3.5,
     },
@@ -16,8 +17,9 @@ export default function CheckoutPage() {
       coverUrl: '/templates/daisy/daisy-inner-left.jpg',
       title: 'Thank You Card',
       sku: 'THX-002',
+      variant: 'mini',
       qty: 2,
-      price: 3.0,
+      price: 2.5,
     },
   ];
 
