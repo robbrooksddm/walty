@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { Virtuoso } from "react-virtuoso";
 import Popover from "./Popover";
 
 interface Font {
@@ -11,18 +12,27 @@ interface Font {
   url?: string; // Google Fonts stylesheet URL
 }
 
-const BASE_FONTS: Font[] = [
+const POPULAR_FONTS: Font[] = [
   { name: "Arial", family: "Arial, Helvetica, sans-serif" },
   { name: "Georgia", family: "Georgia, serif" },
-  {
-    name: "Domine",
-    family: "Domine, serif",
-    url: "https://fonts.googleapis.com/css2?family=Domine:wght@400;700&display=swap",
-  },
-  {
-    name: "Recoleta",
-    family: "var(--font-recoleta), serif",
-  },
+  { name: "Domine", family: "Domine, serif", url: "https://fonts.googleapis.com/css2?family=Domine:wght@400;700&display=swap" },
+  { name: "Recoleta", family: "var(--font-recoleta), serif" },
+  { name: "Roboto", family: "'Roboto', sans-serif" },
+  { name: "Open Sans", family: "'Open Sans', sans-serif" },
+  { name: "Inter", family: "'Inter', sans-serif" },
+  { name: "Lato", family: "'Lato', sans-serif" },
+  { name: "Montserrat", family: "'Montserrat', sans-serif" },
+  { name: "Poppins", family: "'Poppins', sans-serif" },
+  { name: "Oswald", family: "'Oswald', sans-serif" },
+  { name: "Raleway", family: "'Raleway', sans-serif" },
+  { name: "Merriweather", family: "'Merriweather', serif" },
+  { name: "Nunito", family: "'Nunito', sans-serif" },
+  { name: "Playfair Display", family: "'Playfair Display', serif" },
+  { name: "Noto Sans", family: "'Noto Sans', sans-serif" },
+  { name: "Source Sans Pro", family: "'Source Sans Pro', sans-serif" },
+  { name: "Ubuntu", family: "'Ubuntu', sans-serif" },
+  { name: "Fira Sans", family: "'Fira Sans', sans-serif" },
+  { name: "Inconsolata", family: "'Inconsolata', monospace" },
 ];
 
 interface Props {
@@ -33,85 +43,84 @@ interface Props {
 
 export function FontFamilySelect({ value, onChange, disabled }: Props) {
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(0);
   const [query, setQuery] = useState("");
+  const [fonts, setFonts] = useState<Font[]>(POPULAR_FONTS);
+  const [recent, setRecent] = useState<string[]>([]);
+
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
-  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  itemRefs.current = [];
 
-  // reset search when opening
+  // load recent fonts
   useEffect(() => {
-    if (open) setQuery("");
-  }, [open]);
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem("recent_fonts");
+    if (stored) {
+      try {
+        setRecent(JSON.parse(stored));
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
 
-  const [fonts, setFonts] = useState<Font[]>(BASE_FONTS);
-
-  const filtered = useMemo(() => {
-    const q = query.toLowerCase();
-    return fonts.filter((f) => f.name.toLowerCase().includes(q));
-  }, [query, fonts]);
-
-  // fetch full font list
+  // fetch full font list once
   useEffect(() => {
-    fetch('/api/fonts')
+    fetch("/api/fonts")
       .then((res) => res.json())
       .then((list: { name: string; category: string }[]) => {
         const extras = list.map((f) => ({
           name: f.name,
-          family: `'${f.name}', ${f.category === 'serif' ? 'serif' : 'sans-serif'}`,
+          family: `'${f.name}', ${f.category === "serif" ? "serif" : "sans-serif"}`,
         }));
-        setFonts((prev) => [...prev, ...extras]);
+        setFonts((prev) => {
+          const seen = new Set(prev.map((p) => p.name));
+          const merged = [...prev];
+          extras.forEach((f) => {
+            if (!seen.has(f.name)) merged.push(f);
+          });
+          return merged;
+        });
       })
-      .catch(() => {/* ignore */});
+      .catch(() => {
+        /* ignore */
+      });
   }, []);
 
-  // load fonts for visible options
-  useEffect(() => {
-    filtered.forEach((f) => {
-      const url = f.url || `https://fonts.googleapis.com/css2?family=${f.name.replace(/ /g, '+')}&display=swap`;
-      if (!document.querySelector(`link[data-font="${f.name}"]`)) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = url;
-        link.setAttribute('data-font', f.name);
-        document.head.appendChild(link);
-      }
-    });
-  }, [filtered]);
+  // computed list with recents on top
+  const allFonts = useMemo(() => {
+    const recents = recent
+      .map((n) => fonts.find((f) => f.name === n))
+      .filter((f): f is Font => !!f);
+    const others = fonts.filter((f) => !recent.includes(f.name));
+    return [...recents, ...others];
+  }, [fonts, recent]);
 
-  // keyboard navigation
-  useEffect(() => {
-    if (!open) return;
-    setActive(Math.max(0, filtered.findIndex((f) => f.name === value)));
-    const handle = (e: KeyboardEvent) => {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setActive((i) => Math.min(i + 1, filtered.length - 1));
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setActive((i) => Math.max(i - 1, 0));
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        const f = filtered[active];
-        if (f) onChange(f.name);
-        setOpen(false);
-        btnRef.current?.focus();
-      } else if (e.key === "Escape") {
-        setOpen(false);
-        btnRef.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", handle);
-    return () => window.removeEventListener("keydown", handle);
-  }, [open, active, value, onChange, filtered]);
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase();
+    return allFonts.filter((f) => f.name.toLowerCase().includes(q));
+  }, [query, allFonts]);
 
-  useEffect(() => {
-    if (!open) return;
-    if (document.activeElement !== searchRef.current) {
-      itemRefs.current[active]?.focus();
+  const loadFont = (f: Font) => {
+    const url = f.url || `https://fonts.googleapis.com/css2?family=${f.name.replace(/ /g, "+")}&display=swap`;
+    if (!document.querySelector(`link[data-font="${f.name}"]`)) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = url;
+      link.setAttribute("data-font", f.name);
+      document.head.appendChild(link);
     }
-  }, [open, active]);
+  };
+
+  const handleSelect = (name: string) => {
+    onChange(name);
+    setOpen(false);
+    btnRef.current?.focus();
+    setRecent((prev) => {
+      const next = [name, ...prev.filter((n) => n !== name)].slice(0, 5);
+      localStorage.setItem("recent_fonts", JSON.stringify(next));
+      return next;
+    });
+  };
 
   const current = fonts.find((f) => f.name === value) || fonts[0];
 
@@ -130,7 +139,7 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
       </button>
 
       <Popover anchor={btnRef.current} open={open} onClose={() => setOpen(false)}>
-        <div className="max-h-60 overflow-y-auto p-1">
+        <div className="max-h-60 w-48 p-1">
           <input
             ref={searchRef}
             autoFocus
@@ -143,32 +152,67 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
             placeholder="Search fonts"
             className="mb-1 w-full rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400/50"
           />
-          <ul>
-            {filtered.map((f, i) => (
-              <li key={f.name} className="my-0.5">
-                <button
-                  ref={(el) => (itemRefs.current[i] = el)}
-                  type="button"
-                  onClick={() => {
-                    onChange(f.name);
-                    setOpen(false);
-                    btnRef.current?.focus();
-                  }}
-                  className={`w-full text-left px-3 py-1.5 rounded-md focus:outline-none hover:bg-[--walty-cream] focus:bg-[--walty-cream] ${
-                    value === f.name ? "bg-[--walty-cream]" : ""
-                  }`}
-                  style={{ fontFamily: f.family }}
-                >
-                  {f.name}
-                </button>
-              </li>
-            ))}
-            {filtered.length === 0 && (
-              <li className="p-2 text-sm text-gray-500">No fonts found</li>
-            )}
-          </ul>
+          <Virtuoso
+            style={{ height: "10rem" }}
+            totalCount={filtered.length}
+            itemContent={(i) => {
+              const f = filtered[i];
+              return (
+                <FontRow
+                  key={f.name}
+                  font={f}
+                  selected={value === f.name}
+                  onSelect={() => handleSelect(f.name)}
+                  loadFont={loadFont}
+                />
+              );
+            }}
+          />
+          {filtered.length === 0 && (
+            <div className="p-2 text-sm text-gray-500">No fonts found</div>
+          )}
         </div>
       </Popover>
     </>
+  );
+}
+
+interface RowProps {
+  font: Font;
+  selected: boolean;
+  onSelect: () => void;
+  loadFont: (f: Font) => void;
+}
+
+function FontRow({ font, selected, onSelect, loadFont }: RowProps) {
+  const ref = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        loadFont(font);
+        obs.disconnect();
+      }
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [font, loadFont]);
+
+  return (
+    <div className="my-0.5">
+      <button
+        ref={ref}
+        type="button"
+        onClick={onSelect}
+        className={`w-full text-left px-3 py-1.5 rounded-md focus:outline-none hover:bg-[--walty-cream] focus:bg-[--walty-cream] ${
+          selected ? "bg-[--walty-cream]" : ""
+        }`}
+        style={{ fontFamily: font.family }}
+      >
+        {font.name}
+      </button>
+    </div>
   );
 }
