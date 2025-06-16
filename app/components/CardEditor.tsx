@@ -718,10 +718,6 @@ const handleProofAll = async () => {
       <AddToBasketDialog
         open={basketOpen}
         onClose={() => setBasketOpen(false)}
-        onAdd={(sku) => {
-          console.log('add to basket', sku)
-          setBasketOpen(false)
-        }}
       />
     </div>
   )

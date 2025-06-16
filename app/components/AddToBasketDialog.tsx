@@ -3,11 +3,12 @@
 import { Dialog, Transition } from '@headlessui/react'
 import { Fragment, useState } from 'react'
 import { Check } from 'lucide-react'
+import { useBasket } from '@/lib/useBasket'
 
 interface Props {
   open: boolean
   onClose: () => void
-  onAdd: (sku: string) => void
+  onAdd?: (sku: string) => void
 }
 
 const OPTIONS = [
@@ -19,10 +20,14 @@ const OPTIONS = [
 
 export default function AddToBasketDialog({ open, onClose, onAdd }: Props) {
   const [choice, setChoice] = useState<string | null>(null)
+  const { addItem } = useBasket()
 
   const handleAdd = () => {
     if (choice) {
-      onAdd(choice)
+      addItem(choice)
+      onAdd?.(choice)
+      onClose()
+      setChoice(null)
     }
   }
 
