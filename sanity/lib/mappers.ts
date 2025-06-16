@@ -2,7 +2,7 @@
  * sanity/lib/mappers.ts
  * Convert a Sanity **cardTemplate** document → the shape that
  * <FabricCanvas> expects (TemplatePage[4] → layers[] of Layer objects)
- *********************************************************************/
+ **********************************************************************/
 import type { TemplatePage, Layer } from '@/app/components/FabricCanvas'
 import { urlFor }                   from './image'
 
@@ -30,6 +30,8 @@ function toFabricLayer (raw: SanityLayer): Layer | null {
         x: 0, y: 0,
         selectable: false,
         editable  : false,
+        width: raw.w ?? 1000,
+        height: raw.h ?? 700,
       }
 
     /* — ② editable text — */
@@ -43,6 +45,7 @@ function toFabricLayer (raw: SanityLayer): Layer | null {
         fill     : raw.fill     ?? '#000',
         selectable: true,
         editable  : true,
+        width: raw.width ?? 300,
       }
 
     /* — ③ editable image — */

@@ -493,12 +493,9 @@ const fetchProofBlob = async (
 const handleProofAll = async () => {
   if (!products.length) return
   const { pages, pageImages } = collectProofData()
-  const JSZip = (
-    await import(
-      /* webpackIgnore: true */
-      'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm'
-    )
-  ).default
+  
+  const JSZip = (await import('jszip')).default
+
   const zip = new JSZip()
   for (const p of products) {
     const name = `${p.slug}.jpg`

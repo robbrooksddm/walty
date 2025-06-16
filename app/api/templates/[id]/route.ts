@@ -4,7 +4,7 @@
  * • Always writes to the **draft** (id prefixed with `drafts.`)
  * • If the draft doesn’t exist we create a stub, then patch.
  * • Keeps each page’s `name` so Studio previews show the right titles.
- *********************************************************************/
+ **********************************************************************/
 
 import { NextRequest, NextResponse } from 'next/server'
 import { sanityWriteClient as sanity } from '@/sanity/lib/client'
@@ -24,7 +24,7 @@ function normalisePages(
     name:   typeof p?.name === 'string' && p.name.trim()
               ? p.name.trim()
               : FALLBACK_NAMES[i] ?? `page-${i}`,
-    layers: Array.isArray(p?.layers) ? p.layers.map(l => toSanity(l, spec)) : [],
+    layers: Array.isArray(p?.layers) ? p.layers.map((l: any) => toSanity(l, spec)) : [],
   }))
 }
 
