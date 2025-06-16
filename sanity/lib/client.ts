@@ -26,7 +26,7 @@ export const sanity = createClient({
   apiVersion : '2023-10-01',
   perspective: 'published',   // ⇠ only published docs
   useCdn     : true,          // ⇠ fastest / cached
-})
+} as any)
 
 /*────────────────────────────────────────────────────────────
   2. Read‑only *draft + published* client  (card‑editor / admin)
@@ -38,7 +38,7 @@ export const sanityPreview = createClient({
   token      : readToken,     // Viewer token
   perspective: 'previewDrafts',
   useCdn     : false,         // drafts never reach the CDN
-})
+} as any)
 
 /*────────────────────────────────────────────────────────────
   3. Write‑enabled client  (saving templates, publishing, etc.)
@@ -50,4 +50,4 @@ export const sanityWriteClient = createClient({
   token      : writeToken,    // Contributor token
   perspective: 'previewDrafts',
   useCdn     : false,
-})
+} as any)

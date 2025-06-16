@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sanityWriteClient as sanity } from '@/sanity/lib/client'
 import { toSanity } from '@/app/library/layerAdapters'
-import type { PrintSpec } from '@/app/components/FabricCanvas'
+import type { PrintSpec, Layer } from '@/app/components/FabricCanvas'
 
 const FALLBACK_NAMES = ['front', 'inner-L', 'inner-R', 'back'] as const
 
@@ -24,7 +24,7 @@ function normalisePages(
     name:   typeof p?.name === 'string' && p.name.trim()
               ? p.name.trim()
               : FALLBACK_NAMES[i] ?? `page-${i}`,
-    layers: Array.isArray(p?.layers) ? p.layers.map(l => toSanity(l, spec)) : [],
+    layers: Array.isArray(p?.layers) ? p.layers.map((l: Layer) => toSanity(l, spec)) : [],
   }))
 }
 

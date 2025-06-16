@@ -28,6 +28,8 @@ function toFabricLayer (raw: SanityLayer): Layer | null {
         type : 'image',
         src  : raw.asset ? urlFor(raw.asset).url() : '',
         x: 0, y: 0,
+        width: raw.w ?? raw.width ?? 0,
+        height: raw.h ?? raw.height,
         selectable: false,
         editable  : false,
       }
@@ -39,6 +41,7 @@ function toFabricLayer (raw: SanityLayer): Layer | null {
         text : raw.text ?? 'New text',
         x    : raw.x    ?? 50,
         y    : raw.y    ?? 50,
+        width: raw.width ?? 200,
         fontSize : raw.fontSize ?? 32,
         fill     : raw.fill     ?? '#000',
         selectable: true,

@@ -497,7 +497,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
       case 'paste':
         if (clip.json.length) {
           clip.nudge += 10
-          fabric.util.enlivenObjects(clip.json, objs => {
+          fabric.util.enlivenObjects(clip.json, (objs: fabric.Object[]) => {
             const root = objs[0]
             root.set({ left: (root.left ?? 0) + clip.nudge, top: (root.top ?? 0) + clip.nudge })
             root.setCoords()
@@ -521,7 +521,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
         if (active) {
           clip.json = [active.toJSON(PROPS)]
           clip.nudge += 10
-          fabric.util.enlivenObjects(clip.json, objs => {
+          fabric.util.enlivenObjects(clip.json, (objs: fabric.Object[]) => {
             const root = objs[0]
             root.set({ left: (root.left ?? 0) + clip.nudge, top: (root.top ?? 0) + clip.nudge })
             root.setCoords()
@@ -585,7 +585,7 @@ useEffect(() => {
     e.stopPropagation();
     setMenuPos({ x: e.clientX, y: e.clientY });
   };
-  fc.upperCanvasEl.addEventListener('contextmenu', ctxMenu);
+  (fc as any).upperCanvasEl.addEventListener('contextmenu', ctxMenu);
   /* --- keep Fabric’s wrapper the same size as the visible preview --- */
   const container = canvasRef.current!.parentElement as HTMLElement | null;
   if (container) {
@@ -866,7 +866,7 @@ window.addEventListener('keydown', onKey)
   fcRef.current = fc; onReady(fc)
 
     return () => {
-      fc.upperCanvasEl.removeEventListener('contextmenu', ctxMenu)
+      (fc as any).upperCanvasEl.removeEventListener('contextmenu', ctxMenu)
       window.removeEventListener('keydown', onKey)
       if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
       window.removeEventListener('scroll', updateOffset)

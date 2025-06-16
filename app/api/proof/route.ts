@@ -136,9 +136,9 @@ export async function POST(req: NextRequest) {
     ]
 
     panels.forEach((p, idx) => {
-      const img = pageMap[p.page || p.name]
-      if (!img) return
-      comps.push({ input: img, left: positions[idx].left, top: positions[idx].top } as Overlay)
+      const buf = bufferMap[p.page || p.name]
+      if (!buf) return
+      comps.push({ input: buf, left: positions[idx].left, top: positions[idx].top })
     })
 
     let outImg = sharp({ create: { width: sheetW, height: sheetH, channels: 4, background: '#ffffff' } }).composite(comps)
