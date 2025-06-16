@@ -28,7 +28,11 @@ export default function AddToBasketDialog({ open, onClose, onAdd }: Props) {
 
   return (
     <Transition.Root show={open} as={Fragment}>
-      <Dialog as="div" className="fixed inset-0 z-50 flex items-center justify-center" onClose={onClose}>
+      <Dialog
+        as="div"
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        onClose={onClose}
+      >
         <div className="fixed inset-0 bg-black/60" aria-hidden="true" />
         <Transition.Child
           as={Fragment}
@@ -39,7 +43,7 @@ export default function AddToBasketDialog({ open, onClose, onAdd }: Props) {
           leaveFrom="opacity-100 scale-100"
           leaveTo="opacity-0 scale-95"
         >
-          <div className="bg-white rounded shadow-lg w-[min(90vw,420px)] p-6 space-y-6">
+          <Dialog.Panel className="relative z-10 bg-white rounded shadow-lg w-[min(90vw,420px)] p-6 space-y-6">
             <h2 className="font-domine text-xl text-[--walty-teal]">Choose an option</h2>
             <ul className="space-y-2">
               {OPTIONS.map((opt) => (
@@ -64,7 +68,7 @@ export default function AddToBasketDialog({ open, onClose, onAdd }: Props) {
                 Add to basket
               </button>
             </div>
-          </div>
+          </Dialog.Panel>
         </Transition.Child>
       </Dialog>
     </Transition.Root>
