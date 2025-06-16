@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Search, User, ShoppingBag, Crown } from "lucide-react";
 import BasketPopover from "./BasketPopover";
+import { useBasket } from "@/lib/useBasket";
 
 export default function WaltyNav() {
   /* show shadow when scrolled */
@@ -19,6 +20,8 @@ export default function WaltyNav() {
 
   const basketRef = useRef<HTMLButtonElement | null>(null);
   const [basketOpen, setBasketOpen] = useState(false);
+  const { items } = useBasket();
+  const itemCount = items.reduce((t, it) => t + it.qty, 0);
 
   return (
     <header
@@ -54,8 +57,19 @@ export default function WaltyNav() {
               <User className="w-[30px] h-[30px] stroke-[--walty-orange]" />
               Account
             </Link>
-            <button ref={basketRef} onClick={() => setBasketOpen((o) => !o)} className="flex flex-col items-center gap-1 hover:text-[--walty-teal]">
+            <button
+              ref={basketRef}
+              onClick={() => setBasketOpen((o) => !o)}
+              className="relative flex flex-col items-center gap-1 hover:text-[--walty-teal]"
+            >
               <ShoppingBag className="w-[30px] h-[30px] stroke-[--walty-orange]" />
+              {itemCount > 0 && (
+                <span
+                  className="absolute -top-1 -right-2 rounded-full bg-[--walty-orange] text-[--walty-cream] text-[10px] leading-none px-1"
+                >
+                  {itemCount}
+                </span>
+              )}
               Basket
             </button>
           </nav>
