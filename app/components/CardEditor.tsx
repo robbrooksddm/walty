@@ -25,6 +25,7 @@ import EditorCommands                   from './EditorCommands'
 import SelfieDrawer                     from './SelfieDrawer'
 import CropDrawer                      from './CropDrawer'
 import PreviewModal                    from './PreviewModal'
+import AddToBasketDialog               from './AddToBasketDialog'
 import { CropTool }                     from '@/lib/CropTool'
 import WaltyEditorHeader                from './WaltyEditorHeader'
 import type { TemplatePage }            from './FabricCanvas'
@@ -289,6 +290,9 @@ const [aiPlaceholderId, setAiPlaceholderId] = useState<string | null>(null)
 /* preview modal state */
 const [previewOpen, setPreviewOpen] = useState(false)
 const [previewImgs, setPreviewImgs] = useState<string[]>([])
+
+/* add-to-basket modal state */
+const [basketOpen, setBasketOpen] = useState(false)
 
 /* listen for the event FabricCanvas now emits */
 useEffect(() => {
@@ -560,7 +564,7 @@ const handleProofAll = async () => {
     >
       <WaltyEditorHeader                     /* ② mount new component */
         onPreview={handlePreview}
-        onAddToBasket={() => console.log("basket")}
+        onAddToBasket={() => setBasketOpen(true)}
         height={72}                          /* match the design */
       />
 
@@ -710,6 +714,14 @@ const handleProofAll = async () => {
         open={previewOpen}
         images={previewImgs}
         onClose={() => setPreviewOpen(false)}
+      />
+      <AddToBasketDialog
+        open={basketOpen}
+        onClose={() => setBasketOpen(false)}
+        onAdd={(sku) => {
+          console.log('add to basket', sku)
+          setBasketOpen(false)
+        }}
       />
     </div>
   )
