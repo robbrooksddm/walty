@@ -582,6 +582,12 @@ useEffect(() => {
     preserveObjectStacking: true,
   });
 
+  // guard Fabric's rendering after cleanup
+  const origRenderAll = fc.renderAll.bind(fc)
+  const origRequestRenderAll = fc.requestRenderAll.bind(fc)
+  fc.renderAll = () => { if (!disposedRef.current) origRenderAll() }
+  fc.requestRenderAll = () => { if (!disposedRef.current) origRequestRenderAll() }
+
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -879,6 +885,7 @@ window.addEventListener('keydown', onKey)
       onReady(null)
       cropToolRef.current?.abort()
       disposedRef.current = true
+      fcRef.current = null
       fc.dispose()
     }
 // eslint-disable-next-line react-hooks/exhaustive-deps
