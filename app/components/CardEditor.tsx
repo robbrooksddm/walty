@@ -225,8 +225,10 @@ export default function CardEditor({
   }, [canvasMap])
 
   useEffect(() => {
-    updateThumb(activeIdx)
-  }, [pages, activeIdx])
+    canvasMap.forEach((fc, idx) => {
+      if (fc) updateThumbFromCanvas(idx, fc)
+    })
+  }, [pages])
 
   const [activeType, setActiveType] = useState<'text' | 'image' | null>(null)
   useEffect(() => {
