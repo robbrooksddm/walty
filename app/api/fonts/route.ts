@@ -8,15 +8,19 @@ export async function GET(req: NextRequest) {
   if (!key) {
     return NextResponse.json({ error: 'Missing GOOGLE_FONTS_API_KEY' }, { status: 500 })
   }
-  const res = await fetch(
-    `https://www.googleapis.com/webfonts/v1/webfonts?key=${key}&fields=items(family,category)`
-  )
+  const popular = req.nextUrl.searchParams.get('popular')
+  const baseUrl = `https://www.googleapis.com/webfonts/v1/webfonts?key=${key}&fields=items(family,category)`
+  const url = popular ? `${baseUrl}&sort=popularity` : baseUrl
+  const res = await fetch(url)
   if (!res.ok) {
     return NextResponse.json({ error: 'Failed to fetch Google Fonts' }, { status: 500 })
   }
   const data = await res.json()
-  const fonts = Array.isArray(data.items)
+  let fonts = Array.isArray(data.items)
     ? data.items.map((f: any) => ({ name: f.family, category: f.category }))
     : []
+  if (popular) {
+    fonts = fonts.slice(0, 100)
+  }
   return NextResponse.json(fonts)
 }

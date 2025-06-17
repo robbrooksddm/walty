@@ -39,10 +39,18 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
   const searchRef = useRef<HTMLInputElement | null>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   itemRefs.current = [];
+  const listRef = useRef<HTMLDivElement | null>(null);
 
-  // reset search when opening
+  const fetchedRef = useRef(false);
+  const ITEMS_PER_BATCH = 40;
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_BATCH);
+
+  // reset search & visible items when opening
   useEffect(() => {
-    if (open) setQuery("");
+    if (open) {
+      setQuery("");
+      setVisibleCount(ITEMS_PER_BATCH);
+    }
   }, [open]);
 
   const [fonts, setFonts] = useState<Font[]>(BASE_FONTS);
@@ -52,9 +60,15 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
     return fonts.filter((f) => f.name.toLowerCase().includes(q));
   }, [query, fonts]);
 
-  // fetch full font list
   useEffect(() => {
-    fetch('/api/fonts')
+    setVisibleCount(ITEMS_PER_BATCH);
+  }, [query]);
+
+  // fetch full font list when dropdown opens
+  useEffect(() => {
+    if (!open || fetchedRef.current) return;
+    fetchedRef.current = true;
+    fetch('/api/fonts?popular=1')
       .then((res) => res.json())
       .then((list: { name: string; category: string }[]) => {
         const extras = list.map((f) => ({
@@ -64,21 +78,25 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
         setFonts((prev) => [...prev, ...extras]);
       })
       .catch(() => {/* ignore */});
-  }, []);
+  }, [open]);
 
-  // load fonts for visible options
+  // load stylesheet for a specific font
+  const loadFont = (font: Font) => {
+    const url = font.url || `https://fonts.googleapis.com/css2?family=${font.name.replace(/ /g, '+')}&display=swap`;
+    if (!document.querySelector(`link[data-font="${font.name}"]`)) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = url;
+      link.setAttribute('data-font', font.name);
+      document.head.appendChild(link);
+    }
+  };
+
+  // ensure selected font is loaded
   useEffect(() => {
-    filtered.forEach((f) => {
-      const url = f.url || `https://fonts.googleapis.com/css2?family=${f.name.replace(/ /g, '+')}&display=swap`;
-      if (!document.querySelector(`link[data-font="${f.name}"]`)) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = url;
-        link.setAttribute('data-font', f.name);
-        document.head.appendChild(link);
-      }
-    });
-  }, [filtered]);
+    const f = fonts.find((ff) => ff.name === value);
+    if (f) loadFont(f);
+  }, [value, fonts]);
 
   // keyboard navigation
   useEffect(() => {
@@ -106,6 +124,13 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
     return () => window.removeEventListener("keydown", handle);
   }, [open, active, value, onChange, filtered]);
 
+  // ensure keyboard navigation reveals active item
+  useEffect(() => {
+    if (active >= visibleCount) {
+      setVisibleCount((c) => Math.min(active + 1, filtered.length));
+    }
+  }, [active, visibleCount, filtered.length]);
+
   useEffect(() => {
     if (!open) return;
     if (document.activeElement !== searchRef.current) {
@@ -130,7 +155,17 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
       </button>
 
       <Popover anchor={btnRef.current} open={open} onClose={() => setOpen(false)}>
-        <div className="max-h-60 overflow-y-auto p-1">
+        <div
+          ref={listRef}
+          onScroll={() => {
+            if (!listRef.current) return;
+            const el = listRef.current;
+            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
+              setVisibleCount((c) => Math.min(c + ITEMS_PER_BATCH, filtered.length));
+            }
+          }}
+          className="max-h-60 overflow-y-auto p-1"
+        >
           <input
             ref={searchRef}
             autoFocus
@@ -144,7 +179,7 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
             className="mb-1 w-full rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400/50"
           />
           <ul>
-            {filtered.map((f, i) => (
+            {filtered.slice(0, visibleCount).map((f, i) => (
               <li key={f.name} className="my-0.5">
                 <button
                   ref={(el) => {
@@ -152,6 +187,7 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
                   }}
                   type="button"
                   onClick={() => {
+                    loadFont(f);
                     onChange(f.name);
                     setOpen(false);
                     btnRef.current?.focus();
