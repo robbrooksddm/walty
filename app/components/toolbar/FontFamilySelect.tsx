@@ -44,6 +44,8 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
   const fetchedRef = useRef(false);
   const ITEMS_PER_BATCH = 40;
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_BATCH);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   // reset search & visible items when opening
   useEffect(() => {
@@ -68,7 +70,7 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
   useEffect(() => {
     if (!open || fetchedRef.current) return;
     fetchedRef.current = true;
-    fetch('/api/fonts?popular=1')
+    fetch('/api/fonts?popular=1&start=0&limit=100')
       .then((res) => res.json())
       .then((list: { name: string; category: string }[]) => {
         const extras = list.map((f) => ({
@@ -76,6 +78,7 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
           family: `'${f.name}', ${f.category === 'serif' ? 'serif' : 'sans-serif'}`,
         }));
         setFonts((prev) => [...prev, ...extras]);
+        setHasMore(list.length === 100);
       })
       .catch(() => {/* ignore */});
   }, [open]);
@@ -90,6 +93,25 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
       link.setAttribute('data-font', font.name);
       document.head.appendChild(link);
     }
+  };
+
+  const fetchMoreFonts = () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    fetch(`/api/fonts?popular=1&start=${fonts.length}&limit=100`)
+      .then((res) => res.json())
+      .then((list: { name: string; category: string }[]) => {
+        const extras = list.map((f) => ({
+          name: f.name,
+          family: `'${f.name}', ${f.category === 'serif' ? 'serif' : 'sans-serif'}`,
+        }));
+        if (extras.length) {
+          setFonts((prev) => [...prev, ...extras]);
+        }
+        if (extras.length < 100) setHasMore(false);
+      })
+      .catch(() => {/* ignore */})
+      .finally(() => setLoadingMore(false));
   };
 
   // ensure selected font is loaded
@@ -161,7 +183,11 @@ export function FontFamilySelect({ value, onChange, disabled }: Props) {
             if (!listRef.current) return;
             const el = listRef.current;
             if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
-              setVisibleCount((c) => Math.min(c + ITEMS_PER_BATCH, filtered.length));
+              if (visibleCount < filtered.length) {
+                setVisibleCount((c) => Math.min(c + ITEMS_PER_BATCH, filtered.length));
+              } else {
+                fetchMoreFonts();
+              }
             }
           }}
           className="max-h-60 overflow-y-auto p-1"

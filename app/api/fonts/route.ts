@@ -8,7 +8,12 @@ export async function GET(req: NextRequest) {
   if (!key) {
     return NextResponse.json({ error: 'Missing GOOGLE_FONTS_API_KEY' }, { status: 500 })
   }
-  const popular = req.nextUrl.searchParams.get('popular')
+  const popular = req.nextUrl.searchParams.has('popular')
+  const startParam = req.nextUrl.searchParams.get('start')
+  const limitParam = req.nextUrl.searchParams.get('limit')
+  const start = startParam ? parseInt(startParam, 10) : 0
+  const limit = limitParam ? parseInt(limitParam, 10) : popular ? 100 : undefined
+
   const baseUrl = `https://www.googleapis.com/webfonts/v1/webfonts?key=${key}&fields=items(family,category)`
   const url = popular ? `${baseUrl}&sort=popularity` : baseUrl
   const res = await fetch(url)
@@ -19,8 +24,10 @@ export async function GET(req: NextRequest) {
   let fonts = Array.isArray(data.items)
     ? data.items.map((f: any) => ({ name: f.family, category: f.category }))
     : []
-  if (popular) {
-    fonts = fonts.slice(0, 100)
+  if (typeof limit === 'number') {
+    fonts = fonts.slice(start, start + limit)
+  } else if (start) {
+    fonts = fonts.slice(start)
   }
   return NextResponse.json(fonts)
 }
