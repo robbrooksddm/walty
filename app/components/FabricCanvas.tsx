@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from 'react'
 import { fabric }            from 'fabric'
 import { useEditor }         from './EditorStore'
 import { fromSanity }        from '@/app/library/layerAdapters'
+import { urlFor }            from '@/sanity/lib/image'
 import '@/lib/fabricDefaults'
 import { SEL_COLOR } from '@/lib/fabricDefaults';
 import { CropTool } from '@/lib/CropTool'
@@ -269,18 +270,15 @@ const syncGhost = (
 const getSrcUrl = (raw: Layer): string | undefined => {
     /* 1 — explicit override from the editor */
     if (raw.srcUrl) return raw.srcUrl
-  
+
     /* 2 — plain string already means “loadable url / blob” */
     if (typeof raw.src === 'string') return raw.src
-  
-    /* 3 — Sanity image reference → build the CDN url */
-    if (raw.src && raw.src.asset?._ref) {
-      const id = raw.src.asset._ref             // image-xyz-2000x2000-png
-        .replace('image-', '')                  // xyz-2000x2000-png
-        .replace(/\-(png|jpg|jpeg|webp)$/, '')  // xyz-2000x2000
-      return `https://cdn.sanity.io/images/${process.env.NEXT_PUBLIC_SANITY_PROJECT_ID}/production/${id}.png`
+
+    /* 3 — Sanity image reference → build the CDN url (scaled) */
+    if (raw.src && (raw.src as any).asset?._ref) {
+      return urlFor(raw.src as any, { width: PAGE_W }).url()
     }
-  
+
     /* nothing usable yet */
     return undefined
   }                   // can’t resolve yet

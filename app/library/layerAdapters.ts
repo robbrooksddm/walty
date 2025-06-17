@@ -30,8 +30,8 @@ function isSanityRef(src:any): src is { _type:'image'; asset:{ _ref:string } } {
     return src && typeof src === 'object' && src._type === 'image' && src.asset?._ref
   }
   
-  const imgUrl = (src:any):string|undefined =>
-         isSanityRef(src)        ? urlFor(src).url()        // new path
+  const imgUrl = (src:any, size?:{width?:number;height?:number}):string|undefined =>
+         isSanityRef(src)        ? urlFor(src, size).url()   // new path
        : typeof src === 'string' ? src                      // plain URL
        : undefined
 
@@ -80,7 +80,8 @@ if (raw._type === 'aiLayer') {
   if (raw._type === 'editableImage' || raw._type === 'bgImage') {
     return {
       type :'image',
-      src  : imgUrl(raw.src) ?? imgUrl(raw) ?? raw.srcUrl,
+      src  : imgUrl(raw.src ?? raw, { width: PAGE_W }) ?? '',
+      assetId: raw.src?.asset?._ref ?? raw.asset?._ref,
       x : raw.x ?? 0,
       y : raw.y ?? 0,
       width : raw.w,

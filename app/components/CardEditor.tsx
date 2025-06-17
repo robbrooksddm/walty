@@ -30,6 +30,7 @@ import { CropTool }                     from '@/lib/CropTool'
 import WaltyEditorHeader                from './WaltyEditorHeader'
 import type { TemplatePage }            from './FabricCanvas'
 import type { TemplateProduct }         from '@/app/library/getTemplatePages'
+import { urlFor }                       from '@/sanity/lib/image'
 
 
 /* ---------- helpers ------------------------------------------------ */
@@ -446,7 +447,7 @@ const handlePreview = () => {
 }
 
 /* helper – gather pages and rendered images once */
-const collectProofData = () => {
+const collectProofData = async () => {
   canvasMap.forEach(fc => {
     const tool = (fc as any)?._cropTool as CropTool | undefined
     if (tool?.isActive) tool.commit()
@@ -458,16 +459,27 @@ const collectProofData = () => {
 
   const pages = useEditor.getState().pages
   const pageImages: string[] = []
-  canvasMap.forEach(fc => {
-    if (!fc) { pageImages.push(''); return }
+  for (const fc of canvasMap) {
+    if (!fc) { pageImages.push(''); continue }
     const guides = fc.getObjects().filter(o => (o as any)._guide)
     guides.forEach(g => g.set('visible', false))
+
+    const images = fc.getObjects().filter(o => (o as any).type === 'image') as fabric.Image[]
+    const originals: Array<[fabric.Image,string]> = []
+    await Promise.all(images.map(img => {
+      const id = (img as any).assetId as string | undefined
+      if (!id) return Promise.resolve()
+      const orig = (img as any).__src || img.getSrc()
+      originals.push([img, orig])
+      return new Promise<void>(res => img.setSrc(urlFor({ _ref: id } as any).url(), () => res()))
+    }))
+
     fc.renderAll()
-    pageImages.push(
-      fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT() })
-    )
+    pageImages.push(fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT() }))
+
+    await Promise.all(originals.map(([img, src]) => new Promise<void>(res => img.setSrc(src, () => res()))))
     guides.forEach(g => g.set('visible', true))
-  })
+  }
   return { pages, pageImages }
 }
 
@@ -496,7 +508,7 @@ const fetchProofBlob = async (
 /* download proofs for all products */
 const handleProofAll = async () => {
   if (!products.length) return
-  const { pages, pageImages } = collectProofData()
+  const { pages, pageImages } = await collectProofData()
   
   const JSZip = (await import('jszip')).default
 

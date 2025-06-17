@@ -14,5 +14,12 @@ const builder = imageUrlBuilder({ projectId, dataset })
  * Pass any Sanity image field (or asset) and receive a chainable builder.
  * `.format('png')` tells the CDN “never auto-convert, give me PNG”.
  */
-export const urlFor = (source: SanityImageSource) =>
-  builder.image(source).format('png')
+export const urlFor = (
+  source: SanityImageSource,
+  size?: { width?: number; height?: number },
+) => {
+  let b = builder.image(source).format('png')
+  if (size?.width)  b = b.width(size.width)
+  if (size?.height) b = b.height(size.height)
+  return b
+}
