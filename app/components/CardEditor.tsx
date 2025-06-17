@@ -212,11 +212,13 @@ export default function CardEditor({
   useLayoutEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ pageIdx: number; canvas: fabric.Canvas }>).detail
-      if (detail.canvas) updateThumbFromCanvas(detail.pageIdx, detail.canvas)
+      if (detail.canvas && detail.pageIdx === activeIdx) {
+        updateThumbFromCanvas(detail.pageIdx, detail.canvas)
+      }
     }
     document.addEventListener('card-canvas-rendered', handler)
     return () => document.removeEventListener('card-canvas-rendered', handler)
-  }, [])
+  }, [activeIdx])
 
   useEffect(() => {
     canvasMap.forEach((fc, idx) => {
