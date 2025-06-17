@@ -135,6 +135,8 @@ if (raw._type === 'aiLayer') {
                     ? raw.lineHeight
                     : parseFloat(String(raw.lineHeight)) || 1.16,
       opacity   : raw.opacity,
+      scaleX    : raw.scaleX,
+      scaleY    : raw.scaleY,
     }
   }
 
