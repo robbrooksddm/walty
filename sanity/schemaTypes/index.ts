@@ -8,6 +8,12 @@ import product       from './product'
 import productMockup from './productMockup'
 import sitePage      from './sitePage'
 
+/* commerce ---------------------------------------------- */
+import productType from './commerce/productType'
+import variant     from './commerce/variant'
+import fulfil      from './commerce/fulfil'
+import skuMap      from './commerce/skuMap'
+
 /* AI-related ---------------------------------------------------- */
 import aiPlaceholder from './aiPlaceholder'
 import aiLayer       from './aiLayer'
@@ -32,6 +38,10 @@ export const schemaTypes = [
   cardProduct,
   productMockup,
   sitePage,
+  productType,
+  variant,
+  fulfil,
+  skuMap,
   aiPlaceholder,
   printSpec,
 

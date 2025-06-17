@@ -174,8 +174,12 @@ export const structure: StructureResolver = (S: StructureBuilder) =>
             .title('Commerce')
             .items([
               S.documentTypeListItem('product').title('Products'),
-              S.documentTypeListItem('cardProduct').title('Variants'),
+              S.documentTypeListItem('cardProduct').title('Legacy variants'),
               S.documentTypeListItem('printSpec').title('Print specs'),
+              S.documentTypeListItem('productType').title('Product types'),
+              S.documentTypeListItem('variant').title('Variants'),
+              S.documentTypeListItem('fulfil').title('Fulfil options'),
+              S.documentTypeListItem('skuMap').title('SKU maps'),
             ]),
         ),
 
