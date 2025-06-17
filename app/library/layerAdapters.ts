@@ -110,11 +110,18 @@ if (raw._type === 'aiLayer') {
       text : raw.text ?? '',
       x : raw.x ?? 0,
       y : raw.y ?? 0,
-      width: raw.width ?? 200,
+      width : typeof raw.width === 'number'
+                ? raw.width
+                : parseFloat(String(raw.width)) ||
+                    (raw.widthPct != null ? (raw.widthPct / 100) * PAGE_W : 200),
+      height: typeof raw.height === 'number'
+                ? raw.height
+                : parseFloat(String(raw.height)) ||
+                    (raw.heightPct != null ? (raw.heightPct / 100) * PAGE_H : undefined),
       leftPct:   typeof raw.leftPct === 'number' ? raw.leftPct : ((raw.x ?? 0) / PAGE_W) * 100,
       topPct:    typeof raw.topPct  === 'number' ? raw.topPct  : ((raw.y ?? 0) / PAGE_H) * 100,
-      widthPct:  typeof raw.widthPct  === 'number' ? raw.widthPct  : (raw.width != null ? (raw.width / PAGE_W) * 100 : undefined),
-      heightPct: typeof raw.heightPct === 'number' ? raw.heightPct : (raw.height != null ? (raw.height / PAGE_H) * 100 : undefined),
+      widthPct:  typeof raw.widthPct  === 'number' ? raw.widthPct  : (raw.width  != null ? (parseFloat(String(raw.width))  / PAGE_W) * 100 : undefined),
+      heightPct: typeof raw.heightPct === 'number' ? raw.heightPct : (raw.height != null ? (parseFloat(String(raw.height)) / PAGE_H) * 100 : undefined),
       fontSize  : typeof raw.fontSize === 'number'
                     ? raw.fontSize
                     : parseFloat(String(raw.fontSize)) || 32,
@@ -246,7 +253,8 @@ else if (typeof layer.src === 'string') {
       topPct:    layer.topPct  ?? ((layer.y ?? 0) / PAGE_H) * 100,
       widthPct:  layer.widthPct  ?? (layer.width != null ? (layer.width / PAGE_W) * 100 : undefined),
       heightPct: layer.heightPct ?? (layer.height != null ? (layer.height / PAGE_H) * 100 : undefined),
-      width: layer.width,
+      width : layer.width,
+      height: layer.height,
       fontSize  : typeof layer.fontSize === 'number'
                     ? layer.fontSize
                     : parseFloat(String(layer.fontSize)) || 32,
