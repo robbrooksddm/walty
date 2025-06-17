@@ -115,14 +115,18 @@ if (raw._type === 'aiLayer') {
       topPct:    typeof raw.topPct  === 'number' ? raw.topPct  : ((raw.y ?? 0) / PAGE_H) * 100,
       widthPct:  typeof raw.widthPct  === 'number' ? raw.widthPct  : (raw.width != null ? (raw.width / PAGE_W) * 100 : undefined),
       heightPct: typeof raw.heightPct === 'number' ? raw.heightPct : (raw.height != null ? (raw.height / PAGE_H) * 100 : undefined),
-      fontSize  : raw.fontSize   ?? 32,
+      fontSize  : typeof raw.fontSize === 'number'
+                    ? raw.fontSize
+                    : parseFloat(String(raw.fontSize)) || 32,
       fontFamily: raw.fontFamily ?? 'Arial',
       fontWeight: raw.fontWeight ?? 'normal',
       fontStyle : raw.fontStyle  ?? 'normal',
       underline : raw.underline  ?? false,
       fill      : raw.fill       ?? '#000',
       textAlign : raw.textAlign  ?? 'left',
-      lineHeight: raw.lineHeight ?? 1.16,
+      lineHeight: typeof raw.lineHeight === 'number'
+                    ? raw.lineHeight
+                    : parseFloat(String(raw.lineHeight)) || 1.16,
       opacity   : raw.opacity,
     }
   }
@@ -243,14 +247,18 @@ else if (typeof layer.src === 'string') {
       widthPct:  layer.widthPct  ?? (layer.width != null ? (layer.width / PAGE_W) * 100 : undefined),
       heightPct: layer.heightPct ?? (layer.height != null ? (layer.height / PAGE_H) * 100 : undefined),
       width: layer.width,
-      fontSize  : layer.fontSize   ?? 32,
+      fontSize  : typeof layer.fontSize === 'number'
+                    ? layer.fontSize
+                    : parseFloat(String(layer.fontSize)) || 32,
       fontFamily: layer.fontFamily ?? 'Arial',
       fontWeight: layer.fontWeight ?? 'normal',
       fontStyle : layer.fontStyle  ?? 'normal',
       underline : layer.underline  ?? false,
       fill      : layer.fill       ?? '#000',
       textAlign : layer.textAlign  ?? 'left',
-      lineHeight: layer.lineHeight ?? 1.16,
+      lineHeight: typeof layer.lineHeight === 'number'
+                    ? layer.lineHeight
+                    : parseFloat(String(layer.lineHeight)) || 1.16,
       ...(layer.opacity != null && { opacity: layer.opacity }),
       ...(layer.scaleX  != null && { scaleX : layer.scaleX }),
       ...(layer.scaleY  != null && { scaleY : layer.scaleY }),
