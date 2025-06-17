@@ -110,20 +110,33 @@ if (raw._type === 'aiLayer') {
       text : raw.text ?? '',
       x : raw.x ?? 0,
       y : raw.y ?? 0,
-      width: raw.width ?? 200,
+      width : typeof raw.width === 'number'
+                ? raw.width
+                : parseFloat(String(raw.width)) ||
+                    (raw.widthPct != null ? (raw.widthPct / 100) * PAGE_W : 200),
+      height: typeof raw.height === 'number'
+                ? raw.height
+                : parseFloat(String(raw.height)) ||
+                    (raw.heightPct != null ? (raw.heightPct / 100) * PAGE_H : undefined),
       leftPct:   typeof raw.leftPct === 'number' ? raw.leftPct : ((raw.x ?? 0) / PAGE_W) * 100,
       topPct:    typeof raw.topPct  === 'number' ? raw.topPct  : ((raw.y ?? 0) / PAGE_H) * 100,
-      widthPct:  typeof raw.widthPct  === 'number' ? raw.widthPct  : (raw.width != null ? (raw.width / PAGE_W) * 100 : undefined),
-      heightPct: typeof raw.heightPct === 'number' ? raw.heightPct : (raw.height != null ? (raw.height / PAGE_H) * 100 : undefined),
-      fontSize  : raw.fontSize,
-      fontFamily: raw.fontFamily,
-      fontWeight: raw.fontWeight,
-      fontStyle : raw.fontStyle,
-      underline : raw.underline,
-      fill      : raw.fill,
-      textAlign : raw.textAlign,
-      lineHeight: raw.lineHeight,
+      widthPct:  typeof raw.widthPct  === 'number' ? raw.widthPct  : (raw.width  != null ? (parseFloat(String(raw.width))  / PAGE_W) * 100 : undefined),
+      heightPct: typeof raw.heightPct === 'number' ? raw.heightPct : (raw.height != null ? (parseFloat(String(raw.height)) / PAGE_H) * 100 : undefined),
+      fontSize  : typeof raw.fontSize === 'number'
+                    ? raw.fontSize
+                    : parseFloat(String(raw.fontSize)) || 32,
+      fontFamily: raw.fontFamily ?? 'Arial',
+      fontWeight: raw.fontWeight ?? 'normal',
+      fontStyle : raw.fontStyle  ?? 'normal',
+      underline : raw.underline  ?? false,
+      fill      : raw.fill       ?? '#000',
+      textAlign : raw.textAlign  ?? 'left',
+      lineHeight: typeof raw.lineHeight === 'number'
+                    ? raw.lineHeight
+                    : parseFloat(String(raw.lineHeight)) || 1.16,
       opacity   : raw.opacity,
+      scaleX    : raw.scaleX,
+      scaleY    : raw.scaleY,
     }
   }
 
@@ -242,15 +255,20 @@ else if (typeof layer.src === 'string') {
       topPct:    layer.topPct  ?? ((layer.y ?? 0) / PAGE_H) * 100,
       widthPct:  layer.widthPct  ?? (layer.width != null ? (layer.width / PAGE_W) * 100 : undefined),
       heightPct: layer.heightPct ?? (layer.height != null ? (layer.height / PAGE_H) * 100 : undefined),
-      width: layer.width,
-      fontSize  : layer.fontSize,
-      fontFamily: layer.fontFamily,
-      fontWeight: layer.fontWeight,
-      fontStyle : layer.fontStyle,
-      underline : layer.underline,
-      fill      : layer.fill,
-      textAlign : layer.textAlign,
-      lineHeight: layer.lineHeight,
+      width : layer.width,
+      height: layer.height,
+      fontSize  : typeof layer.fontSize === 'number'
+                    ? layer.fontSize
+                    : parseFloat(String(layer.fontSize)) || 32,
+      fontFamily: layer.fontFamily ?? 'Arial',
+      fontWeight: layer.fontWeight ?? 'normal',
+      fontStyle : layer.fontStyle  ?? 'normal',
+      underline : layer.underline  ?? false,
+      fill      : layer.fill       ?? '#000',
+      textAlign : layer.textAlign  ?? 'left',
+      lineHeight: typeof layer.lineHeight === 'number'
+                    ? layer.lineHeight
+                    : parseFloat(String(layer.lineHeight)) || 1.16,
       ...(layer.opacity != null && { opacity: layer.opacity }),
       ...(layer.scaleX  != null && { scaleX : layer.scaleX }),
       ...(layer.scaleY  != null && { scaleY : layer.scaleY }),

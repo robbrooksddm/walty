@@ -725,6 +725,8 @@ addGuides(fc, mode)                           // add guides based on mode
       textAlign  : t.textAlign,
       lineHeight : t.lineHeight,
       opacity    : t.opacity,
+      width      : t.getScaledWidth(),
+      height     : t.getScaledHeight(),
       widthPct  : (t.getScaledWidth()  / PAGE_W) * 100,
       heightPct : (t.getScaledHeight() / PAGE_H) * 100,
       lines     : t.textLines as string[],
