@@ -21,6 +21,14 @@ export default defineType({
     }),
     defineField({ name: 'prodigiSku',    type: 'string', title: 'Prodigi SKU',    validation: r => r.required() }),
     defineField({ name: 'printAreaId',   type: 'string', title: 'Print area ID',  validation: r => r.required() }),
-    defineField({ name: 'sizingStrategy',type: 'string', title: 'Sizing',         validation: r => r.required() }),
+    defineField({ name: 'sizingStrategy', type: 'string', title: 'Sizing',
+      validation: r => r.required() }),
+    defineField({
+      name: 'active',
+      type: 'boolean',
+      title: 'Active',
+      initialValue: true,
+      validation: r => r.required(),
+    }),
   ],
 })

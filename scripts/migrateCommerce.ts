@@ -9,71 +9,48 @@ const sanity = createClient({
   useCdn    : false,
 })
 
-interface CardProduct {
-  _id: string
-  title: string
-  slug?: { current: string }
-  printSpec: { _ref: string }
+interface Variant { _id: string; variantHandle: string }
+interface Fulfil { _id: string; fulfilHandle: string }
+
+const STEMS: Record<string, string> = {
+  'gc-mini': 'GLOBAL-GRE-GLOS-4X6',
+  'gc-classic': 'GLOBAL-GRE-GLOS-5X7',
+  'gc-large': 'GLOBAL-GRE-GLOS-A4',
 }
 
-// fill with your known Prodigi SKUs
-const SKUS: Record<string, { toSender: string; toRecipient: string }> = {
-  // e.g. 'greetingcard-7x5': { toSender: 'SKU123', toRecipient: 'SKU124' }
+function suffixFor(handle: string): string | null {
+  if (handle.startsWith('toRecipient')) return '-REC'
+  if (handle.startsWith('toSender')) return '-DIR'
+  return null
 }
 
 async function run() {
-  const cps = await sanity.fetch<CardProduct[]>(`*[_type=="cardProduct"]{_id,title,slug,printSpec}`)
+  const variants = await sanity.fetch<Variant[]>(`*[_type=="cardProduct"]{_id,variantHandle}`)
+  const fulfils = await sanity.fetch<Fulfil[]>(`*[_type=="fulfilOption"]{_id,fulfilHandle}`)
 
-  // create fulfil docs
-  const fulfilSender = {
-    _id: 'toSender',
-    _type: 'fulfilOption',
-    title: 'Ship to buyer',
-    fulfilHandle: 'toSender',
-    shipTo: 'buyer',
-    packaging: 'flat',
-    shippingMethod: 'unknown',
-    serviceLevel: 'unknown',
-    postageCostExVat: 0,
-    active: true,
-  }
-  const fulfilRecipient = {
-    _id: 'toRecipient',
-    _type: 'fulfilOption',
-    title: 'Ship to recipient',
-    fulfilHandle: 'toRecipient',
-    shipTo: 'recipient',
-    packaging: 'flat',
-    shippingMethod: 'unknown',
-    serviceLevel: 'unknown',
-    postageCostExVat: 0,
-    active: true,
-  }
-  await sanity.createIfNotExists(fulfilSender)
-  await sanity.createIfNotExists(fulfilRecipient)
-
-  for (const cp of cps) {
-    const variantId = cp._id
-    const handle = cp.slug?.current || cp._id
-    await sanity.patch(variantId).setIfMissing({variantHandle: handle}).commit()
-
-    const skus = SKUS[cp._id] || { toSender: '', toRecipient: '' }
-    const maps = [
-      { fulfil: fulfilSender._id, sku: skus.toSender },
-      { fulfil: fulfilRecipient._id, sku: skus.toRecipient },
-    ]
-
-    for (const m of maps) {
-      if (!m.sku) continue
-      const id = `${variantId}_${m.fulfil}`
+  for (const v of variants) {
+    const stem = STEMS[v.variantHandle]
+    if (!stem) {
+      console.warn(`No SKU stem for variant ${v.variantHandle}`)
+      continue
+    }
+    for (const f of fulfils) {
+      const suffix = suffixFor(f.fulfilHandle)
+      if (!suffix) {
+        console.warn(`No suffix for fulfil ${f.fulfilHandle}`)
+        continue
+      }
+      const id = `${v.variantHandle}_${f.fulfilHandle}`
+      const prodigiSku = `${stem}${suffix}`
       await sanity.createIfNotExists({
         _id: id,
         _type: 'skuMap',
-        variant: { _type: 'reference', _ref: variantId },
-        fulfil: { _type: 'reference', _ref: m.fulfil },
-        prodigiSku: m.sku,
-        printAreaId: 'default',
+        variant: { _type: 'reference', _ref: v._id },
+        fulfil: { _type: 'reference', _ref: f._id },
+        prodigiSku,
+        printAreaId: 'front_cover',
         sizingStrategy: 'fillPrintArea',
+        active: true,
       })
     }
   }
