@@ -12,6 +12,7 @@ const sanity = createClient({
 interface CardProduct {
   _id: string
   title: string
+  slug?: { current: string }
   printSpec: { _ref: string }
 }
 
@@ -21,16 +22,40 @@ const SKUS: Record<string, { toSender: string; toRecipient: string }> = {
 }
 
 async function run() {
-  const cps = await sanity.fetch<CardProduct[]>(`*[_type=="cardProduct"]{_id,title,printSpec}`)
+  const cps = await sanity.fetch<CardProduct[]>(`*[_type=="cardProduct"]{_id,title,slug,printSpec}`)
 
   // create fulfil docs
-  const fulfilSender = { _id: 'toSender', _type: 'fulfilOption', title: 'Ship to buyer', shipTo: 'buyer', packaging: 'flat', shippingMethod: 'unknown', serviceLevel: 'unknown', postageCostExVat: 0, active: true }
-  const fulfilRecipient = { _id: 'toRecipient', _type: 'fulfilOption', title: 'Ship to recipient', shipTo: 'recipient', packaging: 'flat', shippingMethod: 'unknown', serviceLevel: 'unknown', postageCostExVat: 0, active: true }
+  const fulfilSender = {
+    _id: 'toSender',
+    _type: 'fulfilOption',
+    title: 'Ship to buyer',
+    fulfilHandle: 'toSender',
+    shipTo: 'buyer',
+    packaging: 'flat',
+    shippingMethod: 'unknown',
+    serviceLevel: 'unknown',
+    postageCostExVat: 0,
+    active: true,
+  }
+  const fulfilRecipient = {
+    _id: 'toRecipient',
+    _type: 'fulfilOption',
+    title: 'Ship to recipient',
+    fulfilHandle: 'toRecipient',
+    shipTo: 'recipient',
+    packaging: 'flat',
+    shippingMethod: 'unknown',
+    serviceLevel: 'unknown',
+    postageCostExVat: 0,
+    active: true,
+  }
   await sanity.createIfNotExists(fulfilSender)
   await sanity.createIfNotExists(fulfilRecipient)
 
   for (const cp of cps) {
     const variantId = cp._id
+    const handle = cp.slug?.current || cp._id
+    await sanity.patch(variantId).setIfMissing({variantHandle: handle}).commit()
 
     const skus = SKUS[cp._id] || { toSender: '', toRecipient: '' }
     const maps = [

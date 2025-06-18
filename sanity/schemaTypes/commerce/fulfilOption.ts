@@ -11,6 +11,14 @@ export default defineType({
       title: 'Title',
       validation: r => r.required(),
     }),
+
+    defineField({
+      name: 'fulfilHandle',
+      type: 'string',
+      title: 'Fulfil handle',
+      description: 'Short stable key like "toRecipient_flat_std"',
+      validation: r => r.required(),
+    }),
     defineField({
       name: 'shipTo',
       type: 'string',

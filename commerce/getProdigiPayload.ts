@@ -13,15 +13,14 @@ export interface ProdigiPayload {
 }
 
 export async function getProdigiPayload(
-  variantId: string,
-  fulfilId: string,
+  variantHandle: string,
+  fulfilHandle: string,
   assets: { url: string }[],
   copies = 1,
 ): Promise<ProdigiPayload> {
-  const id = `${variantId}_${fulfilId}`
-  const query = `*[_type=="skuMap" && _id==$id][0]{prodigiSku,printAreaId,sizingStrategy}`
-  const map = await sanity.fetch<{prodigiSku:string,printAreaId:string,sizingStrategy:string}>(query, {id})
-  if (!map) throw new Error(`SKU mapping not found for ${id}`)
+  const query = `*[_type=="skuMap" && variant->variantHandle==$v && fulfil->fulfilHandle==$f][0]{prodigiSku,printAreaId,sizingStrategy}`
+  const map = await sanity.fetch<{prodigiSku:string,printAreaId:string,sizingStrategy:string}>(query, {v: variantHandle, f: fulfilHandle})
+  if (!map) throw new Error(`SKU mapping not found for ${variantHandle}_${fulfilHandle}`)
 
   return {
     sku: map.prodigiSku,
