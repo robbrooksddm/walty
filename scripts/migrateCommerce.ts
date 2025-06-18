@@ -24,8 +24,8 @@ async function run() {
   const cps = await sanity.fetch<CardProduct[]>(`*[_type=="cardProduct"]{_id,title,printSpec}`)
 
   // create fulfil docs
-  const fulfilSender = { _id: 'toSender', _type: 'fulfil', title: 'Ship to buyer', slug: { current: 'to-sender' } }
-  const fulfilRecipient = { _id: 'toRecipient', _type: 'fulfil', title: 'Ship to recipient', slug: { current: 'to-recipient' } }
+  const fulfilSender = { _id: 'toSender', _type: 'fulfilOption', title: 'Ship to buyer', shipTo: 'buyer', packaging: 'flat', shippingMethod: 'unknown', serviceLevel: 'unknown', postageCostExVat: 0, active: true }
+  const fulfilRecipient = { _id: 'toRecipient', _type: 'fulfilOption', title: 'Ship to recipient', shipTo: 'recipient', packaging: 'flat', shippingMethod: 'unknown', serviceLevel: 'unknown', postageCostExVat: 0, active: true }
   await sanity.createIfNotExists(fulfilSender)
   await sanity.createIfNotExists(fulfilRecipient)
 

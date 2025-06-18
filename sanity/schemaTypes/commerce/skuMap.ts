@@ -16,7 +16,7 @@ export default defineType({
       name: 'fulfil',
       type: 'reference',
       title: 'Fulfilment',
-      to: [{type: 'fulfil'}],
+      to: [{type: 'fulfilOption'}],
       validation: r => r.required(),
     }),
     defineField({ name: 'prodigiSku',    type: 'string', title: 'Prodigi SKU',    validation: r => r.required() }),
