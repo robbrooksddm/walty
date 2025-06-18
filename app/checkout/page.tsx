@@ -1,27 +1,27 @@
-import CheckoutClient from './CheckoutClient';
+import CheckoutClient from './CheckoutClient'
+import { sanityFetch } from '@/lib/sanityClient'
+import { urlFor } from '@/sanity/lib/image'
 
-export default function CheckoutPage() {
-  // Seed dummy cart items and addresses
-  const items = [
-    {
-      id: '1',
-      coverUrl: '/templates/daisy/daisy-front-cover.jpg',
-      title: 'Birthday Card',
-      sku: 'BDY-001',
-      variant: 'classic',
-      qty: 1,
-      price: 3.5,
-    },
-    {
-      id: '2',
-      coverUrl: '/templates/daisy/daisy-inner-left.jpg',
-      title: 'Thank You Card',
-      sku: 'THX-002',
-      variant: 'mini',
-      qty: 2,
-      price: 2.5,
-    },
-  ];
+export default async function CheckoutPage() {
+  // Fetch a couple of live card templates to populate the basket
+  const products = await sanityFetch<{
+    _id: string
+    title: string
+    slug: { current: string }
+    coverImage?: any
+  }[]>(
+    `*[_type=="cardTemplate" && isLive==true]{_id,title,slug,coverImage}[0...2]`
+  )
+
+  const items = products.map((p) => ({
+    id: p._id,
+    coverUrl: p.coverImage ? urlFor(p.coverImage).width(160).height(224).url() : '',
+    title: p.title,
+    sku: p.slug.current,
+    variant: 'classic',
+    qty: 1,
+    price: 3.5,
+  }))
 
   const addresses = [
     {
