@@ -27,6 +27,15 @@ export default defineType({
       validation: (Rule) => Rule.required(),
     }),
 
+    defineField({
+      name : 'variantHandle',
+      type : 'string',
+      title: 'Variant handle',
+      description: 'Short stable key like "gc-mini"',
+      validation: r => r.required(),
+    }),
+
+
     /* which mockup images define the preview */
     defineField({
       name : 'mockup',
