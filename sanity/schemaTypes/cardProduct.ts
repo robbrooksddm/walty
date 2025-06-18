@@ -10,6 +10,13 @@ export default defineType({
   title: 'Card product',
 
   fields: [
+    defineField({
+      name: '_id',
+      type: 'string',
+      title: 'Document ID',
+      description: 'Unique ID for this product variant',
+      validation: r => r.required(),
+    }),
     /* visible name shown to staff & in checkout */
     defineField({
       name : 'title',

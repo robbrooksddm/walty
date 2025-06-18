@@ -6,6 +6,13 @@ export default defineType({
   title: 'Fulfilment option',
   fields: [
     defineField({
+      name: '_id',
+      type: 'string',
+      title: 'Document ID',
+      description: 'Unique ID for this fulfil option',
+      validation: r => r.required(),
+    }),
+    defineField({
       name: 'title',
       type: 'string',
       title: 'Title',
