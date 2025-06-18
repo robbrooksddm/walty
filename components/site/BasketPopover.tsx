@@ -22,19 +22,19 @@ export default function BasketPopover({ anchor, open, onClose }: Props) {
           <>
             {items.map((it) => (
               <div
-                key={it.sku}
+                key={it.id}
                 className="border-b pb-2 last:border-none last:pb-0 flex gap-2"
               >
                 <img
-                  src="/templates/daisy/daisy-front-cover.jpg"
+                  src={it.image}
                   alt="thumbnail"
                   className="w-12 h-12 rounded object-cover"
                 />
                 <div className="flex-grow">
                   <div className="flex justify-between items-center">
-                    <span className="font-medium">{it.sku}</span>
+                    <span className="font-medium">{it.title}</span>
                     <button
-                      onClick={() => removeItem(it.sku)}
+                      onClick={() => removeItem(it.id)}
                       className="text-sm text-red-600 hover:underline"
                     >
                       Remove
@@ -43,7 +43,7 @@ export default function BasketPopover({ anchor, open, onClose }: Props) {
                   <div className="flex items-center gap-2 mt-1">
                     <button
                       className="px-2 py-0.5 border rounded"
-                      onClick={() => updateQty(it.sku, Math.max(1, it.qty - 1))}
+                      onClick={() => updateQty(it.id, Math.max(1, it.qty - 1))}
                     >
                       -
                     </button>
@@ -51,19 +51,19 @@ export default function BasketPopover({ anchor, open, onClose }: Props) {
                       type="number"
                       value={it.qty}
                       onChange={(e) =>
-                        updateQty(it.sku, Math.max(1, parseInt(e.target.value) || 1))
+                        updateQty(it.id, Math.max(1, parseInt(e.target.value) || 1))
                       }
                       className="w-12 border rounded text-center text-sm"
                     />
                     <button
                       className="px-2 py-0.5 border rounded"
-                      onClick={() => updateQty(it.sku, it.qty + 1)}
+                      onClick={() => updateQty(it.id, it.qty + 1)}
                     >
                       +
                     </button>
                   </div>
                   <Link
-                    href={`/cards/${it.sku}/customise`}
+                    href={`/cards/${it.slug}/customise`}
                     className="mt-2 inline-block text-sm text-[--walty-teal] hover:underline"
                   >
                     Preview &amp; customise

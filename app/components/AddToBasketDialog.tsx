@@ -8,23 +8,26 @@ import { useBasket } from '@/lib/useBasket'
 interface Props {
   open: boolean
   onClose: () => void
-  onAdd?: (sku: string) => void
+  slug: string
+  title: string
+  coverUrl: string
+  onAdd?: (variant: string) => void
 }
 
 const OPTIONS = [
-  { label: 'Single card', sku: 'single' },
-  { label: 'Pack of 5', sku: 'pack5' },
-  { label: 'Pack of 10', sku: 'pack10' },
-  { label: 'Pack of 20', sku: 'pack20' },
+  { label: 'Digital Card', sku: 'digital' },
+  { label: 'Mini Card', sku: 'mini' },
+  { label: 'Classic Card', sku: 'classic' },
+  { label: 'Giant Card', sku: 'giant' },
 ]
 
-export default function AddToBasketDialog({ open, onClose, onAdd }: Props) {
+export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, onAdd }: Props) {
   const [choice, setChoice] = useState<string | null>(null)
   const { addItem } = useBasket()
 
   const handleAdd = () => {
     if (choice) {
-      addItem(choice)
+      addItem({ slug, title, variant: choice, image: coverUrl })
       onAdd?.(choice)
       onClose()
       setChoice(null)

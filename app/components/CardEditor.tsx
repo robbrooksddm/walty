@@ -75,6 +75,9 @@ function CoachMark({ anchor, onClose }: { anchor: DOMRect | null; onClose: () =>
 export default function CardEditor({
   initialPages,
   templateId,
+  slug,
+  title,
+  coverImage,
   printSpec,
   previewSpec,
   products = [],
@@ -83,6 +86,9 @@ export default function CardEditor({
 }: {
   initialPages: TemplatePage[] | undefined
   templateId?: string
+  slug: string
+  title: string
+  coverImage?: string
   printSpec?: PrintSpec
   previewSpec?: PreviewSpec
   products?: TemplateProduct[]
@@ -715,6 +721,9 @@ const handleProofAll = async () => {
       <AddToBasketDialog
         open={basketOpen}
         onClose={() => setBasketOpen(false)}
+        slug={slug}
+        title={title}
+        coverUrl={thumbs[0] || coverImage || ''}
       />
     </div>
   )
