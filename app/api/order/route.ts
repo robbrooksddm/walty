@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getProdigiPayload } from '@/commerce/getProdigiPayload'
 
+const PRODIGI_BASE = process.env.PRODIGI_BASE_URL ||
+  'https://api.sandbox.prodigi.com/v4.0'
+const PRODIGI_API_KEY = process.env.PRODIGI_API_KEY || ''
+
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
@@ -22,8 +26,22 @@ export async function POST(req: NextRequest) {
         assets: payload.assets,
       } ]
     }
+    if (!PRODIGI_API_KEY) {
+      console.warn('PRODIGI_API_KEY not configured; returning order JSON')
+      return NextResponse.json(order)
+    }
 
-    return NextResponse.json(order)
+    const resp = await fetch(`${PRODIGI_BASE}/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': PRODIGI_API_KEY,
+      },
+      body: JSON.stringify(order),
+    })
+
+    const data = await resp.json().catch(() => ({}))
+    return NextResponse.json(data, { status: resp.status })
   } catch (err) {
     console.error('[order]', err)
     return NextResponse.json({ error: 'server-error' }, { status: 500 })

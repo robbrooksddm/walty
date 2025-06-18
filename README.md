@@ -22,6 +22,7 @@ Create a `.env` file and include your Google Fonts API key:
 
 ```
 GOOGLE_FONTS_API_KEY=your_key_here
+PRODIGI_API_KEY=your_prodigi_key
 ```
 
 This is required for the font picker to load the full list of Google Fonts.
