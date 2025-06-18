@@ -8,7 +8,10 @@ import { useBasket } from '@/lib/useBasket'
 interface Props {
   open: boolean
   onClose: () => void
-  onAdd?: (sku: string) => void
+  slug: string
+  title: string
+  coverUrl: string
+  onAdd?: (variant: string) => void
 }
 
 const OPTIONS = [
@@ -18,13 +21,13 @@ const OPTIONS = [
   { label: 'Giant Card', sku: 'giant' },
 ]
 
-export default function AddToBasketDialog({ open, onClose, onAdd }: Props) {
+export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, onAdd }: Props) {
   const [choice, setChoice] = useState<string | null>(null)
   const { addItem } = useBasket()
 
   const handleAdd = () => {
     if (choice) {
-      addItem(choice)
+      addItem({ slug, title, variant: choice, image: coverUrl })
       onAdd?.(choice)
       onClose()
       setChoice(null)

@@ -5,7 +5,7 @@
 
    import CardEditor from "@/app/components/CardEditor";
    
-   export default function CustomiseClient({ tpl }: { tpl: any }) {
+   export default function CustomiseClient({ slug, title, coverImage, tpl }: { slug: string; title: string; coverImage?: string; tpl: any }) {
      // 1️⃣ keep the old log
      console.log("TPL pages 👉", tpl.pages);
    
@@ -21,6 +21,9 @@
          initialPages={tpl.pages}
          printSpec={tpl.spec}
          previewSpec={tpl.previewSpec}
+         slug={slug}
+         title={title}
+         coverImage={coverImage}
          mode="customer"
        />
      );

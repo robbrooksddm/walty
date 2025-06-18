@@ -1,26 +1,19 @@
+'use client'
 import CheckoutClient from './CheckoutClient'
-import { sanityFetch } from '@/lib/sanityClient'
-import { urlFor } from '@/sanity/lib/image'
+import { useBasket } from '@/lib/useBasket'
+import { CARD_SIZES } from './sizeOptions'
 
-export default async function CheckoutPage() {
-  // Fetch a couple of live card templates to populate the basket
-  const products = await sanityFetch<{
-    _id: string
-    title: string
-    slug: { current: string }
-    coverImage?: any
-  }[]>(
-    `*[_type=="cardTemplate" && isLive==true]{_id,title,slug,coverImage}[0...2]`
-  )
+export default function CheckoutPage() {
+  const { items } = useBasket()
 
-  const items = products.map((p) => ({
-    id: p._id,
-    coverUrl: p.coverImage ? urlFor(p.coverImage).width(160).height(224).url() : '',
-    title: p.title,
-    sku: p.slug.current,
-    variant: 'classic',
-    qty: 1,
-    price: 3.5,
+  const cartItems = items.map((it) => ({
+    id: it.id,
+    coverUrl: it.image,
+    title: it.title,
+    sku: it.slug,
+    variant: it.variant,
+    qty: it.qty,
+    price: CARD_SIZES.find((s) => s.id === it.variant)?.price ?? 0,
   }))
 
   const addresses = [
@@ -42,5 +35,5 @@ export default async function CheckoutPage() {
     },
   ];
 
-  return <CheckoutClient initialItems={items} initialAddresses={addresses} />;
+  return <CheckoutClient initialItems={cartItems} initialAddresses={addresses} />;
 }
