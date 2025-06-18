@@ -27,13 +27,6 @@ export default defineType({
       validation: (Rule) => Rule.required(),
     }),
 
-    defineField({
-      name: 'productType',
-      type: 'reference',
-      title: 'Product type',
-      to: [{ type: 'productType' }],
-      validation: r => r.required(),
-    }),
 
     /* which mockup images define the preview */
     defineField({

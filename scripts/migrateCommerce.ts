@@ -31,12 +31,6 @@ async function run() {
 
   for (const cp of cps) {
     const variantId = cp._id
-    await sanity
-      .patch(cp._id)
-      .setIfMissing({
-        productType: { _type: 'reference', _ref: 'greetingCard' },
-      })
-      .commit()
 
     const skus = SKUS[cp._id] || { toSender: '', toRecipient: '' }
     const maps = [
