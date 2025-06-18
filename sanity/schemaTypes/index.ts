@@ -10,7 +10,6 @@ import sitePage      from './sitePage'
 
 /* commerce ---------------------------------------------- */
 import productType from './commerce/productType'
-import variant     from './commerce/variant'
 import fulfil      from './commerce/fulfil'
 import skuMap      from './commerce/skuMap'
 
@@ -39,7 +38,6 @@ export const schemaTypes = [
   productMockup,
   sitePage,
   productType,
-  variant,
   fulfil,
   skuMap,
   aiPlaceholder,

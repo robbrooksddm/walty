@@ -30,14 +30,13 @@ async function run() {
   await sanity.createIfNotExists(fulfilRecipient)
 
   for (const cp of cps) {
-    const variantId = `var-${cp._id}`
-    await sanity.createIfNotExists({
-      _id: variantId,
-      _type: 'variant',
-      title: cp.title,
-      productType: { _type: 'reference', _ref: 'greetingCard' },
-      printSpec: cp.printSpec,
-    })
+    const variantId = cp._id
+    await sanity
+      .patch(cp._id)
+      .setIfMissing({
+        productType: { _type: 'reference', _ref: 'greetingCard' },
+      })
+      .commit()
 
     const skus = SKUS[cp._id] || { toSender: '', toRecipient: '' }
     const maps = [

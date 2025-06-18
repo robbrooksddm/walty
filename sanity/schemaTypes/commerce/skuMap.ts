@@ -9,7 +9,7 @@ export default defineType({
       name: 'variant',
       type: 'reference',
       title: 'Variant',
-      to: [{type: 'variant'}],
+      to: [{type: 'cardProduct'}],
       validation: r => r.required(),
     }),
     defineField({
