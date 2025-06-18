@@ -12,10 +12,10 @@ interface Props {
 }
 
 const OPTIONS = [
-  { label: 'Single card', sku: 'single' },
-  { label: 'Pack of 5', sku: 'pack5' },
-  { label: 'Pack of 10', sku: 'pack10' },
-  { label: 'Pack of 20', sku: 'pack20' },
+  { label: 'Digital Card', sku: 'digital' },
+  { label: 'Mini Card', sku: 'mini' },
+  { label: 'Classic Card', sku: 'classic' },
+  { label: 'Giant Card', sku: 'giant' },
 ]
 
 export default function AddToBasketDialog({ open, onClose, onAdd }: Props) {
