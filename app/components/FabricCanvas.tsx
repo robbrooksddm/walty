@@ -583,6 +583,8 @@ useEffect(() => {
   const fc = new fabric.Canvas(canvasRef.current!) as fabric.Canvas & { upperCanvasEl: HTMLCanvasElement };
   fc.backgroundColor = '#fff';
   fc.preserveObjectStacking = true;
+  // allow selection handles to render outside the clipping region
+  fc.controlsAboveOverlay = true;
 
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
@@ -1099,6 +1101,7 @@ img.on('mouseup', () => {
   /* ---------- render ----------------------------------------- */
   return (
     <div
+      className="border shadow rounded"
       style={{
         position: 'relative',
         overflow: 'visible',
@@ -1117,7 +1120,6 @@ img.on('mouseup', () => {
           width: PREVIEW_W + CANVAS_PAD * 2 * SCALE,
           height: PREVIEW_H + CANVAS_PAD * 2 * SCALE,
         }}
-        className="border shadow rounded"
       />
       {menuPos && (
         <ContextMenu
