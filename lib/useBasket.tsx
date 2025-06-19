@@ -59,19 +59,13 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
   }, [items]);
 
   const addItem = (item: { slug: string; title: string; variant: string; image: string; proof: string }) => {
-    const canonical: Record<string, string> = {
-      mini: 'gc-mini',
-      classic: 'gc-classic',
-      giant: 'gc-large',
-    }
-    const variant = canonical[item.variant] ?? item.variant
     setItems((prev) => {
-      const id = `${item.slug}_${variant}`
+      const id = `${item.slug}_${item.variant}`
       const existing = prev.find((it) => it.id === id)
       if (existing) {
         return prev.map((it) => (it.id === id ? { ...it, qty: it.qty + 1 } : it))
       }
-      return [...prev, { id, qty: 1, ...item, variant }]
+      return [...prev, { id, qty: 1, ...item }]
     })
   }
 

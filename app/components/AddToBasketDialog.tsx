@@ -27,14 +27,7 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
   const [choice, setChoice] = useState<string | null>(null)
   const { addItem } = useBasket()
 
-  const canonical: Record<string, string> = {
-    mini: 'gc-mini',
-    classic: 'gc-classic',
-    giant: 'gc-large',
-  }
-  const options =
-    products?.map(p => ({ label: p.title, handle: canonical[p.variantHandle] ?? p.variantHandle }))
-    || DEFAULT_OPTIONS
+  const options = products?.map(p => ({ label: p.title, handle: p.variantHandle })) || DEFAULT_OPTIONS
 
   const handleAdd = async () => {
     if (choice) {
