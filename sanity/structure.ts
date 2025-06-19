@@ -85,7 +85,7 @@ export const structure: StructureResolver = (S: StructureBuilder) =>
                           S.documentTypeList('cardTemplate')
                             .title('Portrait')
                             .filter(
-                              '_type == "cardTemplate" && previewSpec.previewHeightPx > previewSpec.previewWidthPx'
+                              '_type == "cardTemplate" && product->previewSpec.previewHeightPx > product->previewSpec.previewWidthPx'
                             )
                             .child((id) => cardTemplateNode(S, id)),
                         ),
@@ -95,7 +95,7 @@ export const structure: StructureResolver = (S: StructureBuilder) =>
                           S.documentTypeList('cardTemplate')
                             .title('Landscape')
                             .filter(
-                              '_type == "cardTemplate" && previewSpec.previewWidthPx > previewSpec.previewHeightPx'
+                              '_type == "cardTemplate" && product->previewSpec.previewWidthPx > product->previewSpec.previewHeightPx'
                             )
                             .child((id) => cardTemplateNode(S, id)),
                         ),
@@ -105,7 +105,7 @@ export const structure: StructureResolver = (S: StructureBuilder) =>
                           S.documentTypeList('cardTemplate')
                             .title('Square')
                             .filter(
-                              '_type == "cardTemplate" && previewSpec.previewWidthPx == previewSpec.previewHeightPx'
+                              '_type == "cardTemplate" && product->previewSpec.previewWidthPx == product->previewSpec.previewHeightPx'
                             )
                             .child((id) => cardTemplateNode(S, id)),
                         ),

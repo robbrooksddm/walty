@@ -54,8 +54,8 @@ export async function getTemplatePages(
     )
   ] | order(_updatedAt desc)[0]{
     coverImage,
-    previewSpec,
-    "products": products[]->{
+    "previewSpec": product->previewSpec,
+    "products": product->variants[]->{
       _id,
       title,
       "slug": slug.current,

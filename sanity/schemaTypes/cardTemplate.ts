@@ -120,33 +120,6 @@ export default defineType({
       validation: r => r.required(),
     }),
 
-    defineField({
-      name: 'previewSpec',
-      type: 'object',
-      title: 'Preview canvas',
-      group: 'basic',
-      fields: [
-        {
-          name: 'previewWidthPx',
-          type: 'number',
-          title: 'Width (px)',
-          initialValue: 420,
-          validation: r => r.required().positive(),
-        },
-        {
-          name: 'previewHeightPx',
-          type: 'number',
-          title: 'Height (px)',
-          initialValue: 580,
-          validation: r => r.required().positive(),
-        },
-        defineField({
-          name: 'maxMobileWidthPx',
-          type: 'number',
-          title: 'Max mobile width (px)',
-        }),
-      ],
-    }),
 
     /* —— Pages —————————————————————————— */
     defineField({
@@ -198,13 +171,12 @@ export default defineType({
       validation: r => r.required(),
     }),
     defineField({
-      name: 'products',
-      type: 'array',
-      title: 'Available as…',
+      name: 'product',
+      type: 'reference',
+      title: 'Product',
       group: 'store',
-      of: [{type: 'reference', to: [{type: 'cardProduct'}]}],
-      validation: r =>
-        r.min(1).error('Choose at least one product SKU'),
+      to: [{type: 'product'}],
+      validation: r => r.required(),
     }),
     defineField({
       name: 'description',
