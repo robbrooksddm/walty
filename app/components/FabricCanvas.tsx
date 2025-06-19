@@ -103,6 +103,7 @@ let PAGE_H = 0
 let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
 let PAD = 4
+const CANVAS_PAD = 40
 
 recompute()
 
@@ -573,7 +574,11 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
 useEffect(() => {
   if (!canvasRef.current) return
 
-  // Create Fabric using the <canvas> element’s own dimensions
+  // expand the canvas so handles outside the page remain visible
+  canvasRef.current.width  = PAGE_W + CANVAS_PAD * 2
+  canvasRef.current.height = PAGE_H + CANVAS_PAD * 2
+
+  // Create Fabric using the <canvas> element’s expanded dimensions
   // – we’ll work in full‑size page units and simply scale the viewport.
   const fc = new fabric.Canvas(canvasRef.current!) as fabric.Canvas & { upperCanvasEl: HTMLCanvasElement };
   fc.backgroundColor = '#fff';
@@ -594,8 +599,15 @@ useEffect(() => {
     container.style.maxHeight = `${PREVIEW_H}px`;
   }
   addBackdrop(fc);
-  // keep the preview scaled to the configured width
-  fc.setViewportTransform([SCALE, 0, 0, SCALE, 0, 0]);
+  // keep the preview scaled to the configured width with padding
+  fc.setViewportTransform([SCALE, 0, 0, SCALE, CANVAS_PAD, CANVAS_PAD]);
+  fc.clipPath = new fabric.Rect({
+    left: CANVAS_PAD,
+    top: CANVAS_PAD,
+    width: PAGE_W,
+    height: PAGE_H,
+    absolutePositioned: true,
+  })
   enableSnapGuides(fc, PAGE_W, PAGE_H);
 
   /* keep event coordinates aligned with any scroll/resize */
@@ -1086,12 +1098,25 @@ img.on('mouseup', () => {
 
   /* ---------- render ----------------------------------------- */
   return (
-    <>
+    <div
+      style={{
+        position: 'relative',
+        overflow: 'visible',
+        width: PREVIEW_W,
+        height: PREVIEW_H,
+      }}
+    >
       <canvas
         ref={canvasRef}
-        width={PREVIEW_W}
-        height={PREVIEW_H}
-        style={{ width: PREVIEW_W, height: PREVIEW_H }}   // lock CSS size
+        width={PAGE_W + CANVAS_PAD * 2}
+        height={PAGE_H + CANVAS_PAD * 2}
+        style={{
+          position: 'absolute',
+          left: -CANVAS_PAD * SCALE,
+          top: -CANVAS_PAD * SCALE,
+          width: PREVIEW_W + CANVAS_PAD * 2 * SCALE,
+          height: PREVIEW_H + CANVAS_PAD * 2 * SCALE,
+        }}
         className="border shadow rounded"
       />
       {menuPos && (
@@ -1102,6 +1127,6 @@ img.on('mouseup', () => {
           onClose={() => setMenuPos(null)}
         />
       )}
-    </>
+    </div>
   )
 }
