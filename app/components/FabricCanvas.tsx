@@ -579,12 +579,25 @@ useEffect(() => {
   fc.backgroundColor = '#fff';
   fc.preserveObjectStacking = true;
 
+  const ctxMenu = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenuPos({ x: e.clientX, y: e.clientY });
+  };
+  fc.upperCanvasEl.addEventListener('contextmenu', ctxMenu);
+
   /*
-   * Allow selection outlines to render outside the visible canvas by
-   * enlarging Fabric's overlay <canvas>.  The actual drawing surface
-   * (lowerCanvasEl) stays the same size so layers remain clipped when
-   * positioned beyond the page bounds.
+   * Clip drawing to the page bounds while still letting Fabric render
+   * selection outlines beyond the visible canvas area.
    */
+  fc.clipPath = new fabric.Rect({
+    left: 0,
+    top: 0,
+    width: PAGE_W,
+    height: PAGE_H,
+    absolutePositioned: true,
+  });
+
   const PAD_PX = 40;                          // extra outline room (preview px)
   const padCanvas = PAD_PX / SCALE;           // convert → canvas units
   fc.wrapperEl.style.overflow = 'visible';
@@ -594,16 +607,6 @@ useEffect(() => {
   fc.upperCanvasEl.style.height = `${PREVIEW_H + PAD_PX * 2}px`;
   fc.upperCanvasEl.width  = PAGE_W + padCanvas * 2;
   fc.upperCanvasEl.height = PAGE_H + padCanvas * 2;
-  fc.calcOffset();
-  (fc as any)._offset.left += PAD_PX;
-  (fc as any)._offset.top  += PAD_PX;
-
-  const ctxMenu = (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setMenuPos({ x: e.clientX, y: e.clientY });
-  };
-  fc.upperCanvasEl.addEventListener('contextmenu', ctxMenu);
   /* --- keep Fabric’s wrapper the same size as the visible preview --- */
   const container = canvasRef.current!.parentElement as HTMLElement | null;
   if (container) {
@@ -618,7 +621,11 @@ useEffect(() => {
   enableSnapGuides(fc, PAGE_W, PAGE_H);
 
   /* keep event coordinates aligned with any scroll/resize */
-  const updateOffset = () => fc.calcOffset();
+  const updateOffset = () => {
+    fc.calcOffset();
+    (fc as any)._offset.left += PAD_PX;
+    (fc as any)._offset.top  += PAD_PX;
+  };
   updateOffset();
   window.addEventListener('scroll', updateOffset, { passive: true });
   window.addEventListener('resize', updateOffset);
