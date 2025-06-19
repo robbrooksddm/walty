@@ -154,7 +154,8 @@ export class CropTool {
       subTargetCheck: true,          // let clicks inside the rectangle fall through
     })
     // ---- replace default controls with 4 small white “L” handles ----
-    const sizePx = 2 / this.SCALE;          // corner length (≈70 % smaller)
+    // slightly larger "L" handles for easier grabbing
+    const sizePx = 4 / this.SCALE;
 
     /** Draw a single L‑shape, rotated for each corner */
     const drawL = (
@@ -685,10 +686,15 @@ export class CropTool {
     this.masks = [];
     if (!keep) this.fc.discardActiveObject()
     this.fc.requestRenderAll()
+    // ensure any leftover overlay is cleared
+    const ctx = (this.fc as any).contextTop
+    if (ctx) this.fc.clearContext(ctx)
 
     if (this.img) {
       this.img.lockMovementX = false
       this.img.lockMovementY = false
+      // allow free resizing again
+      this.img.minScaleLimit = 0
     }
     this.frame    = null
     this.img      = null
