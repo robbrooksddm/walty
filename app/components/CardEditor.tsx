@@ -724,6 +724,7 @@ const handleProofAll = async () => {
         slug={slug}
         title={title}
         coverUrl={thumbs[0] || coverImage || ''}
+        products={products}
       />
     </div>
   )

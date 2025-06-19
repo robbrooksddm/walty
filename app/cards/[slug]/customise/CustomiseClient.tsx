@@ -21,6 +21,7 @@
          initialPages={tpl.pages}
          printSpec={tpl.spec}
          previewSpec={tpl.previewSpec}
+         products={tpl.products}
          slug={slug}
          title={title}
          coverImage={coverImage}

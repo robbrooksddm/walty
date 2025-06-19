@@ -21,6 +21,8 @@ export interface TemplateProduct {
   _id: string
   slug: string
   title: string
+  variantHandle: string
+  price?: number
   printSpec?: PrintSpec
   showSafeArea?: boolean
 }
@@ -57,6 +59,8 @@ export async function getTemplatePages(
       _id,
       title,
       "slug": slug.current,
+      variantHandle,
+      price,
       "printSpec": coalesce(printSpec->, printSpec),
       showSafeArea
     },
@@ -83,7 +87,15 @@ export async function getTemplatePages(
     pages?: any[]
     coverImage?: any
     previewSpec?: PreviewSpec
-    products?: { _id: string; title: string; slug: string; printSpec?: PrintSpec }[]
+    products?: {
+      _id: string
+      title: string
+      slug: string
+      variantHandle: string
+      price?: number
+      printSpec?: PrintSpec
+      showSafeArea?: boolean
+    }[]
   }>(query, params)
 
   const pages = Array.isArray(raw?.pages) && raw.pages.length === 4

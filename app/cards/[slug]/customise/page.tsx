@@ -18,7 +18,7 @@ export default async function CustomisePage({
   // 🡇 open the "params" gift‑box and pull out slug
   const { slug } = await params;
 
-  const { pages, spec, previewSpec, coverImage } = await getTemplatePages(slug)
+  const { pages, spec, previewSpec, coverImage, products } = await getTemplatePages(slug)
   const meta = await sanityPreview.fetch<{title:string}>(
     `*[_type=="cardTemplate" && slug.current==$s][0]{title}`,
     { s: slug }
@@ -31,7 +31,7 @@ export default async function CustomisePage({
       slug={slug}
       title={meta?.title || slug}
       coverImage={coverImage}
-      tpl={{ pages, spec, previewSpec }}
+      tpl={{ pages, spec, previewSpec, products }}
     />
   )
 }
