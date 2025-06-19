@@ -26,6 +26,10 @@ export async function POST(req: NextRequest) {
         assets: payload.assets,
       } ]
     }
+
+    // Log the outbound payload so developers can verify exactly
+    // what is being sent to the Prodigi API
+    console.log('[order] sending to Prodigi:', JSON.stringify(order, null, 2))
     if (!PRODIGI_API_KEY) {
       console.warn('PRODIGI_API_KEY not configured; returning order JSON')
       return NextResponse.json(order)
