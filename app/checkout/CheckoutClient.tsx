@@ -87,7 +87,7 @@ export default function CheckoutClient({
           body: JSON.stringify({
             variantHandle: item.variant,
             fulfilHandle: 'toSender_flat_std',
-            assets: [{ url: item.proofUrl || item.coverUrl }],
+            assets: [{ url: item.proofUrl }],
             copies: item.qty,
             address: addr || undefined,
           }),

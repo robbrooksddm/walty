@@ -30,13 +30,26 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
   const options = products?.map(p => ({ label: p.title, handle: p.variantHandle })) || DEFAULT_OPTIONS
 
   const handleAdd = async () => {
-    if (choice) {
-      const proof = (await generateProofUrl?.(choice)) || ''
-      addItem({ slug, title, variant: choice, image: coverUrl, proof })
-      onAdd?.(choice)
-      onClose()
-      setChoice(null)
+    if (!choice) return
+
+    let proof = ''
+    if (generateProofUrl) {
+      try {
+        const url = await generateProofUrl(choice)
+        if (typeof url === 'string' && url) {
+          proof = url
+        } else {
+          console.warn('Proof generation failed for', choice)
+        }
+      } catch (err) {
+        console.error('proof generation', err)
+      }
     }
+
+    addItem({ slug, title, variant: choice, image: coverUrl, proof })
+    onAdd?.(choice)
+    onClose()
+    setChoice(null)
   }
 
   return (
