@@ -30,7 +30,19 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined") return [];
     try {
       const stored = window.localStorage.getItem("basket");
-      return stored ? JSON.parse(stored) : [];
+      const parsed = stored ? JSON.parse(stored) : [];
+      const map: Record<string, string> = {
+        mini: "gc-mini",
+        classic: "gc-classic",
+        giant: "gc-large",
+      };
+      return Array.isArray(parsed)
+        ? parsed.map((it: BasketItem) => ({
+            ...it,
+            variant: map[it.variant] ?? it.variant,
+            id: `${it.slug}_${map[it.variant] ?? it.variant}`,
+          }))
+        : [];
     } catch {
       return [];
     }
