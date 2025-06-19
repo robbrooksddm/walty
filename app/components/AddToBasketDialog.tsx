@@ -11,27 +11,48 @@ interface Props {
   slug: string
   title: string
   coverUrl: string
+  products?: { title: string; variantHandle: string }[]
   onAdd?: (variant: string) => void
+  generateProofUrl?: (variant: string) => Promise<string | null>
 }
 
-const OPTIONS = [
-  { label: 'Digital Card', sku: 'digital' },
-  { label: 'Mini Card', sku: 'mini' },
-  { label: 'Classic Card', sku: 'classic' },
-  { label: 'Giant Card', sku: 'giant' },
+const DEFAULT_OPTIONS = [
+  { label: 'Digital Card', handle: 'digital' },
+  { label: 'Mini Card', handle: 'gc-mini' },
+  { label: 'Classic Card', handle: 'gc-classic' },
+  { label: 'Giant Card', handle: 'gc-large' },
 ]
 
-export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, onAdd }: Props) {
+export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd, generateProofUrl }: Props) {
   const [choice, setChoice] = useState<string | null>(null)
   const { addItem } = useBasket()
 
-  const handleAdd = () => {
-    if (choice) {
-      addItem({ slug, title, variant: choice, image: coverUrl })
-      onAdd?.(choice)
-      onClose()
-      setChoice(null)
+  const options = products?.map(p => ({ label: p.title, handle: p.variantHandle })) || DEFAULT_OPTIONS
+
+  const handleAdd = async () => {
+    if (!choice) return
+
+    let proof = ''
+    if (generateProofUrl) {
+      try {
+        const url = await generateProofUrl(choice)
+        if (typeof url === 'string' && url) {
+          proof = url
+        } else {
+          console.warn('Proof generation failed for', choice)
+          return
+        }
+      } catch (err) {
+        console.error('proof generation', err)
+        return
+      }
     }
+
+    if (!proof) return
+    addItem({ slug, title, variant: choice, image: coverUrl, proof })
+    onAdd?.(choice)
+    onClose()
+    setChoice(null)
   }
 
   return (
@@ -54,14 +75,14 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
           <Dialog.Panel className="relative z-10 bg-white rounded shadow-lg w-[min(90vw,420px)] p-6 space-y-6">
             <h2 className="font-domine text-xl text-[--walty-teal]">Choose an option</h2>
             <ul className="space-y-2">
-              {OPTIONS.map((opt) => (
-                <li key={opt.sku}>
+              {options.map((opt) => (
+                <li key={opt.handle}>
                   <button
-                    onClick={() => setChoice(opt.sku)}
-                    className={`w-full flex items-center justify-between border rounded-md p-3 ${choice === opt.sku ? 'border-[--walty-orange] bg-[--walty-cream]' : 'border-gray-300'}`}
+                    onClick={() => setChoice(opt.handle)}
+                    className={`w-full flex items-center justify-between border rounded-md p-3 ${choice === opt.handle ? 'border-[--walty-orange] bg-[--walty-cream]' : 'border-gray-300'}`}
                   >
                     <span>{opt.label}</span>
-                    {choice === opt.sku && <Check className="text-[--walty-orange]" size={20} />}
+                    {choice === opt.handle && <Check className="text-[--walty-orange]" size={20} />}
                   </button>
                 </li>
               ))}

@@ -8,12 +8,13 @@ export interface BasketItem {
   title: string;
   variant: string;
   image: string;
+  proof: string;
   qty: number;
 }
 
 interface BasketContextValue {
   items: BasketItem[];
-  addItem: (item: { slug: string; title: string; variant: string; image: string }) => void;
+  addItem: (item: { slug: string; title: string; variant: string; image: string; proof: string }) => void;
   removeItem: (id: string) => void;
   updateQty: (id: string, qty: number) => void;
 }
@@ -30,7 +31,20 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined") return [];
     try {
       const stored = window.localStorage.getItem("basket");
-      return stored ? JSON.parse(stored) : [];
+      const parsed = stored ? JSON.parse(stored) : [];
+      const map: Record<string, string> = {
+        mini: "gc-mini",
+        classic: "gc-classic",
+        giant: "gc-large",
+      };
+      return Array.isArray(parsed)
+        ? parsed.map((it: BasketItem) => ({
+            ...it,
+            proof: it.proof || '',
+            variant: map[it.variant] ?? it.variant,
+            id: `${it.slug}_${map[it.variant] ?? it.variant}`,
+          }))
+        : [];
     } catch {
       return [];
     }
@@ -44,14 +58,12 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items]);
 
-  const addItem = (item: { slug: string; title: string; variant: string; image: string }) => {
+  const addItem = (item: { slug: string; title: string; variant: string; image: string; proof: string }) => {
     setItems((prev) => {
       const id = `${item.slug}_${item.variant}`
       const existing = prev.find((it) => it.id === id)
       if (existing) {
-        return prev.map((it) =>
-          it.id === id ? { ...it, qty: it.qty + 1 } : it
-        )
+        return prev.map((it) => (it.id === id ? { ...it, qty: it.qty + 1 } : it))
       }
       return [...prev, { id, qty: 1, ...item }]
     })

@@ -1,30 +1,28 @@
-/* app/cards/[slug]/customise/CustomiseClient.tsx
-   (replace the whole file with this) */
+"use client";
 
-   "use client";
+import CardEditor from "@/app/components/CardEditor";
 
-   import CardEditor from "@/app/components/CardEditor";
-   
-   export default function CustomiseClient({ slug, title, coverImage, tpl }: { slug: string; title: string; coverImage?: string; tpl: any }) {
-     // 1️⃣ keep the old log
-     console.log("TPL pages 👉", tpl.pages);
-   
-     // 2️⃣ NEW: put them on window so we can inspect in DevTools
-     if (typeof window !== "undefined") {
-       (window as any).tplPages = tpl.pages;
-       (window as any).tplPreview = tpl.previewSpec;
-     }
-   
-     // 3️⃣ use customer mode so shoppers get the streamlined editor
-     return (
-       <CardEditor
-         initialPages={tpl.pages}
-         printSpec={tpl.spec}
-         previewSpec={tpl.previewSpec}
-         slug={slug}
-         title={title}
-         coverImage={coverImage}
-         mode="customer"
-       />
-     );
-   }
+export default function CustomiseClient({ slug, title, coverImage, tpl }: { slug: string; title: string; coverImage?: string; tpl: any }) {
+  // keep the old log
+  console.log("TPL pages 👉", tpl.pages);
+
+  // put them on window so we can inspect in DevTools
+  if (typeof window !== "undefined") {
+    (window as any).tplPages = tpl.pages;
+    (window as any).tplPreview = tpl.previewSpec;
+  }
+
+  // use customer mode so shoppers get the streamlined editor
+  return (
+    <CardEditor
+      initialPages={tpl.pages}
+      printSpec={tpl.spec}
+      previewSpec={tpl.previewSpec}
+      products={tpl.products}
+      slug={slug}
+      title={title}
+      coverImage={coverImage}
+      mode="customer"
+    />
+  );
+}

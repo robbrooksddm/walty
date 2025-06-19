@@ -72,6 +72,20 @@ function CoachMark({ anchor, onClose }: { anchor: DOMRect | null; onClose: () =>
 }
 
 /* ────────────────────────────────────────────────────────────────── */
+export interface CardEditorProps {
+  initialPages: TemplatePage[] | undefined
+  templateId?: string
+  slug: string
+  title: string
+  coverImage?: string
+  printSpec?: PrintSpec
+  previewSpec?: PreviewSpec
+  products?: TemplateProduct[]
+  proofUrl?: string
+  mode?: Mode
+  onSave?: SaveFn
+}
+
 export default function CardEditor({
   initialPages,
   templateId,
@@ -81,20 +95,10 @@ export default function CardEditor({
   printSpec,
   previewSpec,
   products = [],
+  proofUrl = '',
   mode = 'customer',
   onSave,
-}: {
-  initialPages: TemplatePage[] | undefined
-  templateId?: string
-  slug: string
-  title: string
-  coverImage?: string
-  printSpec?: PrintSpec
-  previewSpec?: PreviewSpec
-  products?: TemplateProduct[]
-  mode?: Mode
-  onSave?: SaveFn
-}) {
+}: CardEditorProps) {
   if (printSpec) {
     setPrintSpec(printSpec)
     setEditorSpec(printSpec)
@@ -499,6 +503,26 @@ const fetchProofBlob = async (
   return null
 }
 
+/* helper – generate proof, upload to Sanity and return its CDN URL */
+const generateProofURL = async (variant: string): Promise<string | null> => {
+  const { pages, pageImages } = collectProofData()
+  const blob = await fetchProofBlob(variant, `${variant}.jpg`, pages, pageImages)
+  if (!blob) return null
+
+  try {
+    const form = new FormData()
+    form.append('file', new File([blob], `${variant}.jpg`, { type: blob.type }))
+    const res = await fetch('/api/upload', { method: 'POST', body: form })
+    if (res.ok) {
+      const { url } = await res.json()
+      return typeof url === 'string' && url ? url : null
+    }
+  } catch (err) {
+    console.error('proof upload', err)
+  }
+  return null
+}
+
 /* download proofs for all products */
 const handleProofAll = async () => {
   if (!products.length) return
@@ -723,7 +747,9 @@ const handleProofAll = async () => {
         onClose={() => setBasketOpen(false)}
         slug={slug}
         title={title}
-        coverUrl={thumbs[0] || coverImage || ''}
+        coverUrl={coverImage || ''}
+        products={products}
+        generateProofUrl={generateProofURL}
       />
     </div>
   )

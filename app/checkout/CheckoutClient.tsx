@@ -9,6 +9,7 @@ import { CARD_SIZES } from './sizeOptions';
 export interface CartItem {
   id: string;
   coverUrl: string;
+  proofUrl: string;
   title: string;
   sku: string;
   variant: string;
@@ -86,7 +87,7 @@ export default function CheckoutClient({
           body: JSON.stringify({
             variantHandle: item.variant,
             fulfilHandle: 'toSender_flat_std',
-            assets: [{ url: item.coverUrl }],
+            assets: [{ url: item.proofUrl }],
             copies: item.qty,
             address: addr || undefined,
           }),
