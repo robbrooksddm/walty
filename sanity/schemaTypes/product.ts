@@ -44,9 +44,16 @@ export default defineType({
           validation: r => r.required().positive(),
         },
         {
-          name: 'safeInsetPx',
+          name: 'safeInsetXPx',
           type: 'number',
-          title: 'Safe inset (px)',
+          title: 'Safe inset X (px)',
+          initialValue: 0,
+          validation: r => r.min(0),
+        },
+        {
+          name: 'safeInsetYPx',
+          type: 'number',
+          title: 'Safe inset Y (px)',
           initialValue: 0,
           validation: r => r.min(0),
         },

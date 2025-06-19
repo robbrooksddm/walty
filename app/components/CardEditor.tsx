@@ -119,8 +119,9 @@ export default function CardEditor({
     }
     const pageW = printSpec.trimWidthIn + printSpec.bleedIn * 2
     const scale = previewSpec.previewWidthPx / (pageW * printSpec.dpi)
-    const insetIn = (previewSpec.safeInsetPx ?? 0) / (printSpec.dpi * scale)
-    setSafeInset(insetIn, insetIn)
+    const insetXIn = (previewSpec.safeInsetXPx ?? 0) / (printSpec.dpi * scale)
+    const insetYIn = (previewSpec.safeInsetYPx ?? 0) / (printSpec.dpi * scale)
+    setSafeInset(insetXIn, insetYIn)
   }, [printSpec, previewSpec, showSafeArea])
   /* 1 ─ hydrate Zustand once ------------------------------------- */
   useEffect(() => {
