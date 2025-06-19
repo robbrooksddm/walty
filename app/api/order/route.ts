@@ -26,10 +26,6 @@ export async function POST(req: NextRequest) {
         assets: payload.assets,
       } ]
     }
-
-    // Log the outbound payload so developers can verify exactly
-    // what is being sent to the Prodigi API
-    console.log('[order] sending to Prodigi:', JSON.stringify(order, null, 2))
     if (!PRODIGI_API_KEY) {
       console.warn('PRODIGI_API_KEY not configured; returning order JSON')
       return NextResponse.json(order)
@@ -44,8 +40,18 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(order),
     })
 
-    const data = await resp.json().catch(() => ({}))
-    return NextResponse.json(data, { status: resp.status })
+    const body = await resp.json()
+    if (!resp.ok) {
+      console.error('Prodigi error \u2192', {
+        status: resp.status,
+        code: body.errors?.[0]?.code,
+        msg: body.errors?.[0]?.message,
+        field: body.errors?.[0]?.field,
+      })
+      throw new Error('Prodigi order failed')
+    }
+
+    return NextResponse.json(body, { status: resp.status })
   } catch (err) {
     console.error('[order]', err)
     return NextResponse.json({ error: 'server-error' }, { status: 500 })
