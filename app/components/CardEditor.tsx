@@ -72,6 +72,20 @@ function CoachMark({ anchor, onClose }: { anchor: DOMRect | null; onClose: () =>
 }
 
 /* ────────────────────────────────────────────────────────────────── */
+export interface CardEditorProps {
+  initialPages: TemplatePage[] | undefined
+  templateId?: string
+  slug: string
+  title: string
+  coverImage?: string
+  printSpec?: PrintSpec
+  previewSpec?: PreviewSpec
+  products?: TemplateProduct[]
+  proofUrl?: string
+  mode?: Mode
+  onSave?: SaveFn
+}
+
 export default function CardEditor({
   initialPages,
   templateId,
@@ -81,20 +95,10 @@ export default function CardEditor({
   printSpec,
   previewSpec,
   products = [],
+  proofUrl = '',
   mode = 'customer',
   onSave,
-}: {
-  initialPages: TemplatePage[] | undefined
-  templateId?: string
-  slug: string
-  title: string
-  coverImage?: string
-  printSpec?: PrintSpec
-  previewSpec?: PreviewSpec
-  products?: TemplateProduct[]
-  mode?: Mode
-  onSave?: SaveFn
-}) {
+}: CardEditorProps) {
   if (printSpec) {
     setPrintSpec(printSpec)
     setEditorSpec(printSpec)

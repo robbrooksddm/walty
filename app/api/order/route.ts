@@ -14,6 +14,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'bad input' }, { status: 400 })
     }
 
+    console.log('asset urls →', assets)
+
     const payload = await getProdigiPayload(variantHandle, fulfilHandle, assets, copies)
 
     let recipient: any = null
