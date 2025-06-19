@@ -587,16 +587,9 @@ useEffect(() => {
   fc.upperCanvasEl.addEventListener('contextmenu', ctxMenu);
 
   /*
-   * Clip drawing to the page bounds while still letting Fabric render
-   * selection outlines beyond the visible canvas area.
+   * Expand the overlay canvas so selection outlines can draw outside the
+   * visible page while the drawing canvas stays page sized.
    */
-  fc.clipPath = new fabric.Rect({
-    left: 0,
-    top: 0,
-    width: PAGE_W,
-    height: PAGE_H,
-    absolutePositioned: true,
-  });
 
   const PAD_PX = 40;                          // extra outline room (preview px)
   const padCanvas = PAD_PX / SCALE;           // convert → canvas units
@@ -903,6 +896,13 @@ window.addEventListener('keydown', onKey)
       window.removeEventListener('keydown', keyCropHandler);
       onReady(null)
       cropToolRef.current?.abort()
+      fc.wrapperEl.style.overflow = ''
+      fc.upperCanvasEl.style.left = ''
+      fc.upperCanvasEl.style.top = ''
+      fc.upperCanvasEl.style.width = `${PREVIEW_W}px`
+      fc.upperCanvasEl.style.height = `${PREVIEW_H}px`
+      fc.upperCanvasEl.width = PAGE_W
+      fc.upperCanvasEl.height = PAGE_H
       fc.dispose()
     }
 // eslint-disable-next-line react-hooks/exhaustive-deps
