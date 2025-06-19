@@ -31,6 +31,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(order)
     }
 
+    console.log('Posting order to Prodigi \u2192', order)
+
     const resp = await fetch(`${PRODIGI_BASE}/orders`, {
       method: 'POST',
       headers: {
@@ -40,18 +42,15 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(order),
     })
 
-    const body = await resp.json()
-    if (!resp.ok) {
-      console.error('Prodigi error \u2192', {
-        status: resp.status,
-        code: body.errors?.[0]?.code,
-        msg: body.errors?.[0]?.message,
-        field: body.errors?.[0]?.field,
-      })
-      throw new Error('Prodigi order failed')
+    const text = await resp.text()
+    console.log('Prodigi raw response \u2192', resp.status, text)
+
+    if (resp.ok && resp.headers.get('content-type')?.includes('application/json')) {
+      const data = JSON.parse(text)
+      return NextResponse.json(data, { status: resp.status })
     }
 
-    return NextResponse.json(body, { status: resp.status })
+    return new NextResponse(text, { status: resp.status })
   } catch (err) {
     console.error('[order]', err)
     return NextResponse.json({ error: 'server-error' }, { status: 500 })
