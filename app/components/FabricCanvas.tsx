@@ -65,19 +65,27 @@ let safeInsetXIn = 0
 let safeInsetYIn = 0
 let SAFE_X = 0
 let SAFE_Y = 0
+let SCALE_X = 1
+let SCALE_Y = 1
+let OFFSET_X = 0
+let OFFSET_Y = 0
 
 function recompute() {
   PAGE_W = Math.round((currentSpec.trimWidthIn + currentSpec.bleedIn * 2) * currentSpec.dpi)
   PAGE_H = Math.round((currentSpec.trimHeightIn + currentSpec.bleedIn * 2) * currentSpec.dpi)
   PREVIEW_W = currentPreview.previewWidthPx
   PREVIEW_H = currentPreview.previewHeightPx
-  SCALE = PREVIEW_W / PAGE_W
+  SCALE_X = PREVIEW_W / PAGE_W
+  SCALE_Y = PREVIEW_H / PAGE_H
+  SCALE = Math.min(SCALE_X, SCALE_Y)
+  OFFSET_X = (PREVIEW_W - PAGE_W * SCALE) / 2
+  OFFSET_Y = (PREVIEW_H - PAGE_H * SCALE) / 2
   PAD = 4 / SCALE
   // compute safe-zone after scaling so rounding happens in preview pixels
-  const safeXPreview = safeInsetXIn * currentSpec.dpi * SCALE
-  const safeYPreview = safeInsetYIn * currentSpec.dpi * SCALE
-  SAFE_X = Math.round(safeXPreview) / SCALE
-  SAFE_Y = Math.round(safeYPreview) / SCALE
+  const safeXPreview = safeInsetXIn * currentSpec.dpi * SCALE_X
+  const safeYPreview = safeInsetYIn * currentSpec.dpi * SCALE_Y
+  SAFE_X = Math.round(safeXPreview) / SCALE_X
+  SAFE_Y = Math.round(safeYPreview) / SCALE_Y
 }
 
 export const setPrintSpec = (spec: PrintSpec) => {
@@ -262,8 +270,8 @@ const syncGhost = (
   const canvasRect = canvas.getBoundingClientRect()
   const { left, top, width, height } = img.getBoundingRect()
 
-  ghost.style.left   = `${canvasRect.left + left   * SCALE}px`
-  ghost.style.top    = `${canvasRect.top  + top    * SCALE}px`
+  ghost.style.left   = `${canvasRect.left + OFFSET_X + left   * SCALE}px`
+  ghost.style.top    = `${canvasRect.top  + OFFSET_Y + top    * SCALE}px`
   ghost.style.width  = `${width  * SCALE}px`
   ghost.style.height = `${height * SCALE}px`
 }
@@ -605,8 +613,8 @@ useEffect(() => {
     container.style.maxHeight = `${PREVIEW_H}px`;
   }
   addBackdrop(fc);
-  // keep the preview scaled to the configured width
-  fc.setViewportTransform([SCALE, 0, 0, SCALE, 0, 0]);
+  // keep the preview scaled to the configured size
+  fc.setViewportTransform([SCALE, 0, 0, SCALE, OFFSET_X, OFFSET_Y]);
   enableSnapGuides(fc, PAGE_W, PAGE_H);
 
   /* keep event coordinates aligned with any scroll/resize */
