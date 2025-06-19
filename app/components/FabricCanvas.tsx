@@ -579,6 +579,25 @@ useEffect(() => {
   fc.backgroundColor = '#fff';
   fc.preserveObjectStacking = true;
 
+  /*
+   * Allow selection outlines to render outside the visible canvas by
+   * enlarging Fabric's overlay <canvas>.  The actual drawing surface
+   * (lowerCanvasEl) stays the same size so layers remain clipped when
+   * positioned beyond the page bounds.
+   */
+  const PAD_PX = 40;                          // extra outline room (preview px)
+  const padCanvas = PAD_PX / SCALE;           // convert → canvas units
+  fc.wrapperEl.style.overflow = 'visible';
+  fc.upperCanvasEl.style.left = `-${PAD_PX}px`;
+  fc.upperCanvasEl.style.top  = `-${PAD_PX}px`;
+  fc.upperCanvasEl.style.width  = `${PREVIEW_W + PAD_PX * 2}px`;
+  fc.upperCanvasEl.style.height = `${PREVIEW_H + PAD_PX * 2}px`;
+  fc.upperCanvasEl.width  = PAGE_W + padCanvas * 2;
+  fc.upperCanvasEl.height = PAGE_H + padCanvas * 2;
+  fc.calcOffset();
+  (fc as any)._offset.left += PAD_PX;
+  (fc as any)._offset.top  += PAD_PX;
+
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
