@@ -499,17 +499,24 @@ const fetchProofBlob = async (
   return null
 }
 
-/* helper – return proof as Data URL for given variant */
-const generateProofDataURL = async (variant: string) => {
+/* helper – generate proof, upload to Sanity and return its CDN URL */
+const generateProofURL = async (variant: string) => {
   const { pages, pageImages } = collectProofData()
   const blob = await fetchProofBlob(variant, `${variant}.jpg`, pages, pageImages)
   if (!blob) return ''
-  return await new Promise<string>((res, rej) => {
-    const reader = new FileReader()
-    reader.onerror = () => rej(new Error('read failed'))
-    reader.onload = () => res(reader.result as string)
-    reader.readAsDataURL(blob)
-  })
+
+  try {
+    const form = new FormData()
+    form.append('file', new File([blob], `${variant}.jpg`, { type: blob.type }))
+    const res = await fetch('/api/upload', { method: 'POST', body: form })
+    if (res.ok) {
+      const { url } = await res.json()
+      return typeof url === 'string' ? url : ''
+    }
+  } catch (err) {
+    console.error('proof upload', err)
+  }
+  return ''
 }
 
 /* download proofs for all products */
@@ -738,7 +745,7 @@ const handleProofAll = async () => {
         title={title}
         coverUrl={thumbs[0] || coverImage || ''}
         products={products}
-        generateProof={generateProofDataURL}
+        generateProofUrl={generateProofURL}
       />
     </div>
   )
