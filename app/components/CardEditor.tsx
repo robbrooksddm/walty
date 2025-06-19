@@ -160,15 +160,16 @@ export default function CardEditor({
   const updateThumbFromCanvas = (idx: number, fc: fabric.Canvas) => {
     try {
       if (!(fc as any).lowerCanvasEl) return
+      const guides = fc.getObjects().filter(o => (o as any)._guide)
+      guides.forEach(g => g.set('visible', false))
       fc.renderAll()
-      console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
-      console.log('Expected page px', pageW(), pageH())
-      console.log('Export multiplier', EXPORT_MULT())
       const url = fc.toDataURL({
         format: 'jpeg',
         quality: 0.8,
         multiplier: EXPORT_MULT(),
       })
+      guides.forEach(g => g.set('visible', true))
+      fc.renderAll()
       setThumbs(prev => {
         const next = [...prev]
         next[idx] = url

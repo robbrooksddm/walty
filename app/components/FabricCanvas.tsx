@@ -412,15 +412,7 @@ const addGuides = (fc: fabric.Canvas, mode: Mode) => {
     ].forEach(l => fc.add(l))
   }
 
-  if (mode === 'staff') {
-    const bleed = mm(currentSpec.bleedIn * 25.4)
-    ;[
-      mk([bleed, bleed, PAGE_W - bleed, bleed], 'bleed', '#f87171'),
-      mk([PAGE_W - bleed, bleed, PAGE_W - bleed, PAGE_H - bleed], 'bleed', '#f87171'),
-      mk([PAGE_W - bleed, PAGE_H - bleed, bleed, PAGE_H - bleed], 'bleed', '#f87171'),
-      mk([bleed, PAGE_H - bleed, bleed, bleed], 'bleed', '#f87171'),
-    ].forEach(l => fc.add(l))
-  }
+  // bleed guides removed – bleed settings remain active but no red overlay
 }
 
 /* ---------- white backdrop -------------------------------------- */
