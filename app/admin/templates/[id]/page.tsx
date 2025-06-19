@@ -29,7 +29,7 @@ export default async function AdminTemplatePage({
   )
   if (!exists) return notFound();
 
-  const { pages, spec, previewSpec, products } = await getTemplatePages(id)
+  const { pages, spec, previewSpec, products, showSafeArea } = await getTemplatePages(id)
   console.log('↳ template printSpec', spec)
 
   /* 2. load the client wrapper *only on the client* */
@@ -45,6 +45,7 @@ export default async function AdminTemplatePage({
       printSpec={spec}
       previewSpec={previewSpec}
       products={products}
+      showSafeArea={showSafeArea}
     />
   )
 }

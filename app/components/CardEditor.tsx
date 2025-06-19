@@ -81,6 +81,7 @@ export interface CardEditorProps {
   printSpec?: PrintSpec
   previewSpec?: PreviewSpec
   products?: TemplateProduct[]
+  showSafeArea?: boolean
   proofUrl?: string
   mode?: Mode
   onSave?: SaveFn
@@ -95,6 +96,7 @@ export default function CardEditor({
   printSpec,
   previewSpec,
   products = [],
+  showSafeArea,
   proofUrl = '',
   mode = 'customer',
   onSave,
@@ -110,28 +112,16 @@ export default function CardEditor({
     setPreviewSpec(previewSpec)
   }
   useEffect(() => {
-    if (!printSpec || !previewSpec || !products.length) return
-    const baseW = printSpec.trimWidthIn + printSpec.bleedIn * 2
-    const baseH = printSpec.trimHeightIn + printSpec.bleedIn * 2
-    const baseRatio = baseW / baseH
-    const ratios = products
-      .filter(p => p.showSafeArea)
-      .map(p => p.printSpec)
-      .filter(Boolean)
-      .map(s => (s!.trimWidthIn + s!.bleedIn * 2) / (s!.trimHeightIn + s!.bleedIn * 2))
-    if (!ratios.length) return
-    const minRatio = Math.min(...ratios)
-    let safeW = baseW
-    let safeH = baseH
-    if (minRatio < baseRatio) {
-      safeW = baseH * minRatio
-    } else if (minRatio > baseRatio) {
-      safeH = baseW / minRatio
+    if (!printSpec || !previewSpec) return
+    if (!showSafeArea) {
+      setSafeInset(0, 0)
+      return
     }
-    const insetX = (baseW - safeW) / 2 + printSpec.bleedIn + 0.125
-    const insetY = (baseH - safeH) / 2 + printSpec.bleedIn + 0.125
-    setSafeInset(insetX, insetY)
-  }, [printSpec, previewSpec, products])
+    const pageW = printSpec.trimWidthIn + printSpec.bleedIn * 2
+    const scale = previewSpec.previewWidthPx / (pageW * printSpec.dpi)
+    const insetIn = (previewSpec.safeInsetPx ?? 0) / (printSpec.dpi * scale)
+    setSafeInset(insetIn, insetIn)
+  }, [printSpec, previewSpec, showSafeArea])
   /* 1 ─ hydrate Zustand once ------------------------------------- */
   useEffect(() => {
     useEditor.getState().setPages(

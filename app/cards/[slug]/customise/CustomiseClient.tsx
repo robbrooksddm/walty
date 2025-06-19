@@ -19,6 +19,7 @@ export default function CustomiseClient({ slug, title, coverImage, tpl }: { slug
       printSpec={tpl.spec}
       previewSpec={tpl.previewSpec}
       products={tpl.products}
+      showSafeArea={tpl.showSafeArea}
       slug={slug}
       title={title}
       coverImage={coverImage}

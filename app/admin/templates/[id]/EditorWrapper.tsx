@@ -19,9 +19,10 @@ interface Props {
   printSpec?   : PrintSpec
   previewSpec? : PreviewSpec
   products?    : TemplateProduct[]
+  showSafeArea?: boolean
 }
 
-export default function EditorWrapper({templateId, initialPages, printSpec, previewSpec, products}: Props) {
+export default function EditorWrapper({templateId, initialPages, printSpec, previewSpec, products, showSafeArea}: Props) {
   const router          = useRouter()
   const [error, setErr] = useState<string | null>(null)
 
@@ -62,6 +63,7 @@ export default function EditorWrapper({templateId, initialPages, printSpec, prev
         printSpec={printSpec}
         previewSpec={previewSpec}
         products={products}
+        showSafeArea={showSafeArea}
         mode="staff"
         onSave={handleSave}
       />

@@ -24,7 +24,6 @@ export interface TemplateProduct {
   variantHandle: string
   price?: number
   printSpec?: PrintSpec
-  showSafeArea?: boolean
 }
 
 export interface TemplateData {
@@ -33,6 +32,8 @@ export interface TemplateData {
   spec?: PrintSpec
   previewSpec?: PreviewSpec
   products?: TemplateProduct[]
+  showSafeArea?: boolean
+  pageCount?: number
 }
 
 /**
@@ -55,14 +56,15 @@ export async function getTemplatePages(
   ] | order(_updatedAt desc)[0]{
     coverImage,
     "previewSpec": product->previewSpec,
+    "showSafeArea": product->showSafeArea,
+    "pageCount": product->pageCount,
     "products": product->variants[]->{
       _id,
       title,
       "slug": slug.current,
       variantHandle,
       price,
-      "printSpec": coalesce(printSpec->, printSpec),
-      showSafeArea
+      "printSpec": coalesce(printSpec->, printSpec)
     },
     pages[]{
       layers[]{
@@ -87,6 +89,8 @@ export async function getTemplatePages(
     pages?: any[]
     coverImage?: any
     previewSpec?: PreviewSpec
+    showSafeArea?: boolean
+    pageCount?: number
     products?: {
       _id: string
       title: string
@@ -94,7 +98,6 @@ export async function getTemplatePages(
       variantHandle: string
       price?: number
       printSpec?: PrintSpec
-      showSafeArea?: boolean
     }[]
   }>(query, params)
 
@@ -114,6 +117,8 @@ console.log(
   const spec = (raw?.products?.[0]?.printSpec || undefined) as PrintSpec | undefined
   console.log('\u25BA getTemplatePages spec =', JSON.stringify(spec, null, 2))
   const previewSpec = raw?.previewSpec as PreviewSpec | undefined
+  const showSafeArea = raw?.showSafeArea
+  const pageCount = raw?.pageCount
 
   const pagesOut = names.map((name, i) => ({
     name,
@@ -125,5 +130,5 @@ console.log(
   const coverImage = raw?.coverImage ? urlFor(raw.coverImage).url() : undefined
   const products = raw?.products as TemplateProduct[] | undefined
 
-  return { pages: pagesOut, coverImage, spec, previewSpec, products }
+  return { pages: pagesOut, coverImage, spec, previewSpec, products, showSafeArea, pageCount }
 }

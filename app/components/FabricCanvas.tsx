@@ -44,6 +44,7 @@ export interface PrintSpec {
 export interface PreviewSpec {
   previewWidthPx: number
   previewHeightPx: number
+  safeInsetPx?: number
   maxMobileWidthPx?: number
 }
 

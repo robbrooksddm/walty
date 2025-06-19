@@ -61,24 +61,6 @@ export default defineType({
       validation: Rule => Rule.required(),
     }),
 
-    /* toggle cropping guides for templates using this SKU */
-    defineField({
-      name: 'showSafeArea',
-      type: 'boolean',
-      title: 'Show safe-area overlay',
-      initialValue: true,
-      description: 'Display the safe-area guide when editing templates',
-      options: {layout: 'switch'},
-      validation: r => r.required(),
-    }),
-
-    defineField({
-      name: 'pageCount',
-      type: 'number',
-      title: 'Pages',
-      initialValue: 4,
-      validation: R => R.required().integer().min(1).max(4),
-    }),
   ],
 
 })
