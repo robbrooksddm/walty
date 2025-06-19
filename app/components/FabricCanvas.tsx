@@ -585,6 +585,8 @@ useEffect(() => {
   fc.preserveObjectStacking = true;
   // allow selection handles to render outside the clipping region
   fc.controlsAboveOverlay = true;
+  // keep Fabric's internal wrapper sized to the visible preview area
+  fc.setDimensions({ width: PREVIEW_W, height: PREVIEW_H }, { cssOnly: true });
 
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
@@ -599,6 +601,7 @@ useEffect(() => {
     container.style.height = `${PREVIEW_H}px`;
     container.style.maxWidth  = `${PREVIEW_W}px`;
     container.style.maxHeight = `${PREVIEW_H}px`;
+    container.style.boxSizing = 'border-box';
   }
   addBackdrop(fc);
   // keep the preview scaled to the configured width with padding
@@ -1101,7 +1104,7 @@ img.on('mouseup', () => {
   /* ---------- render ----------------------------------------- */
   return (
     <div
-      className="border shadow rounded"
+      className="border shadow rounded box-border"
       style={{
         position: 'relative',
         overflow: 'visible',
