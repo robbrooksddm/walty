@@ -54,11 +54,11 @@ export async function PATCH(
       )
     }
 
-    const specRes = await sanity.fetch<{spec: PrintSpec | null}>(
-      `*[_type=="cardTemplate" && _id==$id][0]{"spec":coalesce(product->variants[0]->printSpec->, product->variants[0]->printSpec)}`,
+    const specRes = await sanity.fetch<{specs: PrintSpec[] | null}>(
+      `*[_type=="cardTemplate" && _id==$id][0]{"specs":product->variants[]{coalesce(printSpec->, printSpec)}}`,
       { id: params.id }
     )
-    const spec = specRes?.spec || {
+    const spec = specRes?.specs?.[0] || {
       trimWidthIn : 5,
       trimHeightIn: 7,
       bleedIn     : 0.125,
