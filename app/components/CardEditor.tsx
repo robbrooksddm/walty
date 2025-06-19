@@ -747,7 +747,7 @@ const handleProofAll = async () => {
         onClose={() => setBasketOpen(false)}
         slug={slug}
         title={title}
-        coverUrl={thumbs[0] || coverImage || ''}
+        coverUrl={coverImage || ''}
         products={products}
         generateProofUrl={generateProofURL}
       />
