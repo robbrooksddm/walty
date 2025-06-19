@@ -12,8 +12,7 @@ import { useEffect, useRef, useState } from 'react'
 import { fabric }            from 'fabric'
 import { useEditor }         from './EditorStore'
 import { fromSanity }        from '@/app/library/layerAdapters'
-import '@/lib/fabricDefaults'
-import { SEL_COLOR } from '@/lib/fabricDefaults';
+import { SEL_COLOR, setFabricScale } from '@/lib/fabricDefaults'
 import { CropTool } from '@/lib/CropTool'
 import { enableSnapGuides } from '@/lib/useSnapGuides'
 import ContextMenu from './ContextMenu'
@@ -70,6 +69,7 @@ function recompute() {
   PREVIEW_W = currentPreview.previewWidthPx
   PREVIEW_H = currentPreview.previewHeightPx
   SCALE = PREVIEW_W / PAGE_W
+  setFabricScale(SCALE)
   PAD = 4 / SCALE
   // compute safe-zone after scaling so rounding happens in preview pixels
   const safeXPreview = safeInsetXIn * currentSpec.dpi * SCALE

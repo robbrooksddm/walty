@@ -1,15 +1,33 @@
 /*  fabricDefaults.ts  */
 import { fabric } from 'fabric';
 
-/* ————— constants ————— */
-export const SCALE        = 420 / 1772;        // or the real SCALE you compute
+/* ————— runtime scale ————— */
+let SCALE = 420 / 1772;       // default before FabricCanvas provides a value
+
 export const SEL_COLOR    = '#2EC4B6';         // brand teal – shared everywhere
 export const HANDLE_SHADOW = 'rgba(0,0,0,0.15)';
-export const HANDLE_BLUR   = 1 / SCALE;
+let HANDLE_BLUR   = 1 / SCALE;
+
+/**
+ * Apply the current SCALE to Fabric's global defaults.
+ */
+function applyScale() {
+  (fabric.Object.prototype as any).cornerSize      = Math.round(3 / SCALE);
+  (fabric.Object.prototype as any).touchCornerSize = Math.round(3 / SCALE);
+  HANDLE_BLUR = 1 / SCALE;
+}
+
+/**
+ * Update scale at runtime and recompute dependent values.
+ */
+export const setFabricScale = (scale: number) => {
+  SCALE = scale;
+  applyScale();
+};
+
+applyScale();
 
 /* ————— global Fabric defaults ————— */
-(fabric.Object.prototype as any).cornerSize        = Math.round(3 / SCALE);
-(fabric.Object.prototype as any).touchCornerSize   = Math.round(3 / SCALE);
 (fabric.Object.prototype as any).borderScaleFactor = 1;
 (fabric.Object.prototype as any).borderColor       = SEL_COLOR;
 (fabric.Object.prototype as any).borderDashArray   = [];
