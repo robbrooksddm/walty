@@ -16,9 +16,24 @@ export async function POST(req: NextRequest) {
 
     const payload = await getProdigiPayload(variantHandle, fulfilHandle, assets, copies)
 
+    let recipient: any = null
+    if (address) {
+      const { id, name, line1, city, postcode, country } = address
+      recipient = {
+        name,
+        ...(id ? { id } : {}),
+        address: {
+          line1,
+          townOrCity: city,
+          postalOrZipCode: postcode,
+          countryCode: country === 'UK' ? 'GB' : country,
+        },
+      }
+    }
+
     const order = {
       shippingMethod: payload.shippingMethod,
-      recipient: address || null,
+      recipient,
       items: [ {
         sku: payload.sku,
         copies: payload.copies,
