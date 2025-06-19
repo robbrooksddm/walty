@@ -504,10 +504,10 @@ const fetchProofBlob = async (
 }
 
 /* helper – generate proof, upload to Sanity and return its CDN URL */
-const generateProofURL = async (variant: string) => {
+const generateProofURL = async (variant: string): Promise<string | null> => {
   const { pages, pageImages } = collectProofData()
   const blob = await fetchProofBlob(variant, `${variant}.jpg`, pages, pageImages)
-  if (!blob) return ''
+  if (!blob) return null
 
   try {
     const form = new FormData()
@@ -515,12 +515,12 @@ const generateProofURL = async (variant: string) => {
     const res = await fetch('/api/upload', { method: 'POST', body: form })
     if (res.ok) {
       const { url } = await res.json()
-      return typeof url === 'string' ? url : ''
+      return typeof url === 'string' && url ? url : null
     }
   } catch (err) {
     console.error('proof upload', err)
   }
-  return ''
+  return null
 }
 
 /* download proofs for all products */

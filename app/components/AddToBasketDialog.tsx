@@ -40,12 +40,15 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
           proof = url
         } else {
           console.warn('Proof generation failed for', choice)
+          return
         }
       } catch (err) {
         console.error('proof generation', err)
+        return
       }
     }
 
+    if (!proof) return
     addItem({ slug, title, variant: choice, image: coverUrl, proof })
     onAdd?.(choice)
     onClose()

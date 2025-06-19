@@ -23,11 +23,17 @@ export async function getProdigiPayload(
   const map = await sanity.fetch<{prodigiSku:string,printAreaId:string,sizingStrategy:string,shippingMethod:string}>(query, {v: variantHandle, f: fulfilHandle})
   if (!map) throw new Error(`SKU mapping not found for ${variantHandle}_${fulfilHandle}`)
 
+  const printArea = map.printAreaId === 'front' ? 'default' : map.printAreaId
+  const shippingMethodFix: Record<string, string> = {
+    uk_mail_standard: 'uk_mail_tracked48',
+  }
+  const shippingMethod = shippingMethodFix[map.shippingMethod] || map.shippingMethod
+
   return {
     sku: map.prodigiSku,
     copies,
     sizing: map.sizingStrategy,
-    shippingMethod: map.shippingMethod,
-    assets: assets.map(a => ({ url: a.url, printArea: map.printAreaId })),
+    shippingMethod,
+    assets: assets.map(a => ({ url: a.url, printArea })),
   }
 }
