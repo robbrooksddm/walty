@@ -13,6 +13,7 @@ interface Props {
   coverUrl: string
   products?: { title: string; variantHandle: string }[]
   onAdd?: (variant: string) => void
+  generateProof?: (variant: string) => Promise<string | null>
 }
 
 const DEFAULT_OPTIONS = [
@@ -22,7 +23,7 @@ const DEFAULT_OPTIONS = [
   { label: 'Giant Card', handle: 'gc-large' },
 ]
 
-export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd }: Props) {
+export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd, generateProof }: Props) {
   const [choice, setChoice] = useState<string | null>(null)
   const { addItem } = useBasket()
 
@@ -35,9 +36,10 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     products?.map(p => ({ label: p.title, handle: canonical[p.variantHandle] ?? p.variantHandle }))
     || DEFAULT_OPTIONS
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (choice) {
-      addItem({ slug, title, variant: choice, image: coverUrl })
+      const proof = (await generateProof?.(choice)) || ''
+      addItem({ slug, title, variant: choice, image: coverUrl, proof })
       onAdd?.(choice)
       onClose()
       setChoice(null)

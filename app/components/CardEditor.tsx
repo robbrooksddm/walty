@@ -499,6 +499,19 @@ const fetchProofBlob = async (
   return null
 }
 
+/* helper – return proof as Data URL for given variant */
+const generateProofDataURL = async (variant: string) => {
+  const { pages, pageImages } = collectProofData()
+  const blob = await fetchProofBlob(variant, `${variant}.jpg`, pages, pageImages)
+  if (!blob) return ''
+  return await new Promise<string>((res, rej) => {
+    const reader = new FileReader()
+    reader.onerror = () => rej(new Error('read failed'))
+    reader.onload = () => res(reader.result as string)
+    reader.readAsDataURL(blob)
+  })
+}
+
 /* download proofs for all products */
 const handleProofAll = async () => {
   if (!products.length) return
@@ -725,6 +738,7 @@ const handleProofAll = async () => {
         title={title}
         coverUrl={thumbs[0] || coverImage || ''}
         products={products}
+        generateProof={generateProofDataURL}
       />
     </div>
   )
