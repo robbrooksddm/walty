@@ -386,6 +386,7 @@ type GuideName = 'safe-zone' | 'bleed'
 const addGuides = (fc: fabric.Canvas, mode: Mode) => {
   fc.getObjects().filter(o => (o as any)._guide).forEach(o => fc.remove(o))
   const strokeW = mm(0.5)
+  const offset = strokeW / 2
   const mk = (
     xy: [number, number, number, number],
     name: GuideName,
@@ -406,21 +407,29 @@ const addGuides = (fc: fabric.Canvas, mode: Mode) => {
   if (SAFE_X > 0 || SAFE_Y > 0) {
     const safeX = SAFE_X
     const safeY = SAFE_Y
+    const right  = PAGE_W - safeX - (SAFE_X > 0 ? offset : 0)
+    const left   = safeX + (SAFE_X > 0 ? offset : 0)
+    const top    = safeY + (SAFE_Y > 0 ? offset : 0)
+    const bottom = PAGE_H - safeY - (SAFE_Y > 0 ? offset : 0)
     ;[
-      mk([safeX, safeY, PAGE_W - safeX, safeY], 'safe-zone', '#34d399'),
-      mk([PAGE_W - safeX, safeY, PAGE_W - safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
-      mk([PAGE_W - safeX, PAGE_H - safeY, safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
-      mk([safeX, PAGE_H - safeY, safeX, safeY], 'safe-zone', '#34d399'),
+      mk([left,  top,    right, top   ], 'safe-zone', '#34d399'),
+      mk([right, top,    right, bottom], 'safe-zone', '#34d399'),
+      mk([right, bottom, left,  bottom], 'safe-zone', '#34d399'),
+      mk([left,  bottom, left,  top   ], 'safe-zone', '#34d399'),
     ].forEach(l => fc.add(l))
   }
 
   if (mode === 'staff') {
     const bleed = mm(currentSpec.bleedIn * 25.4)
+    const bRight  = PAGE_W - bleed - offset
+    const bLeft   = bleed + offset
+    const bTop    = bleed + offset
+    const bBottom = PAGE_H - bleed - offset
     ;[
-      mk([bleed, bleed, PAGE_W - bleed, bleed], 'bleed', '#f87171'),
-      mk([PAGE_W - bleed, bleed, PAGE_W - bleed, PAGE_H - bleed], 'bleed', '#f87171'),
-      mk([PAGE_W - bleed, PAGE_H - bleed, bleed, PAGE_H - bleed], 'bleed', '#f87171'),
-      mk([bleed, PAGE_H - bleed, bleed, bleed], 'bleed', '#f87171'),
+      mk([bLeft,  bTop,    bRight, bTop   ], 'bleed', '#f87171'),
+      mk([bRight, bTop,    bRight, bBottom], 'bleed', '#f87171'),
+      mk([bRight, bBottom, bLeft,  bBottom], 'bleed', '#f87171'),
+      mk([bLeft,  bBottom, bLeft,  bTop   ], 'bleed', '#f87171'),
     ].forEach(l => fc.add(l))
   }
 }

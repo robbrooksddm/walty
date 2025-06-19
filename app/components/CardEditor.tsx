@@ -650,7 +650,7 @@ const handleProofAll = async () => {
           ))}
 
                     {/* canvases */}
-          <div className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 pb-24 gap-6">
+          <div className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6">
             {/* front */}
             <div className={section === 'front' ? box : 'hidden'} style={{ width: boxWidth }}>
               <FabricCanvas
