@@ -14,6 +14,7 @@ import FabricCanvas, {
   setPrintSpec,
   setPreviewSpec,
   setSafeInset,
+  setSafeInsetPx,
   PrintSpec,
   PreviewSpec,
   previewW,
@@ -110,7 +111,15 @@ export default function CardEditor({
     setPreviewSpec(previewSpec)
   }
   useEffect(() => {
-    if (!printSpec || !previewSpec || !products.length) return
+    if (!printSpec || !previewSpec) return
+
+    // 1️⃣  explicit safe insets from the preview spec
+    if (previewSpec.safeInsetXPx || previewSpec.safeInsetYPx) {
+      setSafeInsetPx(previewSpec.safeInsetXPx ?? 0, previewSpec.safeInsetYPx ?? 0)
+      return
+    }
+
+    if (!products.length) return
     const baseW = printSpec.trimWidthIn + printSpec.bleedIn * 2
     const baseH = printSpec.trimHeightIn + printSpec.bleedIn * 2
     const baseRatio = baseW / baseH
@@ -456,7 +465,7 @@ const handlePreview = () => {
 }
 
 /* helper – gather pages and rendered images once */
-const collectProofData = () => {
+const collectProofData = (showGuides = false) => {
   canvasMap.forEach(fc => {
     const tool = (fc as any)?._cropTool as CropTool | undefined
     if (tool?.isActive) tool.commit()
@@ -471,7 +480,7 @@ const collectProofData = () => {
   canvasMap.forEach(fc => {
     if (!fc) { pageImages.push(''); return }
     const guides = fc.getObjects().filter(o => (o as any)._guide)
-    guides.forEach(g => g.set('visible', false))
+    guides.forEach(g => g.set('visible', showGuides))
     fc.renderAll()
     pageImages.push(
       fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT() })
@@ -505,7 +514,8 @@ const fetchProofBlob = async (
 
 /* helper – generate proof, upload to Sanity and return its CDN URL */
 const generateProofURL = async (variant: string): Promise<string | null> => {
-  const { pages, pageImages } = collectProofData()
+  const showGuides = products.find(p => p.variantHandle === variant)?.showProofSafeArea ?? false
+  const { pages, pageImages } = collectProofData(showGuides)
   const blob = await fetchProofBlob(variant, `${variant}.jpg`, pages, pageImages)
   if (!blob) return null
 
@@ -526,12 +536,11 @@ const generateProofURL = async (variant: string): Promise<string | null> => {
 /* download proofs for all products */
 const handleProofAll = async () => {
   if (!products.length) return
-  const { pages, pageImages } = collectProofData()
-  
   const JSZip = (await import('jszip')).default
 
   const zip = new JSZip()
   for (const p of products) {
+    const { pages, pageImages } = collectProofData(p.showProofSafeArea)
     const name = `${p.slug}.jpg`
     const blob = await fetchProofBlob(p.slug, name, pages, pageImages)
     if (blob) zip.file(name, blob)
