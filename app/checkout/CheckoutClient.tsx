@@ -112,11 +112,14 @@ export default function CheckoutClient({
       const addr = addresses.find((a) => a.id === item.addressId);
       try {
         let proof = item.proofUrl;
-        if (!proof) {
-          proof = (await regenerateProof(item.variant, item.pageImages, item.sku)) || '';
+        if (!proof || !/^https?:\/\//.test(proof)) {
+          proof =
+            (await regenerateProof(item.variant, item.pageImages, item.sku)) || '';
           if (proof) {
             setCartItems((prev) =>
-              prev.map((it) => (it.id === item.id ? { ...it, proofUrl: proof } : it)),
+              prev.map((it) =>
+                it.id === item.id ? { ...it, proofUrl: proof } : it,
+              ),
             );
             updateBasketVariant(item.id, item.variant, proof, item.pageImages);
           }
@@ -132,7 +135,7 @@ export default function CheckoutClient({
             copies: item.qty,
             address: addr || undefined,
             id: item.sku,
-            pageImages: proof ? undefined : item.pageImages,
+            pageImages: item.pageImages,
           }),
         });
         const data = await res.json().catch(() => ({}));

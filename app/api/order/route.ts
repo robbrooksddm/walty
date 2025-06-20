@@ -51,7 +51,8 @@ export async function POST(req: NextRequest) {
     }
 
     let finalAssets = assets as { url: string }[]
-    if (assets.some(a => !a.url) && Array.isArray(pageImages) && typeof id === 'string') {
+    if (Array.isArray(pageImages) && typeof id === 'string' &&
+        assets.some(a => !a.url || !/^https?:\/\//.test(a.url))) {
       const url = await createProofURL(variantHandle, id, pageImages, req.nextUrl.origin)
       if (url) {
         finalAssets = [{ url }]
