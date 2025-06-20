@@ -25,6 +25,7 @@ export interface TemplateProduct {
   price?: number
   printSpec?: PrintSpec
   showSafeArea?: boolean
+  showProofSafeArea?: boolean
 }
 
 export interface TemplateData {
@@ -62,7 +63,8 @@ export async function getTemplatePages(
       variantHandle,
       price,
       "printSpec": coalesce(printSpec->, printSpec),
-      "showSafeArea": ^.showSafeArea
+      "showSafeArea": ^.showSafeArea,
+      "showProofSafeArea": ^.showProofSafeArea
     },
     pages[]{
       layers[]{
@@ -95,6 +97,7 @@ export async function getTemplatePages(
       price?: number
       printSpec?: PrintSpec
       showSafeArea?: boolean
+      showProofSafeArea?: boolean
     }[]
   }>(query, params)
 

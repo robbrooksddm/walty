@@ -81,6 +81,15 @@ export default defineType({
     validation: r => r.required(),
   }),
   defineField({
+    name: 'showProofSafeArea',
+    type: 'boolean',
+    title: 'Show safe-area in proofs',
+    initialValue: false,
+    description: 'Include the green safe guide in generated proofs',
+    options: { layout: 'switch' },
+    validation: r => r.required(),
+  }),
+  defineField({
     name: 'variants',
     type: 'array',
     title: 'Variants',
