@@ -54,8 +54,11 @@ export async function PATCH(
       )
     }
 
-    const specRes = await sanity.fetch<{specs: PrintSpec[] | null}>(
-      `*[_type=="cardTemplate" && _id==$id][0]{"specs":product->variants[]{coalesce(printSpec->, printSpec)}}`,
+    const specRes = await sanity.fetch<{specs: PrintSpec[] | null; productId?: string}>(
+      `*[_type=="cardTemplate" && _id==$id][0]{
+        "specs": product->variants[]{coalesce(printSpec->, printSpec)},
+        "productId": product._ref
+      }`,
       { id: params.id }
     )
     const spec = specRes?.specs?.[0] || {
@@ -73,6 +76,10 @@ export async function PATCH(
     const draftId = `drafts.${params.id}`
 
     /* ---------- 3 ▸ create-or-patch in one transaction -------- */
+    const productRef = specRes?.productId
+      ? { _type: 'reference', _ref: specRes.productId }
+      : undefined
+
     await sanity
       .transaction()
       .createIfNotExists({
@@ -80,6 +87,7 @@ export async function PATCH(
         _type: 'cardTemplate',
         title: '(untitled)',   // minimal stub so Studio is happy
         pages: [],
+        ...(productRef && { product: productRef }),
       })
       .patch(draftId, p =>
         p.set({
