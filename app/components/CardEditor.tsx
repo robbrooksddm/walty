@@ -251,6 +251,9 @@ export default function CardEditor({
     setSaving(true)
     try {
     canvasMap.forEach(fc => {
+      if (!fc) return
+      const active = fc.getActiveObject() as any
+      if (active?.isEditing) active.exitEditing()
       const tool = (fc as any)?._cropTool as CropTool | undefined
       if (tool?.isActive) tool.commit()
     })
