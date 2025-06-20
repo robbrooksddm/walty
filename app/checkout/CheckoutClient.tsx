@@ -1,5 +1,6 @@
 "use client";
 import { useState } from 'react';
+import { useBasket } from '@/lib/useBasket';
 import Basket from './Basket';
 import AddressDrawer from './AddressDrawer';
 import Summary from './Summary';
@@ -10,6 +11,7 @@ export interface CartItem {
   id: string;
   coverUrl: string;
   proofUrl: string;
+  pageImages: string[];
   title: string;
   sku: string;
   variant: string;
@@ -39,6 +41,7 @@ export default function CheckoutClient({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [paymentComplete, setPaymentComplete] = useState(false);
+  const { updateVariant: updateBasketVariant } = useBasket();
 
   const openDrawer = (itemId: string) => {
     setActiveItemId(itemId);
@@ -61,14 +64,41 @@ export default function CheckoutClient({
     setCartItems((prev) => prev.map((it) => (it.id === id ? { ...it, qty } : it)));
   };
 
-  const updateVariant = (id: string, variant: string) => {
+  const regenerateProof = async (variant: string, images: string[], slug: string) => {
+    try {
+      const res = await fetch('/api/proof', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ pageImages: images, sku: variant, id: slug, filename: `${variant}.jpg` }),
+      });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      const form = new FormData();
+      form.append('file', new File([blob], `${variant}.jpg`, { type: blob.type }));
+      const up = await fetch('/api/upload', { method: 'POST', body: form });
+      if (up.ok) {
+        const { url } = await up.json();
+        return typeof url === 'string' && url ? url : null;
+      }
+    } catch (err) {
+      console.error('proof regen', err);
+    }
+    return null;
+  };
+
+  const updateVariant = async (id: string, variant: string) => {
     const size = CARD_SIZES.find((s) => s.id === variant);
     if (!size) return;
+    const item = cartItems.find((it) => it.id === id);
+    if (!item) return;
+    const url = await regenerateProof(variant, item.pageImages, item.sku);
+    if (!url) return;
     setCartItems((prev) =>
       prev.map((it) =>
-        it.id === id ? { ...it, variant, price: size.price } : it,
+        it.id === id ? { ...it, variant, price: size.price, proofUrl: url } : it,
       ),
     );
+    updateBasketVariant(id, variant, url, item.pageImages);
   };
 
   const updateItemAddress = (id: string, addressId: string) => {

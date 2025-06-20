@@ -5,6 +5,11 @@ import { Fragment, useState } from 'react'
 import { Check } from 'lucide-react'
 import { useBasket } from '@/lib/useBasket'
 
+interface ProofResult {
+  url: string
+  images: string[]
+}
+
 interface Props {
   open: boolean
   onClose: () => void
@@ -13,7 +18,7 @@ interface Props {
   coverUrl: string
   products?: { title: string; variantHandle: string }[]
   onAdd?: (variant: string) => void
-  generateProofUrl?: (variant: string) => Promise<string | null>
+  generateProof?: (variant: string) => Promise<ProofResult | null>
 }
 
 const DEFAULT_OPTIONS = [
@@ -23,7 +28,7 @@ const DEFAULT_OPTIONS = [
   { label: 'Giant Card', handle: 'gc-large' },
 ]
 
-export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd, generateProofUrl }: Props) {
+export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd, generateProof }: Props) {
   const [choice, setChoice] = useState<string | null>(null)
   const { addItem } = useBasket()
 
@@ -37,11 +42,13 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     if (!choice) return
 
     let proof = ''
-    if (generateProofUrl) {
+    let images: string[] = []
+    if (generateProof) {
       try {
-        const url = await generateProofUrl(choice)
-        if (typeof url === 'string' && url) {
-          proof = url
+        const result = await generateProof(choice)
+        if (result && result.url) {
+          proof = result.url
+          images = result.images
         } else {
           console.warn('Proof generation failed for', choice)
           return
@@ -53,7 +60,7 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     }
 
     if (!proof) return
-    addItem({ slug, title, variant: choice, image: coverUrl, proof })
+    addItem({ slug, title, variant: choice, image: coverUrl, proof, pageImages: images })
     onAdd?.(choice)
     onClose()
     setChoice(null)

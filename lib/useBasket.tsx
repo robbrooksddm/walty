@@ -9,14 +9,16 @@ export interface BasketItem {
   variant: string;
   image: string;
   proof: string;
+  pageImages: string[];
   qty: number;
 }
 
 interface BasketContextValue {
   items: BasketItem[];
-  addItem: (item: { slug: string; title: string; variant: string; image: string; proof: string }) => void;
+  addItem: (item: { slug: string; title: string; variant: string; image: string; proof: string; pageImages: string[] }) => void;
   removeItem: (id: string) => void;
   updateQty: (id: string, qty: number) => void;
+  updateVariant: (id: string, variant: string, proof: string, pageImages: string[]) => void;
 }
 
 const BasketContext = createContext<BasketContextValue>({
@@ -24,6 +26,7 @@ const BasketContext = createContext<BasketContextValue>({
   addItem: () => {},
   removeItem: () => {},
   updateQty: () => {},
+  updateVariant: () => {},
 });
 
 export function BasketProvider({ children }: { children: React.ReactNode }) {
@@ -41,6 +44,7 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
         ? parsed.map((it: BasketItem) => ({
             ...it,
             proof: it.proof || '',
+            pageImages: Array.isArray((it as any).pageImages) ? (it as any).pageImages : [],
             variant: map[it.variant] ?? it.variant,
             id: `${it.slug}_${map[it.variant] ?? it.variant}`,
           }))
@@ -58,7 +62,7 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items]);
 
-  const addItem = (item: { slug: string; title: string; variant: string; image: string; proof: string }) => {
+  const addItem = (item: { slug: string; title: string; variant: string; image: string; proof: string; pageImages: string[] }) => {
     setItems((prev) => {
       const id = `${item.slug}_${item.variant}`
       const existing = prev.find((it) => it.id === id)
@@ -67,6 +71,14 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
       }
       return [...prev, { id, qty: 1, ...item }]
     })
+  }
+
+  const updateVariant = (id: string, variant: string, proof: string, pageImages: string[]) => {
+    setItems(prev => prev.map(it =>
+      it.id === id
+        ? { ...it, id: `${it.slug}_${variant}`, variant, proof, pageImages }
+        : it
+    ))
   }
 
   const removeItem = (id: string) => {
@@ -78,7 +90,7 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <BasketContext.Provider value={{ items, addItem, removeItem, updateQty }}>
+    <BasketContext.Provider value={{ items, addItem, removeItem, updateQty, updateVariant }}>
       {children}
     </BasketContext.Provider>
   );

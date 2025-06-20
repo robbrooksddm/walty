@@ -10,6 +10,7 @@ export default function CheckoutPage() {
     id: it.id,
     coverUrl: it.image,
     proofUrl: it.proof,
+    pageImages: it.pageImages || [],
     title: it.title,
     sku: it.slug,
     variant: it.variant,
