@@ -54,15 +54,15 @@ export async function getTemplatePages(
     )
   ] | order(_updatedAt desc)[0]{
     coverImage,
-    previewSpec,
-    "products": products[]->{
+    "previewSpec": products[0]->previewSpec,
+    "products": products[]->variants[]->{
       _id,
       title,
       "slug": slug.current,
       variantHandle,
       price,
       "printSpec": coalesce(printSpec->, printSpec),
-      showSafeArea
+      "showSafeArea": ^.showSafeArea
     },
     pages[]{
       layers[]{
