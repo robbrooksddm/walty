@@ -31,6 +31,8 @@ const DEFAULT_OPTIONS = [
 export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd, generateProof }: Props) {
   const [choice, setChoice] = useState<string | null>(null)
   const { addItem } = useBasket()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const options =
     products?.filter((p): p is { title: string; variantHandle: string } =>
@@ -39,7 +41,9 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     DEFAULT_OPTIONS
 
   const handleAdd = async () => {
-    if (!choice) return
+    if (!choice || loading) return
+    setLoading(true)
+    setError('')
 
     let proof = ''
     let images: string[] = []
@@ -51,19 +55,27 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
           images = result.images
         } else {
           console.warn('Proof generation failed for', choice)
+          setError('Failed to generate preview. Please try again.')
+          setLoading(false)
           return
         }
       } catch (err) {
         console.error('proof generation', err)
+        setError('Proof generation failed. Please try again.')
+        setLoading(false)
         return
       }
     }
 
-    if (!proof) return
+    if (!proof) {
+      setLoading(false)
+      return
+    }
     addItem({ slug, title, variant: choice, image: coverUrl, proof, pageImages: images })
     onAdd?.(choice)
     onClose()
     setChoice(null)
+    setLoading(false)
   }
 
   return (
@@ -85,6 +97,7 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
         >
           <Dialog.Panel className="relative z-10 bg-white rounded shadow-lg w-[min(90vw,420px)] p-6 space-y-6">
             <h2 className="font-domine text-xl text-[--walty-teal]">Choose an option</h2>
+            {error && <p className="text-red-600 text-sm">{error}</p>}
             <ul className="space-y-2">
               {options.map((opt) => (
                 <li key={opt.handle}>
@@ -102,10 +115,10 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
               <button onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2">Back to editor</button>
               <button
                 onClick={handleAdd}
-                disabled={!choice}
-                className={`rounded-md px-4 py-2 font-semibold text-white ${choice ? 'bg-[--walty-orange] hover:bg-orange-600' : 'bg-gray-300 cursor-not-allowed'}`}
+                disabled={!choice || loading}
+                className={`rounded-md px-4 py-2 font-semibold text-white ${choice ? 'bg-[--walty-orange]' : 'bg-gray-300 cursor-not-allowed'} ${loading ? 'opacity-70 cursor-wait' : 'hover:bg-orange-600'}`}
               >
-                Add to basket
+                {loading ? 'Generating…' : 'Add to basket'}
               </button>
             </div>
           </Dialog.Panel>
