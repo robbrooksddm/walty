@@ -45,6 +45,10 @@ export interface PreviewSpec {
   previewWidthPx: number
   previewHeightPx: number
   maxMobileWidthPx?: number
+  /** Safe zone inset from the left/right edges in preview pixels */
+  safeInsetXPx?: number
+  /** Safe zone inset from the top/bottom edges in preview pixels */
+  safeInsetYPx?: number
 }
 
 let currentSpec: PrintSpec = {
@@ -57,6 +61,8 @@ let currentSpec: PrintSpec = {
 let currentPreview: PreviewSpec = {
   previewWidthPx: 420,
   previewHeightPx: 580,
+  safeInsetXPx: 0,
+  safeInsetYPx: 0,
 }
 
 let safeInsetXIn = 0
@@ -93,6 +99,13 @@ export const setSafeInset = (xIn: number, yIn: number) => {
 export const setPreviewSpec = (spec: PreviewSpec) => {
   currentPreview = spec
   recompute()
+  if (typeof spec.safeInsetXPx === 'number' || typeof spec.safeInsetYPx === 'number') {
+    const baseW = currentSpec.trimWidthIn + currentSpec.bleedIn * 2
+    const baseH = currentSpec.trimHeightIn + currentSpec.bleedIn * 2
+    const insetX = (spec.safeInsetXPx ?? 0) / spec.previewWidthPx * baseW
+    const insetY = (spec.safeInsetYPx ?? 0) / spec.previewHeightPx * baseH
+    setSafeInset(insetX, insetY)
+  }
 }
 
 /* ---------- size helpers ---------------------------------------- */

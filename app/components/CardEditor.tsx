@@ -110,9 +110,18 @@ export default function CardEditor({
     setPreviewSpec(previewSpec)
   }
   useEffect(() => {
-    if (!printSpec || !previewSpec || !products.length) return
+    if (!printSpec || !previewSpec) return
     const baseW = printSpec.trimWidthIn + printSpec.bleedIn * 2
     const baseH = printSpec.trimHeightIn + printSpec.bleedIn * 2
+
+    if (typeof previewSpec.safeInsetXPx === 'number' || typeof previewSpec.safeInsetYPx === 'number') {
+      const insetX = (previewSpec.safeInsetXPx ?? 0) / previewSpec.previewWidthPx * baseW
+      const insetY = (previewSpec.safeInsetYPx ?? 0) / previewSpec.previewHeightPx * baseH
+      setSafeInset(insetX, insetY)
+      return
+    }
+
+    if (!products.length) return
     const baseRatio = baseW / baseH
     const ratios = products
       .filter(p => p.showSafeArea)
