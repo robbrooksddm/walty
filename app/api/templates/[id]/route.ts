@@ -54,7 +54,10 @@ export async function PATCH(
       )
     }
 
-    const specRes = await sanity.fetch<{specs: PrintSpec[] | null; productId?: string}>(
+    const specRes = await sanity.fetch<{
+      specs: PrintSpec[] | null
+      productId?: string
+    }>(
       `*[_type=="cardTemplate" && _id==$id][0]{
         "specs": product->variants[]{coalesce(printSpec->, printSpec)},
         "productId": product._ref
@@ -99,6 +102,7 @@ export async function PATCH(
               asset: { _type: 'reference', _ref: coverImage },
             },
           }),
+          ...(productRef && { product: productRef }),
         }),
       )
       .commit({ autoGenerateArrayKeys: true })
