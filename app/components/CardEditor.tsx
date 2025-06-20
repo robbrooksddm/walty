@@ -533,6 +533,28 @@ const generateProofURL = async (variant: string): Promise<string | null> => {
   return null
 }
 
+/* generate proofs for all products and upload, returning their URLs */
+const generateProofURLs = async (): Promise<string[]> => {
+  const urls: string[] = []
+  for (const p of products) {
+    const { pages, pageImages } = collectProofData(p.showProofSafeArea)
+    const blob = await fetchProofBlob(p.slug, `${p.slug}.jpg`, pages, pageImages)
+    if (!blob) continue
+    try {
+      const form = new FormData()
+      form.append('file', new File([blob], `${p.slug}.jpg`, { type: blob.type }))
+      const res = await fetch('/api/upload', { method: 'POST', body: form })
+      if (res.ok) {
+        const { url } = await res.json()
+        if (typeof url === 'string' && url) urls.push(url)
+      }
+    } catch (err) {
+      console.error('proof upload', err)
+    }
+  }
+  return urls
+}
+
 /* download proofs for all products */
 const handleProofAll = async () => {
   if (!products.length) return
@@ -759,6 +781,7 @@ const handleProofAll = async () => {
         coverUrl={coverImage || ''}
         products={products}
         generateProofUrl={generateProofURL}
+        generateProofUrls={generateProofURLs}
       />
     </div>
   )
