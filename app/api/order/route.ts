@@ -11,13 +11,14 @@ async function createProofURL(
   variant: string,
   id: string,
   images: string[],
+  pages: any[] | undefined,
   origin: string,
 ) {
   try {
     const proofRes = await fetch(`${origin}/api/proof`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ pageImages: images, sku: variant, id, filename: `${variant}.jpg` }),
+      body: JSON.stringify({ pages, pageImages: images, sku: variant, id, filename: `${variant}.jpg` }),
     })
     if (!proofRes.ok) return null
     const blob = await proofRes.blob()
@@ -43,6 +44,7 @@ export async function POST(req: NextRequest) {
       copies = 1,
       id,
       pageImages,
+      pages,
     } = await req.json()
     if (typeof variantHandle !== 'string' ||
         typeof fulfilHandle !== 'string' ||
@@ -51,9 +53,9 @@ export async function POST(req: NextRequest) {
     }
 
     let finalAssets = assets as { url: string }[]
-    if (Array.isArray(pageImages) && typeof id === 'string' &&
+    if ((Array.isArray(pageImages) || Array.isArray(pages)) && typeof id === 'string' &&
         assets.some(a => !a.url || !/^https?:\/\//.test(a.url))) {
-      const url = await createProofURL(variantHandle, id, pageImages, req.nextUrl.origin)
+      const url = await createProofURL(variantHandle, id, pageImages || [], pages, req.nextUrl.origin)
       if (url) {
         finalAssets = [{ url }]
       }

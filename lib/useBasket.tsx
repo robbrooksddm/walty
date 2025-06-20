@@ -10,15 +10,16 @@ export interface BasketItem {
   image: string;
   proof: string;
   pageImages: string[];
+  pages: any[];
   qty: number;
 }
 
 interface BasketContextValue {
   items: BasketItem[];
-  addItem: (item: { slug: string; title: string; variant: string; image: string; proof: string; pageImages: string[] }) => void;
+  addItem: (item: { slug: string; title: string; variant: string; image: string; proof: string; pageImages: string[]; pages: any[] }) => void;
   removeItem: (id: string) => void;
   updateQty: (id: string, qty: number) => void;
-  updateVariant: (id: string, variant: string, proof: string, pageImages: string[]) => void;
+  updateVariant: (id: string, variant: string, proof: string, pageImages: string[], pages: any[]) => void;
 }
 
 const BasketContext = createContext<BasketContextValue>({
@@ -45,6 +46,7 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
             ...it,
             proof: it.proof || '',
             pageImages: Array.isArray((it as any).pageImages) ? (it as any).pageImages : [],
+            pages: Array.isArray((it as any).pages) ? (it as any).pages : [],
             variant: map[it.variant] ?? it.variant,
             id: `${it.slug}_${map[it.variant] ?? it.variant}`,
           }))
@@ -62,7 +64,7 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items]);
 
-  const addItem = (item: { slug: string; title: string; variant: string; image: string; proof: string; pageImages: string[] }) => {
+  const addItem = (item: { slug: string; title: string; variant: string; image: string; proof: string; pageImages: string[]; pages: any[] }) => {
     setItems((prev) => {
       const id = `${item.slug}_${item.variant}`
       const existing = prev.find((it) => it.id === id)
@@ -73,10 +75,10 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
     })
   }
 
-  const updateVariant = (id: string, variant: string, proof: string, pageImages: string[]) => {
+  const updateVariant = (id: string, variant: string, proof: string, pageImages: string[], pages: any[]) => {
     setItems(prev => prev.map(it =>
       it.id === id
-        ? { ...it, id: `${it.slug}_${variant}`, variant, proof, pageImages }
+        ? { ...it, id: `${it.slug}_${variant}`, variant, proof, pageImages, pages }
         : it
     ))
   }

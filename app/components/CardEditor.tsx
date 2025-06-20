@@ -513,12 +513,12 @@ const fetchProofBlob = async (
 }
 
 /* helper – generate proof, upload to Sanity and return its CDN URL */
-interface ProofResult { url: string; images: string[] }
+interface ProofResult { url: string; images: string[]; pages: any[] }
 const generateProof = async (variant: string): Promise<ProofResult> => {
   const showGuides = products.find(p => p.variantHandle === variant)?.showProofSafeArea ?? false
   const { pages, pageImages } = collectProofData(showGuides)
   const blob = await fetchProofBlob(variant, `${variant}.jpg`, pages, pageImages)
-  if (!blob) return { url: '', images: pageImages }
+  if (!blob) return { url: '', images: pageImages, pages }
 
   try {
     const form = new FormData()
@@ -527,13 +527,13 @@ const generateProof = async (variant: string): Promise<ProofResult> => {
     if (res.ok) {
       const { url } = await res.json()
       return typeof url === 'string' && url
-        ? { url, images: pageImages }
-        : { url: '', images: pageImages }
+        ? { url, images: pageImages, pages }
+        : { url: '', images: pageImages, pages }
     }
   } catch (err) {
     console.error('proof upload', err)
   }
-  return { url: '', images: pageImages }
+  return { url: '', images: pageImages, pages }
 }
 
 /* download proofs for all products */

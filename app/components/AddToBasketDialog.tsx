@@ -8,6 +8,7 @@ import { useBasket } from '@/lib/useBasket'
 interface ProofResult {
   url: string
   images: string[]
+  pages: any[]
 }
 
 interface Props {
@@ -47,11 +48,13 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
 
     let proof = ''
     let images: string[] = []
+    let pages: any[] = []
     if (generateProof) {
       try {
         const result = await generateProof(choice)
         proof = result.url
         images = result.images
+        pages = result.pages
         if (!proof) {
           console.warn('Proof generation failed for', choice)
           setError('Failed to generate preview. Card added without preview.')
@@ -62,7 +65,7 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
       }
     }
 
-    addItem({ slug, title, variant: choice, image: coverUrl, proof, pageImages: images })
+    addItem({ slug, title, variant: choice, image: coverUrl, proof, pageImages: images, pages })
     onAdd?.(choice)
     onClose()
     setChoice(null)

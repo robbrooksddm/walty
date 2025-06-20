@@ -12,6 +12,7 @@ export interface CartItem {
   coverUrl: string;
   proofUrl: string;
   pageImages: string[];
+  pages: any[];
   title: string;
   sku: string;
   variant: string;
@@ -64,12 +65,17 @@ export default function CheckoutClient({
     setCartItems((prev) => prev.map((it) => (it.id === id ? { ...it, qty } : it)));
   };
 
-  const regenerateProof = async (variant: string, images: string[], slug: string) => {
+  const regenerateProof = async (
+    variant: string,
+    images: string[],
+    pages: any[],
+    slug: string,
+  ) => {
     try {
       const res = await fetch('/api/proof', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ pageImages: images, sku: variant, id: slug, filename: `${variant}.jpg` }),
+        body: JSON.stringify({ pages, pageImages: images, sku: variant, id: slug, filename: `${variant}.jpg` }),
       });
       if (!res.ok) return null;
       const blob = await res.blob();
@@ -91,14 +97,14 @@ export default function CheckoutClient({
     if (!size) return;
     const item = cartItems.find((it) => it.id === id);
     if (!item) return;
-    const url = await regenerateProof(variant, item.pageImages, item.sku);
+    const url = await regenerateProof(variant, item.pageImages, item.pages, item.sku);
     if (!url) return;
     setCartItems((prev) =>
       prev.map((it) =>
         it.id === id ? { ...it, variant, price: size.price, proofUrl: url } : it,
       ),
     );
-    updateBasketVariant(id, variant, url, item.pageImages);
+    updateBasketVariant(id, variant, url, item.pageImages, item.pages);
   };
 
   const updateItemAddress = (id: string, addressId: string) => {
@@ -114,14 +120,14 @@ export default function CheckoutClient({
         let proof = item.proofUrl;
         if (!proof || !/^https?:\/\//.test(proof)) {
           proof =
-            (await regenerateProof(item.variant, item.pageImages, item.sku)) || '';
+            (await regenerateProof(item.variant, item.pageImages, item.pages, item.sku)) || '';
           if (proof) {
             setCartItems((prev) =>
               prev.map((it) =>
                 it.id === item.id ? { ...it, proofUrl: proof } : it,
               ),
             );
-            updateBasketVariant(item.id, item.variant, proof, item.pageImages);
+            updateBasketVariant(item.id, item.variant, proof, item.pageImages, item.pages);
           }
         }
 
@@ -136,6 +142,7 @@ export default function CheckoutClient({
             address: addr || undefined,
             id: item.sku,
             pageImages: item.pageImages,
+            pages: item.pages,
           }),
         });
         const data = await res.json().catch(() => ({}));

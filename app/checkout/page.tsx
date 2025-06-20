@@ -11,6 +11,7 @@ export default function CheckoutPage() {
     coverUrl: it.image,
     proofUrl: it.proof,
     pageImages: it.pageImages || [],
+    pages: it.pages || [],
     title: it.title,
     sku: it.slug,
     variant: it.variant,
