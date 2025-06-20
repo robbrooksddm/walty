@@ -131,6 +131,8 @@ export default function CheckoutClient({
             assets: [{ url: proof }],
             copies: item.qty,
             address: addr || undefined,
+            id: item.sku,
+            pageImages: proof ? undefined : item.pageImages,
           }),
         });
         const data = await res.json().catch(() => ({}));

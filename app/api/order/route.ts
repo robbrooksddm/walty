@@ -7,16 +7,58 @@ const PRODIGI_API_KEY = process.env.PRODIGI_API_KEY || ''
 
 export const dynamic = 'force-dynamic'
 
+async function createProofURL(
+  variant: string,
+  id: string,
+  images: string[],
+  origin: string,
+) {
+  try {
+    const proofRes = await fetch(`${origin}/api/proof`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ pageImages: images, sku: variant, id, filename: `${variant}.jpg` }),
+    })
+    if (!proofRes.ok) return null
+    const blob = await proofRes.blob()
+    const form = new FormData()
+    form.append('file', new File([blob], `${variant}.jpg`, { type: blob.type }))
+    const up = await fetch(`${origin}/api/upload`, { method: 'POST', body: form })
+    if (!up.ok) return null
+    const data = await up.json().catch(() => null)
+    return data && typeof data.url === 'string' && data.url ? data.url : null
+  } catch (err) {
+    console.error('server proof', err)
+    return null
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { variantHandle, fulfilHandle, assets, address, copies = 1 } = await req.json()
-    if (typeof variantHandle !== 'string' || typeof fulfilHandle !== 'string' || !Array.isArray(assets)) {
+    const {
+      variantHandle,
+      fulfilHandle,
+      assets,
+      address,
+      copies = 1,
+      id,
+      pageImages,
+    } = await req.json()
+    if (typeof variantHandle !== 'string' ||
+        typeof fulfilHandle !== 'string' ||
+        !Array.isArray(assets)) {
       return NextResponse.json({ error: 'bad input' }, { status: 400 })
     }
 
-    console.log('asset urls →', assets)
-
-    const payload = await getProdigiPayload(variantHandle, fulfilHandle, assets, copies)
+    let finalAssets = assets as { url: string }[]
+    if (assets.some(a => !a.url) && Array.isArray(pageImages) && typeof id === 'string') {
+      const url = await createProofURL(variantHandle, id, pageImages, req.nextUrl.origin)
+      if (url) {
+        finalAssets = [{ url }]
+      }
+    }
+    console.log('asset urls →', finalAssets)
+    const payload = await getProdigiPayload(variantHandle, fulfilHandle, finalAssets, copies)
 
     let recipient: any = null
     if (address) {
