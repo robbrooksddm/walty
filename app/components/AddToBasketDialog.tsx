@@ -18,7 +18,7 @@ interface Props {
   coverUrl: string
   products?: { title: string; variantHandle: string }[]
   onAdd?: (variant: string) => void
-  generateProof?: (variant: string) => Promise<ProofResult | null>
+  generateProof?: (variant: string) => Promise<ProofResult>
 }
 
 const DEFAULT_OPTIONS = [
@@ -50,27 +50,18 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     if (generateProof) {
       try {
         const result = await generateProof(choice)
-        if (result && result.url) {
-          proof = result.url
-          images = result.images
-        } else {
+        proof = result.url
+        images = result.images
+        if (!proof) {
           console.warn('Proof generation failed for', choice)
-          setError('Failed to generate preview. Please try again.')
-          setLoading(false)
-          return
+          setError('Failed to generate preview. Card added without preview.')
         }
       } catch (err) {
         console.error('proof generation', err)
-        setError('Proof generation failed. Please try again.')
-        setLoading(false)
-        return
+        setError('Proof generation failed. Card added without preview.')
       }
     }
 
-    if (!proof) {
-      setLoading(false)
-      return
-    }
     addItem({ slug, title, variant: choice, image: coverUrl, proof, pageImages: images })
     onAdd?.(choice)
     onClose()
