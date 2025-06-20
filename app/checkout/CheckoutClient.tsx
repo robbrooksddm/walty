@@ -111,13 +111,24 @@ export default function CheckoutClient({
     for (const item of cartItems) {
       const addr = addresses.find((a) => a.id === item.addressId);
       try {
+        let proof = item.proofUrl;
+        if (!proof) {
+          proof = (await regenerateProof(item.variant, item.pageImages, item.sku)) || '';
+          if (proof) {
+            setCartItems((prev) =>
+              prev.map((it) => (it.id === item.id ? { ...it, proofUrl: proof } : it)),
+            );
+            updateBasketVariant(item.id, item.variant, proof, item.pageImages);
+          }
+        }
+
         const res = await fetch('/api/order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             variantHandle: item.variant,
             fulfilHandle: 'toSender_flat_std',
-            assets: [{ url: item.proofUrl }],
+            assets: [{ url: proof }],
             copies: item.qty,
             address: addr || undefined,
           }),

@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(order)
     }
 
-    console.log('Posting order to Prodigi \u2192', order)
+    console.log('Posting order to Prodigi \u2192', JSON.stringify(order, null, 2))
 
     const resp = await fetch(`${PRODIGI_BASE}/orders`, {
       method: 'POST',
