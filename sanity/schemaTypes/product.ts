@@ -87,7 +87,6 @@ export default defineType({
     initialValue: false,
     description: 'Include the green safe guide in generated proofs',
     options: { layout: 'switch' },
-    validation: r => r.required(),
   }),
   defineField({
     name: 'variants',

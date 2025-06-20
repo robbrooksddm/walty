@@ -480,12 +480,20 @@ const collectProofData = (showGuides = false) => {
   canvasMap.forEach(fc => {
     if (!fc) { pageImages.push(''); return }
     const guides = fc.getObjects().filter(o => (o as any)._guide)
-    if (!showGuides) guides.forEach(g => g.set('visible', false))
+    if (showGuides) {
+      guides.forEach(g => g.set('excludeFromExport', false))
+    } else {
+      guides.forEach(g => g.set('visible', false))
+    }
     fc.renderAll()
     pageImages.push(
       fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT() })
     )
-    if (!showGuides) guides.forEach(g => g.set('visible', true))
+    if (showGuides) {
+      guides.forEach(g => g.set('excludeFromExport', true))
+    } else {
+      guides.forEach(g => g.set('visible', true))
+    }
   })
   return { pages, pageImages }
 }
