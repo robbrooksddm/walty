@@ -117,14 +117,15 @@ export default function CardEditor({
       setSafeInset(0, 0)
       return
     }
-    const pageW   = printSpec.trimWidthIn  + printSpec.bleedIn * 2
-    const pageH   = printSpec.trimHeightIn + printSpec.bleedIn * 2
-    const scaleX  = previewSpec.previewWidthPx  / (pageW * printSpec.dpi)
-    const scaleY  = previewSpec.previewHeightPx / (pageH * printSpec.dpi)
+    const pageW  = printSpec.trimWidthIn  + printSpec.bleedIn * 2
+    const pageH  = printSpec.trimHeightIn + printSpec.bleedIn * 2
+    const scaleX = previewSpec.previewWidthPx  / (pageW * printSpec.dpi)
+    const scaleY = previewSpec.previewHeightPx / (pageH * printSpec.dpi)
+    const scale  = Math.min(scaleX, scaleY)
     const insetXIn = (previewSpec.safeInsetXPx ?? 0) /
-                     (printSpec.dpi * scaleX)
+                     (printSpec.dpi * scale)
     const insetYIn = (previewSpec.safeInsetYPx ?? 0) /
-                     (printSpec.dpi * scaleY)
+                     (printSpec.dpi * scale)
     setSafeInset(insetXIn, insetYIn)
   }, [printSpec, previewSpec, showSafeArea])
   /* 1 ─ hydrate Zustand once ------------------------------------- */
