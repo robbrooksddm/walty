@@ -111,7 +111,8 @@ console.log(
   '\n',
 )
 
-  const spec = (raw?.products?.[0]?.printSpec || undefined) as PrintSpec | undefined
+  const rawProducts = Array.isArray(raw?.products) ? raw.products.filter(Boolean) : []
+  const spec = (rawProducts[0]?.printSpec || undefined) as PrintSpec | undefined
   console.log('\u25BA getTemplatePages spec =', JSON.stringify(spec, null, 2))
   const previewSpec = raw?.previewSpec as PreviewSpec | undefined
 
@@ -123,7 +124,7 @@ console.log(
   })) as TemplatePage[]
 
   const coverImage = raw?.coverImage ? urlFor(raw.coverImage).url() : undefined
-  const products = raw?.products as TemplateProduct[] | undefined
+  const products = rawProducts.length ? (rawProducts as TemplateProduct[]) : undefined
 
   return { pages: pagesOut, coverImage, spec, previewSpec, products }
 }
