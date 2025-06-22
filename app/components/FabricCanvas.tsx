@@ -748,9 +748,12 @@ useEffect(() => {
         } else {
           const baseH = st.natH - st.startCropY;
           const factor = newH / maxH;
+          const center = st.startLeft +
+            (st.startWidth * st.startScaleX) / 2;
           height = baseH;
           scaleX = st.startScaleX * factor;
           scaleY = st.startScaleY * factor;
+          left   = center - (st.startWidth * scaleX) / 2;
           top    = st.startTop;
         }
       } else {
@@ -764,10 +767,13 @@ useEffect(() => {
           const baseH = st.startHeight + st.startCropY;
           const factor = newH / maxH;
           const bottom = st.startTop + st.startHeight * st.startScaleY;
+          const center = st.startLeft +
+            (st.startWidth * st.startScaleX) / 2;
           cropY  = 0;
           height = baseH;
           scaleX = st.startScaleX * factor;
           scaleY = st.startScaleY * factor;
+          left   = center - (st.startWidth * scaleX) / 2;
           top    = bottom - height * scaleY;
         }
       }
