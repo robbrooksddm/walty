@@ -673,6 +673,7 @@ useEffect(() => {
       startX     : ptr.x,
       startY     : ptr.y,
     });
+    t.centeredScaling = false;
   };
 
   const duringCrop = (e: fabric.IEvent) => {
@@ -712,8 +713,16 @@ useEffect(() => {
           width = Math.min(newW, st.natW - st.startCropX);
         } else {
           width  = st.natW - st.startCropX;
-          scaleX = st.startScaleX * (newW / maxW);
-          scaleY = st.startScaleY * (newW / maxW);
+          const factor = newW / maxW;
+          scaleX = st.startScaleX * factor;
+          scaleY = st.startScaleY * factor;
+          const cx = st.startLeft + (st.startWidth * st.startScaleX) / 2;
+          const cy = st.startTop  + (st.startHeight * st.startScaleY) / 2;
+          const sw = width  * scaleX;
+          const sh = height * scaleY;
+          left = cx - sw / 2;
+          top  = cy - sh / 2;
+          img.centeredScaling = true;
         }
       } else {
         const maxW = st.startWidth + st.startCropX;
@@ -725,9 +734,16 @@ useEffect(() => {
         } else {
           cropX = 0;
           width = st.startWidth + st.startCropX;
-          left  = st.startLeft - st.startCropX * st.startScaleX;
-          scaleX = st.startScaleX * (newW / maxW);
-          scaleY = st.startScaleY * (newW / maxW);
+          const factor = newW / maxW;
+          scaleX = st.startScaleX * factor;
+          scaleY = st.startScaleY * factor;
+          const cx = st.startLeft + (st.startWidth * st.startScaleX) / 2;
+          const cy = st.startTop  + (st.startHeight * st.startScaleY) / 2;
+          const sw = width  * scaleX;
+          const sh = height * scaleY;
+          left = cx - sw / 2;
+          top  = cy - sh / 2;
+          img.centeredScaling = true;
         }
       }
     } else if (corner === 'mb' || corner === 'mt') {
@@ -737,8 +753,16 @@ useEffect(() => {
           height = Math.min(newH, st.natH - st.startCropY);
         } else {
           height = st.natH - st.startCropY;
-          scaleX = st.startScaleX * (newH / maxH);
-          scaleY = st.startScaleY * (newH / maxH);
+          const factor = newH / maxH;
+          scaleX = st.startScaleX * factor;
+          scaleY = st.startScaleY * factor;
+          const cx = st.startLeft + (st.startWidth * st.startScaleX) / 2;
+          const cy = st.startTop  + (st.startHeight * st.startScaleY) / 2;
+          const sw = width  * scaleX;
+          const sh = height * scaleY;
+          left = cx - sw / 2;
+          top  = cy - sh / 2;
+          img.centeredScaling = true;
         }
       } else {
         const maxH = st.startHeight + st.startCropY;
@@ -750,9 +774,16 @@ useEffect(() => {
         } else {
           cropY = 0;
           height = st.startHeight + st.startCropY;
-          top = st.startTop - st.startCropY * st.startScaleY;
-          scaleX = st.startScaleX * (newH / maxH);
-          scaleY = st.startScaleY * (newH / maxH);
+          const factor = newH / maxH;
+          scaleX = st.startScaleX * factor;
+          scaleY = st.startScaleY * factor;
+          const cx = st.startLeft + (st.startWidth * st.startScaleX) / 2;
+          const cy = st.startTop  + (st.startHeight * st.startScaleY) / 2;
+          const sw = width  * scaleX;
+          const sh = height * scaleY;
+          left = cx - sw / 2;
+          top  = cy - sh / 2;
+          img.centeredScaling = true;
         }
       }
     }
@@ -764,7 +795,10 @@ useEffect(() => {
 
   const endCrop = (e: fabric.IEvent) => {
     const img = e.target as fabric.Image | undefined;
-    if (img) cropState.delete(img);
+    if (img) {
+      cropState.delete(img);
+      img.centeredScaling = false;
+    }
   };
 
   fc.on('before:transform', startCrop);
