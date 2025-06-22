@@ -513,15 +513,17 @@ const fetchProofBlob = async (
 }
 
 /* helper – generate proof, upload to Sanity and return its CDN URL */
-const generateProofURL = async (variant: string): Promise<string | null> => {
-  const showGuides = products.find(p => p.variantHandle === variant)?.showProofSafeArea ?? false
+const generateProofURL = async (variantHandle: string): Promise<string | null> => {
+  const product = products.find(p => p.variantHandle === variantHandle)
+  const sku = product?.slug ?? variantHandle
+  const showGuides = product?.showProofSafeArea ?? false
   const { pages, pageImages } = collectProofData(showGuides)
-  const blob = await fetchProofBlob(variant, `${variant}.jpg`, pages, pageImages)
+  const blob = await fetchProofBlob(sku, `${variantHandle}.jpg`, pages, pageImages)
   if (!blob) return null
 
   try {
     const form = new FormData()
-    form.append('file', new File([blob], `${variant}.jpg`, { type: blob.type }))
+    form.append('file', new File([blob], `${variantHandle}.jpg`, { type: blob.type }))
     const res = await fetch('/api/upload', { method: 'POST', body: form })
     if (res.ok) {
       const { url } = await res.json()
