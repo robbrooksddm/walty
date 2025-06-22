@@ -632,6 +632,137 @@ useEffect(() => {
   window.addEventListener('keydown', keyCropHandler);
   /* ───────────────────────────────────────────────────────── */
 
+  /* --- Canva‑style side-handle cropping -------------------- */
+  const cropState = new WeakMap<fabric.Image, {
+    corner      : string
+    startCropX  : number
+    startCropY  : number
+    startWidth  : number
+    startHeight : number
+    startLeft   : number
+    startTop    : number
+    startScaleX : number
+    startScaleY : number
+    natW        : number
+    natH        : number
+  }>();
+
+  const startCrop = (e: fabric.IEvent) => {
+    const t = (e as any).transform?.target as fabric.Image | undefined;
+    const c = (e as any).transform?.corner as string | undefined;
+    if (!t || t.type !== 'image') return;
+    if (!c || !['ml', 'mr', 'mt', 'mb'].includes(c)) return;
+    const el = t.getElement() as HTMLImageElement;
+    const w = t.width || el.naturalWidth || 1;
+    const h = t.height || el.naturalHeight || 1;
+    cropState.set(t, {
+      corner     : c,
+      startCropX : t.cropX || 0,
+      startCropY : t.cropY || 0,
+      startWidth : w,
+      startHeight: h,
+      startLeft  : t.left || 0,
+      startTop   : t.top || 0,
+      startScaleX: t.scaleX || 1,
+      startScaleY: t.scaleY || 1,
+      natW       : el.naturalWidth  || w,
+      natH       : el.naturalHeight || h,
+    });
+  };
+
+  const duringCrop = (e: fabric.IEvent) => {
+    const img = e.target as fabric.Image | undefined;
+    if (!img || img.type !== 'image') return;
+    const st = cropState.get(img);
+    if (!st) return;
+
+    const tr = (e as any).transform;
+    if (!tr) return;
+
+    const deltaW = st.startWidth * (tr.scaleX ?? 1) - st.startWidth;
+    const deltaH = st.startHeight * (tr.scaleY ?? 1) - st.startHeight;
+
+    let { corner } = st;
+    let { startCropX: cropX, startCropY: cropY } = st;
+    let { startWidth: width, startHeight: height } = st;
+    let { startLeft: left, startTop: top } = st;
+    let { startScaleX: scaleX, startScaleY: scaleY } = st;
+
+    if (corner === 'mr') {
+      const desired = width + deltaW;
+      const maxW = st.natW - cropX;
+      if (desired <= maxW) {
+        width = Math.max(1, desired);
+      } else {
+        width = maxW;
+        scaleX = st.startScaleX * (desired / maxW);
+      }
+    } else if (corner === 'ml') {
+      const desired = width + deltaW;
+      const maxW = width + cropX;
+      if (desired <= maxW) {
+        const diff = width - desired;
+        cropX += diff;
+        width = Math.max(1, desired);
+        left += diff * st.startScaleX;
+      } else {
+        cropX = 0;
+        width = maxW;
+        left -= st.startCropX * st.startScaleX;
+        scaleX = st.startScaleX * (desired / maxW);
+      }
+    } else if (corner === 'mb') {
+      const desired = height + deltaH;
+      const maxH = st.natH - cropY;
+      if (desired <= maxH) {
+        height = Math.max(1, desired);
+      } else {
+        height = maxH;
+        scaleY = st.startScaleY * (desired / maxH);
+      }
+    } else if (corner === 'mt') {
+      const desired = height + deltaH;
+      const maxH = height + cropY;
+      if (desired <= maxH) {
+        const diff = height - desired;
+        cropY += diff;
+        height = Math.max(1, desired);
+        top += diff * st.startScaleY;
+      } else {
+        cropY = 0;
+        height = maxH;
+        top -= st.startCropY * st.startScaleY;
+        scaleY = st.startScaleY * (desired / maxH);
+      }
+    }
+
+    img.set({ cropX, cropY, width, height, left, top, scaleX, scaleY });
+    img.setCoords();
+    fc.requestRenderAll();
+
+    tr.scaleX = 1;
+    tr.scaleY = 1;
+    Object.assign(st, {
+      startCropX: cropX,
+      startCropY: cropY,
+      startWidth: width,
+      startHeight: height,
+      startLeft: left,
+      startTop: top,
+      startScaleX: scaleX,
+      startScaleY: scaleY,
+    });
+  };
+
+  const endCrop = (e: fabric.IEvent) => {
+    const img = e.target as fabric.Image | undefined;
+    if (img) cropState.delete(img);
+  };
+
+  fc.on('before:transform', startCrop);
+  fc.on('object:scaling', duringCrop);
+  fc.on('object:scaled', endCrop);
+
  
 
 /* ── 2 ▸ Hover overlay only ─────────────────────────────── */
@@ -875,6 +1006,9 @@ window.addEventListener('keydown', onKey)
       // tidy up crop‑tool listeners
       fc.off('mouse:dblclick', dblHandler);
       window.removeEventListener('keydown', keyCropHandler);
+      fc.off('before:transform', startCrop);
+      fc.off('object:scaling', duringCrop);
+      fc.off('object:scaled', endCrop);
       onReady(null)
       cropToolRef.current?.abort()
       fc.dispose()
