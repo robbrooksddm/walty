@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
             }
           } | null
         }>(
-          `*[_type=="cardProduct" && slug.current==$sku][0]{"spec":coalesce(printSpec->, printSpec)}`,
+          `*[_type=="cardProduct" && (slug.current==$sku || variantHandle==$sku)][0]{"spec":coalesce(printSpec->, printSpec)}`,
           { sku },
         )
       : null
