@@ -501,7 +501,7 @@ const fetchProofBlob = async (
     const res = await fetch('/api/proof', {
       method : 'POST',
       headers: { 'content-type': 'application/json' },
-      body   : JSON.stringify({ pages, pageImages, sku, id: templateId, filename }),
+      body   : JSON.stringify({ pages, pageImages, sku, id: templateId ?? slug, filename }),
     })
     if (res.ok) {
       return await res.blob()
