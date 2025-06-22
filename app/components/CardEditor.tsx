@@ -533,6 +533,20 @@ const generateProofURL = async (variant: string): Promise<string | null> => {
   return null
 }
 
+const generateProofURLs = async (
+  handles: string[],
+): Promise<Record<string, string>> => {
+  const entries = await Promise.all(
+    handles.map(async h => [h, await generateProofURL(h)] as const),
+  )
+  const urls: Record<string, string> = {}
+  for (const [h, url] of entries) {
+    if (url) urls[h] = url
+  }
+  if (Object.keys(urls).length === 0) throw new Error('proof generation failed')
+  return urls
+}
+
 /* download proofs for all products */
 const handleProofAll = async () => {
   if (!products.length) return
@@ -758,7 +772,7 @@ const handleProofAll = async () => {
         title={title}
         coverUrl={coverImage || ''}
         products={products}
-        generateProofUrl={generateProofURL}
+        generateProofUrls={generateProofURLs}
       />
     </div>
   )
