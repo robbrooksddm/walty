@@ -643,6 +643,8 @@ useEffect(() => {
     startTop    : number
     startScaleX : number
     startScaleY : number
+    startCenterX: number
+    startCenterY: number
     natW        : number
     natH        : number
     startX      : number
@@ -657,6 +659,8 @@ useEffect(() => {
     const el = t.getElement() as HTMLImageElement;
     const w = t.width || el.naturalWidth || 1;
     const h = t.height || el.naturalHeight || 1;
+    const cx = (t.left || 0) + w * (t.scaleX || 1) / 2;
+    const cy = (t.top  || 0) + h * (t.scaleY || 1) / 2;
     const ptr = fc.getPointer((e as any).e);
     cropState.set(t, {
       corner     : c,
@@ -668,6 +672,8 @@ useEffect(() => {
       startTop   : t.top || 0,
       startScaleX: t.scaleX || 1,
       startScaleY: t.scaleY || 1,
+      startCenterX: cx,
+      startCenterY: cy,
       natW       : el.naturalWidth  || w,
       natH       : el.naturalHeight || h,
       startX     : ptr.x,
@@ -711,9 +717,12 @@ useEffect(() => {
         if (newW <= maxW) {
           width = Math.min(newW, st.natW - st.startCropX);
         } else {
+          const ratio = newW / maxW;
           width  = st.natW - st.startCropX;
-          scaleX = st.startScaleX * (newW / maxW);
-          scaleY = st.startScaleY * (newW / maxW);
+          scaleX = st.startScaleX * ratio;
+          scaleY = st.startScaleY * ratio;
+          left   = st.startCenterX - width * scaleX / 2;
+          top    = st.startCenterY - height * scaleY / 2;
         }
       } else {
         const maxW = st.startWidth + st.startCropX;
@@ -728,8 +737,8 @@ useEffect(() => {
           width = maxW;
           scaleX = st.startScaleX * ratio;
           scaleY = st.startScaleY * ratio;
-          const startRight = st.startLeft + st.startWidth * st.startScaleX;
-          left = startRight - maxW * scaleX;
+          left   = st.startCenterX - width * scaleX / 2;
+          top    = st.startCenterY - height * scaleY / 2;
         }
       }
     } else if (corner === 'mb' || corner === 'mt') {
@@ -738,9 +747,12 @@ useEffect(() => {
         if (newH <= maxH) {
           height = Math.min(newH, st.natH - st.startCropY);
         } else {
+          const ratio = newH / maxH;
           height = st.natH - st.startCropY;
-          scaleX = st.startScaleX * (newH / maxH);
-          scaleY = st.startScaleY * (newH / maxH);
+          scaleX = st.startScaleX * ratio;
+          scaleY = st.startScaleY * ratio;
+          left   = st.startCenterX - width * scaleX / 2;
+          top    = st.startCenterY - height * scaleY / 2;
         }
       } else {
         const maxH = st.startHeight + st.startCropY;
@@ -755,8 +767,8 @@ useEffect(() => {
           height = maxH;
           scaleX = st.startScaleX * ratio;
           scaleY = st.startScaleY * ratio;
-          const startBottom = st.startTop + st.startHeight * st.startScaleY;
-          top = startBottom - maxH * scaleY;
+          left   = st.startCenterX - width * scaleX / 2;
+          top    = st.startCenterY - height * scaleY / 2;
         }
       }
     }
