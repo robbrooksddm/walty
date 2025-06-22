@@ -59,6 +59,16 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
       console.warn('Proof not generated for', choice)
     }
 
+    try {
+      await fetch('/api/log-proofs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, variant: choice, proofs }),
+      })
+    } catch (err) {
+      console.error('log-proofs', err)
+    }
+
     const size = CARD_SIZES.find((s) => s.id === choice)
     const price = size ? size.price : 0
     addItem({ slug, title, variant: choice, image: coverUrl, proofs, price })
