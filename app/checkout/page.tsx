@@ -14,7 +14,9 @@ export default function CheckoutPage() {
     sku: it.slug,
     variant: it.variant,
     qty: it.qty,
-    price: CARD_SIZES.find((s) => s.id === it.variant)?.price ?? 0,
+    price: typeof it.price === 'number'
+      ? it.price
+      : CARD_SIZES.find((s) => s.id === it.variant)?.price ?? 0,
   }))
 
   const addresses = [

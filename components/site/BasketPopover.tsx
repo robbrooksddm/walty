@@ -3,6 +3,7 @@
 import { useBasket } from '@/lib/useBasket'
 import Popover from '@/app/components/toolbar/Popover'
 import Link from 'next/link'
+import { CARD_SIZES } from '@/app/checkout/sizeOptions'
 
 interface Props {
   anchor: HTMLElement | null
@@ -61,6 +62,10 @@ export default function BasketPopover({ anchor, open, onClose }: Props) {
                     >
                       +
                     </button>
+                  </div>
+                  <div className="mt-1 text-sm">
+                    {CARD_SIZES.find((s) => s.id === it.variant)?.label || it.variant}
+                    {` – £${it.price.toFixed(2)}`}
                   </div>
                   <Link
                     href={`/cards/${it.slug}/customise`}

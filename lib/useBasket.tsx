@@ -9,12 +9,13 @@ export interface BasketItem {
   variant: string;
   image: string;
   proofs: Record<string, string>;
+  price: number;
   qty: number;
 }
 
 interface BasketContextValue {
   items: BasketItem[];
-  addItem: (item: { slug: string; title: string; variant: string; image: string; proofs: Record<string, string> }) => void;
+  addItem: (item: { slug: string; title: string; variant: string; image: string; proofs: Record<string, string>; price: number }) => void;
   removeItem: (id: string) => void;
   updateQty: (id: string, qty: number) => void;
 }
@@ -50,6 +51,7 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
                 : typeof it.proof === "string"
                 ? { [it.variant]: it.proof }
                 : {},
+            price: typeof it.price === "number" ? it.price : 0,
             variant: map[it.variant] ?? it.variant,
             id: `${it.slug}_${map[it.variant] ?? it.variant}`,
           }))
@@ -67,7 +69,7 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items]);
 
-  const addItem = (item: { slug: string; title: string; variant: string; image: string; proofs: Record<string, string> }) => {
+  const addItem = (item: { slug: string; title: string; variant: string; image: string; proofs: Record<string, string>; price: number }) => {
     setItems((prev) => {
       const id = `${item.slug}_${item.variant}`
       const existing = prev.find((it) => it.id === id)

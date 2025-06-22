@@ -4,6 +4,7 @@ import { Dialog, Transition } from '@headlessui/react'
 import { Fragment, useState } from 'react'
 import { Check } from 'lucide-react'
 import { useBasket } from '@/lib/useBasket'
+import { CARD_SIZES } from '@/app/checkout/sizeOptions'
 
 interface Props {
   open: boolean
@@ -64,7 +65,9 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
       setLoading(false)
       return
     }
-    addItem({ slug, title, variant: choice, image: coverUrl, proofs })
+    const size = CARD_SIZES.find((s) => s.id === choice)
+    const price = size ? size.price : 0
+    addItem({ slug, title, variant: choice, image: coverUrl, proofs, price })
     onAdd?.(choice)
     onClose()
     setChoice(null)
