@@ -8,13 +8,13 @@ export interface BasketItem {
   title: string;
   variant: string;
   image: string;
-  proof: string;
+  proofUrls: string[];
   qty: number;
 }
 
 interface BasketContextValue {
   items: BasketItem[];
-  addItem: (item: { slug: string; title: string; variant: string; image: string; proof: string }) => void;
+  addItem: (item: { slug: string; title: string; variant: string; image: string; proofUrls: string[] }) => void;
   removeItem: (id: string) => void;
   updateQty: (id: string, qty: number) => void;
 }
@@ -40,9 +40,13 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
       return Array.isArray(parsed)
         ? parsed.map((it: any) => ({
             ...it,
-            proof: Array.isArray(it.proofs)
-              ? it.proofs[0] || ''
-              : it.proof || '',
+            proofUrls: Array.isArray(it.proofUrls)
+              ? it.proofUrls
+              : Array.isArray(it.proofs)
+              ? it.proofs
+              : it.proof
+              ? [it.proof]
+              : [],
             variant: map[it.variant] ?? it.variant,
             id: `${it.slug}_${map[it.variant] ?? it.variant}`,
           }))
@@ -60,7 +64,7 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items]);
 
-  const addItem = (item: { slug: string; title: string; variant: string; image: string; proof: string }) => {
+  const addItem = (item: { slug: string; title: string; variant: string; image: string; proofUrls: string[] }) => {
     setItems((prev) => {
       const id = `${item.slug}_${item.variant}`
       const existing = prev.find((it) => it.id === id)

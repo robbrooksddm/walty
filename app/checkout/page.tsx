@@ -9,7 +9,7 @@ export default function CheckoutPage() {
   const cartItems = items.map((it) => ({
     id: it.id,
     coverUrl: it.image,
-    proofUrl: it.proof,
+    proofUrls: it.proofUrls,
     title: it.title,
     sku: it.slug,
     variant: it.variant,

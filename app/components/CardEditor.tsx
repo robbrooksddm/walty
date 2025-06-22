@@ -533,6 +533,16 @@ const generateProofURL = async (variant: string): Promise<string | null> => {
   return null
 }
 
+/* helper – generate proofs for all products and return their CDN URLs */
+const generateProofURLs = async (): Promise<string[]> => {
+  const urls: string[] = []
+  for (const p of products) {
+    const url = await generateProofURL(p.variantHandle)
+    if (url) urls.push(url)
+  }
+  return urls
+}
+
 
 /* download proofs for all products */
 const handleProofAll = async () => {
@@ -759,7 +769,7 @@ const handleProofAll = async () => {
         title={title}
         coverUrl={coverImage || ''}
         products={products}
-        generateProofUrl={generateProofURL}
+        generateProofUrls={generateProofURLs}
       />
     </div>
   )

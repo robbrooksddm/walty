@@ -12,7 +12,7 @@ interface Props {
   coverUrl: string
   products?: { title: string; variantHandle: string }[]
   onAdd?: (variant: string) => void
-  generateProofUrl?: (variant: string) => Promise<string | null>
+  generateProofUrls?: () => Promise<string[]>
 }
 
 const DEFAULT_OPTIONS = [
@@ -22,7 +22,7 @@ const DEFAULT_OPTIONS = [
   { label: 'Giant Card', handle: 'gc-large' },
 ]
 
-export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd, generateProofUrl }: Props) {
+export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd, generateProofUrls }: Props) {
   const { addItem } = useBasket()
 
   const options =
@@ -32,13 +32,13 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     DEFAULT_OPTIONS
 
   const handleSelect = async (variant: string) => {
-    let proof = ''
-    if (generateProofUrl) {
+    let proofs: string[] = []
+    if (generateProofUrls) {
       try {
-        const url = await generateProofUrl(variant)
-        if (typeof url === 'string' && url) proof = url
+        const urls = await generateProofUrls()
+        if (Array.isArray(urls) && urls.length) proofs = urls
         else {
-          console.warn('Proof generation failed for', variant)
+          console.warn('Proof generation failed')
           return
         }
       } catch (err) {
@@ -47,8 +47,8 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
       }
     }
 
-    if (!proof) return
-    addItem({ slug, title, variant, image: coverUrl, proof })
+    if (!proofs.length) return
+    addItem({ slug, title, variant, image: coverUrl, proofUrls: proofs })
     onAdd?.(variant)
     onClose()
   }
