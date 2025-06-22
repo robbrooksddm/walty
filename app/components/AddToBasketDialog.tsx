@@ -1,7 +1,8 @@
 'use client'
 
 import { Dialog, Transition } from '@headlessui/react'
-import { Fragment } from 'react'
+import { Fragment, useState } from 'react'
+import { Check } from 'lucide-react'
 import { useBasket } from '@/lib/useBasket'
 
 interface Props {
@@ -23,6 +24,7 @@ const DEFAULT_OPTIONS = [
 ]
 
 export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd, generateProofUrls }: Props) {
+  const [choice, setChoice] = useState<string | null>(null)
   const { addItem } = useBasket()
 
   const options =
@@ -31,7 +33,13 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     ).map(p => ({ label: p.title, handle: p.variantHandle })) ??
     DEFAULT_OPTIONS
 
-  const handleSelect = async (variant: string) => {
+  const handleSelect = (variant: string) => {
+    setChoice(variant)
+  }
+
+  const handleAdd = async () => {
+    if (!choice) return
+
     let proofs: string[] = []
     if (generateProofUrls) {
       try {
@@ -48,9 +56,10 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     }
 
     if (!proofs.length) return
-    addItem({ slug, title, variant, image: coverUrl, proofUrls: proofs })
-    onAdd?.(variant)
+    addItem({ slug, title, variant: choice, image: coverUrl, proofUrls: proofs })
+    onAdd?.(choice)
     onClose()
+    setChoice(null)
   }
 
   return (
@@ -77,15 +86,23 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
                 <li key={opt.handle}>
                   <button
                     onClick={() => handleSelect(opt.handle)}
-                    className="w-full flex items-center justify-between border rounded-md p-3 border-gray-300 hover:bg-[--walty-cream]"
+                    className={`w-full flex items-center justify-between border rounded-md p-3 ${choice === opt.handle ? 'border-[--walty-orange] bg-[--walty-cream]' : 'border-gray-300 hover:bg-[--walty-cream]'}`}
                   >
                     <span>{opt.label}</span>
+                    {choice === opt.handle && <Check className="text-[--walty-orange]" size={20} />}
                   </button>
                 </li>
               ))}
             </ul>
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end gap-4 pt-2">
               <button onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2">Back to editor</button>
+              <button
+                onClick={handleAdd}
+                disabled={!choice}
+                className={`rounded-md px-4 py-2 font-semibold text-white ${choice ? 'bg-[--walty-orange] hover:bg-orange-600' : 'bg-gray-300 cursor-not-allowed'}`}
+              >
+                Add to basket
+              </button>
             </div>
           </Dialog.Panel>
         </Transition.Child>
