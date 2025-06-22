@@ -545,6 +545,9 @@ const generateProofURLs = async (): Promise<Record<string, string>> => {
     const url = await generateProofURL(h)
     if (url) urls[h] = url
   }
+  if (Object.keys(urls).length === 0) {
+    throw new Error('proof generation failed')
+  }
   return urls
 }
 

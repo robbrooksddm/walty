@@ -54,6 +54,13 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
         console.error('proof generation', err)
       }
     }
+
+    if (!proofs[choice]) {
+      alert('Unable to create your proof. Please try again.')
+      setLoading(false)
+      return
+    }
+
     const size = CARD_SIZES.find((s) => s.id === choice)
     const price = size ? size.price : 0
     addItem({ slug, title, variant: choice, image: coverUrl, proofs, price })
