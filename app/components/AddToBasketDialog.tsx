@@ -49,24 +49,10 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     let proofs: Record<string, string> = {}
     if (generateProofUrls) {
       try {
-        const urls = await generateProofUrls()
-        if (urls && Object.keys(urls).length) {
-          proofs = urls
-        } else {
-          console.warn('Proof generation failed')
-          setLoading(false)
-          return
-        }
+        proofs = await generateProofUrls()
       } catch (err) {
         console.error('proof generation', err)
-        setLoading(false)
-        return
       }
-    }
-
-    if (!Object.keys(proofs).length) {
-      setLoading(false)
-      return
     }
     const size = CARD_SIZES.find((s) => s.id === choice)
     const price = size ? size.price : 0
