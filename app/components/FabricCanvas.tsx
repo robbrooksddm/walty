@@ -632,6 +632,145 @@ useEffect(() => {
   window.addEventListener('keydown', keyCropHandler);
   /* ───────────────────────────────────────────────────────── */
 
+  /* --- Canva‑style side-handle cropping -------------------- */
+  const cropState = new WeakMap<fabric.Image, {
+    corner      : string
+    startCropX  : number
+    startCropY  : number
+    startWidth  : number
+    startHeight : number
+    startLeft   : number
+    startTop    : number
+    startScaleX : number
+    startScaleY : number
+    natW        : number
+    natH        : number
+    startX      : number
+    startY      : number
+  }>();
+
+  const startCrop = (e: fabric.IEvent) => {
+    const t = (e as any).transform?.target as fabric.Image | undefined;
+    const c = (e as any).transform?.corner as string | undefined;
+    if (!t || t.type !== 'image') return;
+    if (!c || !['ml', 'mr', 'mt', 'mb'].includes(c)) return;
+    const el = t.getElement() as HTMLImageElement;
+    const w = t.width || el.naturalWidth || 1;
+    const h = t.height || el.naturalHeight || 1;
+    const ptr = fc.getPointer((e as any).e);
+    cropState.set(t, {
+      corner     : c,
+      startCropX : t.cropX || 0,
+      startCropY : t.cropY || 0,
+      startWidth : w,
+      startHeight: h,
+      startLeft  : t.left || 0,
+      startTop   : t.top || 0,
+      startScaleX: t.scaleX || 1,
+      startScaleY: t.scaleY || 1,
+      natW       : el.naturalWidth  || w,
+      natH       : el.naturalHeight || h,
+      startX     : ptr.x,
+      startY     : ptr.y,
+    });
+  };
+
+  const duringCrop = (e: fabric.IEvent) => {
+    const img = e.target as fabric.Image | undefined;
+    if (!img || img.type !== 'image') return;
+    const st = cropState.get(img);
+    if (!st) return;
+
+    const corner = st.corner;
+    const ptr    = fc.getPointer((e as any).e);
+    const dx = ptr.x - st.startX;
+    const dy = ptr.y - st.startY;
+    const newW = corner === 'mr'
+      ? st.startWidth + dx / st.startScaleX
+      : corner === 'ml'
+        ? st.startWidth - dx / st.startScaleX
+        : st.startWidth;
+    const newH = corner === 'mb'
+      ? st.startHeight + dy / st.startScaleY
+      : corner === 'mt'
+        ? st.startHeight - dy / st.startScaleY
+        : st.startHeight;
+
+    let cropX = st.startCropX;
+    let cropY = st.startCropY;
+    let width  = st.startWidth;
+    let height = st.startHeight;
+    let left   = st.startLeft;
+    let top    = st.startTop;
+    let scaleX = st.startScaleX;
+    let scaleY = st.startScaleY;
+
+    if (corner === 'mr' || corner === 'ml') {
+      if (corner === 'mr') {
+        const maxW = st.startWidth + (st.natW - (st.startCropX + st.startWidth));
+        if (newW <= maxW) {
+          width = Math.min(newW, st.natW - st.startCropX);
+        } else {
+          width  = st.natW - st.startCropX;
+          scaleX = st.startScaleX * (newW / maxW);
+          scaleY = st.startScaleY * (newW / maxW);
+        }
+      } else {
+        const maxW = st.startWidth + st.startCropX;
+        if (newW <= maxW) {
+          const diff = st.startWidth - newW;
+          cropX = st.startCropX + diff;
+          width = newW;
+          left  = st.startLeft + diff * st.startScaleX;
+        } else {
+          cropX = 0;
+          width = st.startWidth + st.startCropX;
+          left  = st.startLeft - st.startCropX * st.startScaleX;
+          scaleX = st.startScaleX * (newW / maxW);
+          scaleY = st.startScaleY * (newW / maxW);
+        }
+      }
+    } else if (corner === 'mb' || corner === 'mt') {
+      if (corner === 'mb') {
+        const maxH = st.startHeight + (st.natH - (st.startCropY + st.startHeight));
+        if (newH <= maxH) {
+          height = Math.min(newH, st.natH - st.startCropY);
+        } else {
+          height = st.natH - st.startCropY;
+          scaleX = st.startScaleX * (newH / maxH);
+          scaleY = st.startScaleY * (newH / maxH);
+        }
+      } else {
+        const maxH = st.startHeight + st.startCropY;
+        if (newH <= maxH) {
+          const diff = st.startHeight - newH;
+          cropY = st.startCropY + diff;
+          height = newH;
+          top = st.startTop + diff * st.startScaleY;
+        } else {
+          cropY = 0;
+          height = st.startHeight + st.startCropY;
+          top = st.startTop - st.startCropY * st.startScaleY;
+          scaleX = st.startScaleX * (newH / maxH);
+          scaleY = st.startScaleY * (newH / maxH);
+        }
+      }
+    }
+
+    img.set({ cropX, cropY, width, height, left, top, scaleX, scaleY });
+    img.setCoords();
+    fc.requestRenderAll();
+  };
+
+  const endCrop = (e: fabric.IEvent) => {
+    const img = e.target as fabric.Image | undefined;
+    if (img) cropState.delete(img);
+  };
+
+  fc.on('before:transform', startCrop);
+  fc.on('object:scaling', duringCrop);
+  fc.on('object:scaled', endCrop);
+
  
 
 /* ── 2 ▸ Hover overlay only ─────────────────────────────── */
@@ -875,6 +1014,9 @@ window.addEventListener('keydown', onKey)
       // tidy up crop‑tool listeners
       fc.off('mouse:dblclick', dblHandler);
       window.removeEventListener('keydown', keyCropHandler);
+      fc.off('before:transform', startCrop);
+      fc.off('object:scaling', duringCrop);
+      fc.off('object:scaled', endCrop);
       onReady(null)
       cropToolRef.current?.abort()
       fc.dispose()
