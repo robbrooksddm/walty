@@ -632,6 +632,122 @@ useEffect(() => {
   window.addEventListener('keydown', keyCropHandler);
   /* ───────────────────────────────────────────────────────── */
 
+  /* --- Canva‑style side-handle cropping -------------------- */
+  const cropState = new WeakMap<fabric.Image, {
+    corner : string
+    cropX  : number
+    cropY  : number
+    width  : number
+    height : number
+    left   : number
+    top    : number
+    scaleX : number
+    scaleY : number
+    natW   : number
+    natH   : number
+  }>();
+
+  const startCrop = (e: fabric.IEvent) => {
+    const t = (e as any).transform?.target as fabric.Image | undefined;
+    const c = (e as any).transform?.corner as string | undefined;
+    if (!t || t.type !== 'image') return;
+    if (!c || !['ml','mr','mt','mb'].includes(c)) return;
+    const el = t.getElement() as HTMLImageElement;
+    cropState.set(t, {
+      corner : c,
+      cropX  : t.cropX || 0,
+      cropY  : t.cropY || 0,
+      width  : t.width || el.naturalWidth || 1,
+      height : t.height || el.naturalHeight || 1,
+      left   : t.left || 0,
+      top    : t.top || 0,
+      scaleX : t.scaleX || 1,
+      scaleY : t.scaleY || 1,
+      natW   : el.naturalWidth  || t.width || 1,
+      natH   : el.naturalHeight || t.height || 1,
+    });
+  };
+
+  const duringCrop = (e: fabric.IEvent) => {
+    const img = e.target as fabric.Image | undefined;
+    if (!img || img.type !== 'image') return;
+    const st = cropState.get(img);
+    if (!st) return;
+
+    const corner = st.corner;
+    const sx = img.scaleX || 1;
+    const sy = img.scaleY || 1;
+
+    img.scaleX = st.scaleX;
+    img.scaleY = st.scaleY;
+
+    let { cropX, cropY, width, height, left, top } = st;
+    let scale = st.scaleX;
+
+    if (corner === 'mr' || corner === 'ml') {
+      let w = st.width * sx;
+      if (corner === 'mr') {
+        const maxW = st.width + (st.natW - (st.cropX + st.width));
+        if (w <= maxW) {
+          width = Math.min(w, st.natW - st.cropX);
+        } else {
+          width = st.natW - st.cropX;
+          scale = st.scaleX * (w / maxW);
+        }
+      } else {
+        const maxW = st.width + st.cropX;
+        if (w <= maxW) {
+          const diff = st.width - w;
+          cropX = st.cropX + diff;
+          width = w;
+          left = st.left + diff * st.scaleX;
+        } else {
+          cropX = 0;
+          width = st.width + st.cropX;
+          left = st.left - st.cropX * st.scaleX;
+          scale = st.scaleX * (w / maxW);
+        }
+      }
+    } else if (corner === 'mb' || corner === 'mt') {
+      let h = st.height * sy;
+      if (corner === 'mb') {
+        const maxH = st.height + (st.natH - (st.cropY + st.height));
+        if (h <= maxH) {
+          height = Math.min(h, st.natH - st.cropY);
+        } else {
+          height = st.natH - st.cropY;
+          scale = st.scaleY * (h / maxH);
+        }
+      } else {
+        const maxH = st.height + st.cropY;
+        if (h <= maxH) {
+          const diff = st.height - h;
+          cropY = st.cropY + diff;
+          height = h;
+          top = st.top + diff * st.scaleY;
+        } else {
+          cropY = 0;
+          height = st.height + st.cropY;
+          top = st.top - st.cropY * st.scaleY;
+          scale = st.scaleY * (h / maxH);
+        }
+      }
+    }
+
+    img.set({ cropX, cropY, width, height, left, top, scaleX: scale, scaleY: scale });
+    img.setCoords();
+    fc.requestRenderAll();
+  };
+
+  const endCrop = (e: fabric.IEvent) => {
+    const img = e.target as fabric.Image | undefined;
+    if (img) cropState.delete(img);
+  };
+
+  fc.on('before:transform', startCrop);
+  fc.on('object:scaling', duringCrop);
+  fc.on('object:scaled', endCrop);
+
  
 
 /* ── 2 ▸ Hover overlay only ─────────────────────────────── */
@@ -875,6 +991,9 @@ window.addEventListener('keydown', onKey)
       // tidy up crop‑tool listeners
       fc.off('mouse:dblclick', dblHandler);
       window.removeEventListener('keydown', keyCropHandler);
+      fc.off('before:transform', startCrop);
+      fc.off('object:scaling', duringCrop);
+      fc.off('object:scaled', endCrop);
       onReady(null)
       cropToolRef.current?.abort()
       fc.dispose()
