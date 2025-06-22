@@ -10,6 +10,7 @@ export interface CartItem {
   id: string;
   coverUrl: string;
   proofUrl: string;
+  proofs: Record<string, string>;
   title: string;
   sku: string;
   variant: string;
@@ -66,7 +67,14 @@ export default function CheckoutClient({
     if (!size) return;
     setCartItems((prev) =>
       prev.map((it) =>
-        it.id === id ? { ...it, variant, price: size.price } : it,
+        it.id === id
+          ? {
+              ...it,
+              variant,
+              price: size.price,
+              proofUrl: it.proofs[variant] || it.proofUrl,
+            }
+          : it,
       ),
     );
   };

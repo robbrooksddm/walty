@@ -8,13 +8,13 @@ export interface BasketItem {
   title: string;
   variant: string;
   image: string;
-  proof: string;
+  proofs: Record<string, string>;
   qty: number;
 }
 
 interface BasketContextValue {
   items: BasketItem[];
-  addItem: (item: { slug: string; title: string; variant: string; image: string; proof: string }) => void;
+  addItem: (item: { slug: string; title: string; variant: string; image: string; proofs: Record<string, string> }) => void;
   removeItem: (id: string) => void;
   updateQty: (id: string, qty: number) => void;
 }
@@ -38,9 +38,9 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
         giant: "gc-large",
       };
       return Array.isArray(parsed)
-        ? parsed.map((it: BasketItem) => ({
+        ? parsed.map((it: any) => ({
             ...it,
-            proof: it.proof || '',
+            proofs: it.proofs || (it.proof ? { [it.variant]: it.proof } : {}),
             variant: map[it.variant] ?? it.variant,
             id: `${it.slug}_${map[it.variant] ?? it.variant}`,
           }))
@@ -58,7 +58,15 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items]);
 
-  const addItem = (item: { slug: string; title: string; variant: string; image: string; proof: string }) => {
+  const addItem = (
+    item: {
+      slug: string;
+      title: string;
+      variant: string;
+      image: string;
+      proofs: Record<string, string>;
+    },
+  ) => {
     setItems((prev) => {
       const id = `${item.slug}_${item.variant}`
       const existing = prev.find((it) => it.id === id)

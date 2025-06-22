@@ -37,9 +37,11 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     if (!choice) return
 
     let proof = ''
+    let proofs: Record<string, string> = {}
     if (generateProofUrls) {
       try {
-        const urls = await generateProofUrls([choice])
+        const urls = await generateProofUrls(options.map(o => o.handle))
+        proofs = urls
         const url = urls[choice]
         if (typeof url === 'string' && url) {
           proof = url
@@ -54,7 +56,7 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     }
 
     if (!proof) return
-    addItem({ slug, title, variant: choice, image: coverUrl, proof })
+    addItem({ slug, title, variant: choice, image: coverUrl, proofs })
     onAdd?.(choice)
     onClose()
     setChoice(null)
