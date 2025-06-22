@@ -1,8 +1,7 @@
 'use client'
 
 import { Dialog, Transition } from '@headlessui/react'
-import { Fragment, useState } from 'react'
-import { Check } from 'lucide-react'
+import { Fragment } from 'react'
 import { useBasket } from '@/lib/useBasket'
 
 interface Props {
@@ -14,7 +13,6 @@ interface Props {
   products?: { title: string; variantHandle: string }[]
   onAdd?: (variant: string) => void
   generateProofUrl?: (variant: string) => Promise<string | null>
-  generateProofUrls?: () => Promise<string[]>
 }
 
 const DEFAULT_OPTIONS = [
@@ -24,8 +22,7 @@ const DEFAULT_OPTIONS = [
   { label: 'Giant Card', handle: 'gc-large' },
 ]
 
-export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd, generateProofUrl, generateProofUrls }: Props) {
-  const [choice, setChoice] = useState<string | null>(null)
+export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd, generateProofUrl }: Props) {
   const { addItem } = useBasket()
 
   const options =
@@ -34,24 +31,14 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     ).map(p => ({ label: p.title, handle: p.variantHandle })) ??
     DEFAULT_OPTIONS
 
-  const handleAdd = async () => {
-    if (!choice) return
-
-    let proofs: string[] = []
-
-    if (generateProofUrls) {
+  const handleSelect = async (variant: string) => {
+    let proof = ''
+    if (generateProofUrl) {
       try {
-        proofs = await generateProofUrls()
-      } catch (err) {
-        console.error('proof generation', err)
-        return
-      }
-    } else if (generateProofUrl) {
-      try {
-        const url = await generateProofUrl(choice)
-        if (typeof url === 'string' && url) proofs = [url]
+        const url = await generateProofUrl(variant)
+        if (typeof url === 'string' && url) proof = url
         else {
-          console.warn('Proof generation failed for', choice)
+          console.warn('Proof generation failed for', variant)
           return
         }
       } catch (err) {
@@ -60,11 +47,10 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
       }
     }
 
-    if (!proofs.length) return
-    addItem({ slug, title, variant: choice, image: coverUrl, proofs })
-    onAdd?.(choice)
+    if (!proof) return
+    addItem({ slug, title, variant, image: coverUrl, proof })
+    onAdd?.(variant)
     onClose()
-    setChoice(null)
   }
 
   return (
@@ -90,24 +76,16 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
               {options.map((opt) => (
                 <li key={opt.handle}>
                   <button
-                    onClick={() => setChoice(opt.handle)}
-                    className={`w-full flex items-center justify-between border rounded-md p-3 ${choice === opt.handle ? 'border-[--walty-orange] bg-[--walty-cream]' : 'border-gray-300'}`}
+                    onClick={() => handleSelect(opt.handle)}
+                    className="w-full flex items-center justify-between border rounded-md p-3 border-gray-300 hover:bg-[--walty-cream]"
                   >
                     <span>{opt.label}</span>
-                    {choice === opt.handle && <Check className="text-[--walty-orange]" size={20} />}
                   </button>
                 </li>
               ))}
             </ul>
-            <div className="flex justify-end gap-4 pt-2">
+            <div className="flex justify-end pt-2">
               <button onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2">Back to editor</button>
-              <button
-                onClick={handleAdd}
-                disabled={!choice}
-                className={`rounded-md px-4 py-2 font-semibold text-white ${choice ? 'bg-[--walty-orange] hover:bg-orange-600' : 'bg-gray-300 cursor-not-allowed'}`}
-              >
-                Add to basket
-              </button>
             </div>
           </Dialog.Panel>
         </Transition.Child>
