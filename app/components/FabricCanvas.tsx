@@ -634,43 +634,39 @@ useEffect(() => {
 
   /* --- Canva‑style side-handle cropping -------------------- */
   const cropState = new WeakMap<fabric.Image, {
-    corner : string
-    cropX  : number
-    cropY  : number
-    width  : number
-    height : number
-    left   : number
-    top    : number
-    scaleX : number
-    scaleY : number
-    natW   : number
-    natH   : number
-    origW  : number
-    origH  : number
+    corner      : string
+    startCropX  : number
+    startCropY  : number
+    startWidth  : number
+    startHeight : number
+    startLeft   : number
+    startTop    : number
+    startScaleX : number
+    startScaleY : number
+    natW        : number
+    natH        : number
   }>();
 
   const startCrop = (e: fabric.IEvent) => {
     const t = (e as any).transform?.target as fabric.Image | undefined;
     const c = (e as any).transform?.corner as string | undefined;
     if (!t || t.type !== 'image') return;
-    if (!c || !['ml','mr','mt','mb'].includes(c)) return;
+    if (!c || !['ml', 'mr', 'mt', 'mb'].includes(c)) return;
     const el = t.getElement() as HTMLImageElement;
     const w = t.width || el.naturalWidth || 1;
     const h = t.height || el.naturalHeight || 1;
     cropState.set(t, {
-      corner : c,
-      cropX  : t.cropX || 0,
-      cropY  : t.cropY || 0,
-      width  : w,
-      height : h,
-      left   : t.left || 0,
-      top    : t.top || 0,
-      scaleX : t.scaleX || 1,
-      scaleY : t.scaleY || 1,
-      natW   : el.naturalWidth  || w,
-      natH   : el.naturalHeight || h,
-      origW  : w,
-      origH  : h,
+      corner     : c,
+      startCropX : t.cropX || 0,
+      startCropY : t.cropY || 0,
+      startWidth : w,
+      startHeight: h,
+      startLeft  : t.left || 0,
+      startTop   : t.top || 0,
+      startScaleX: t.scaleX || 1,
+      startScaleY: t.scaleY || 1,
+      natW       : el.naturalWidth  || w,
+      natH       : el.naturalHeight || h,
     });
   };
 
@@ -684,72 +680,73 @@ useEffect(() => {
     const tr = (e as any).transform;
     const sx = tr?.scaleX ?? img.scaleX ?? 1;
     const sy = tr?.scaleY ?? img.scaleY ?? 1;
-    const rx = sx / (st.scaleX || 1);
-    const ry = sy / (st.scaleY || 1);
 
-    img.scaleX = st.scaleX;
-    img.scaleY = st.scaleY;
+    const newW = st.startWidth * sx;
+    const newH = st.startHeight * sy;
 
-    let { cropX, cropY, width, height, left, top } = st;
-    let scale = corner === 'mb' || corner === 'mt' ? st.scaleY : st.scaleX;
+    let cropX = st.startCropX;
+    let cropY = st.startCropY;
+    let width  = st.startWidth;
+    let height = st.startHeight;
+    let left   = st.startLeft;
+    let top    = st.startTop;
+    let scaleX = st.startScaleX;
+    let scaleY = st.startScaleY;
 
     if (corner === 'mr' || corner === 'ml') {
-      let w = st.origW * rx;
       if (corner === 'mr') {
-        const maxW = st.width + (st.natW - (st.cropX + st.width));
-        if (w <= maxW) {
-          width = Math.min(w, st.natW - st.cropX);
+        const maxW = st.startWidth + (st.natW - (st.startCropX + st.startWidth));
+        if (newW <= maxW) {
+          width = Math.min(newW, st.natW - st.startCropX);
         } else {
-          width = st.natW - st.cropX;
-          scale = st.scaleX * (w / maxW);
+          width  = st.natW - st.startCropX;
+          scaleX = st.startScaleX * (newW / maxW);
         }
       } else {
-        const maxW = st.width + st.cropX;
-        if (w <= maxW) {
-          const diff = st.width - w;
-          cropX = st.cropX + diff;
-          width = w;
-          left = st.left + diff * st.scaleX;
+        const maxW = st.startWidth + st.startCropX;
+        if (newW <= maxW) {
+          const diff = st.startWidth - newW;
+          cropX = st.startCropX + diff;
+          width = newW;
+          left  = st.startLeft + diff * st.startScaleX;
         } else {
           cropX = 0;
-          width = st.width + st.cropX;
-          left = st.left - st.cropX * st.scaleX;
-          scale = st.scaleX * (w / maxW);
+          width = st.startWidth + st.startCropX;
+          left  = st.startLeft - st.startCropX * st.startScaleX;
+          scaleX = st.startScaleX * (newW / maxW);
         }
       }
     } else if (corner === 'mb' || corner === 'mt') {
-      let h = st.origH * ry;
       if (corner === 'mb') {
-        const maxH = st.height + (st.natH - (st.cropY + st.height));
-        if (h <= maxH) {
-          height = Math.min(h, st.natH - st.cropY);
+        const maxH = st.startHeight + (st.natH - (st.startCropY + st.startHeight));
+        if (newH <= maxH) {
+          height = Math.min(newH, st.natH - st.startCropY);
         } else {
-          height = st.natH - st.cropY;
-          scale = st.scaleY * (h / maxH);
+          height = st.natH - st.startCropY;
+          scaleY = st.startScaleY * (newH / maxH);
         }
       } else {
-        const maxH = st.height + st.cropY;
-        if (h <= maxH) {
-          const diff = st.height - h;
-          cropY = st.cropY + diff;
-          height = h;
-          top = st.top + diff * st.scaleY;
+        const maxH = st.startHeight + st.startCropY;
+        if (newH <= maxH) {
+          const diff = st.startHeight - newH;
+          cropY = st.startCropY + diff;
+          height = newH;
+          top = st.startTop + diff * st.startScaleY;
         } else {
           cropY = 0;
-          height = st.height + st.cropY;
-          top = st.top - st.cropY * st.scaleY;
-          scale = st.scaleY * (h / maxH);
+          height = st.startHeight + st.startCropY;
+          top = st.startTop - st.startCropY * st.startScaleY;
+          scaleY = st.startScaleY * (newH / maxH);
         }
       }
     }
 
-    img.set({ cropX, cropY, width, height, left, top, scaleX: scale, scaleY: scale });
+    img.set({ cropX, cropY, width, height, left, top, scaleX, scaleY });
     img.setCoords();
     if (tr) {
-      tr.scaleX = scale;
-      tr.scaleY = scale;
+      tr.scaleX = scaleX;
+      tr.scaleY = scaleY;
     }
-    cropState.set(img, { ...st, cropX, cropY, width, height, left, top, scaleX: scale, scaleY: scale });
     fc.requestRenderAll();
   };
 
