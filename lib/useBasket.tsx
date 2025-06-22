@@ -8,13 +8,13 @@ export interface BasketItem {
   title: string;
   variant: string;
   image: string;
-  proofUrls: string[];
+  proofs: Record<string, string>;
   qty: number;
 }
 
 interface BasketContextValue {
   items: BasketItem[];
-  addItem: (item: { slug: string; title: string; variant: string; image: string; proofUrls: string[] }) => void;
+  addItem: (item: { slug: string; title: string; variant: string; image: string; proofs: Record<string, string> }) => void;
   removeItem: (id: string) => void;
   updateQty: (id: string, qty: number) => void;
 }
@@ -40,13 +40,16 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
       return Array.isArray(parsed)
         ? parsed.map((it: any) => ({
             ...it,
-            proofUrls: Array.isArray(it.proofUrls)
-              ? it.proofUrls
-              : Array.isArray(it.proofs)
-              ? it.proofs
-              : it.proof
-              ? [it.proof]
-              : [],
+            proofs:
+              typeof it.proofs === "object" && it.proofs !== null
+                ? it.proofs
+                : Array.isArray(it.proofUrls)
+                ? Object.fromEntries(
+                    it.proofUrls.map((url: string, i: number) => [String(i), url])
+                  )
+                : typeof it.proof === "string"
+                ? { [it.variant]: it.proof }
+                : {},
             variant: map[it.variant] ?? it.variant,
             id: `${it.slug}_${map[it.variant] ?? it.variant}`,
           }))
@@ -64,7 +67,7 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items]);
 
-  const addItem = (item: { slug: string; title: string; variant: string; image: string; proofUrls: string[] }) => {
+  const addItem = (item: { slug: string; title: string; variant: string; image: string; proofs: Record<string, string> }) => {
     setItems((prev) => {
       const id = `${item.slug}_${item.variant}`
       const existing = prev.find((it) => it.id === id)

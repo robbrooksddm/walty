@@ -534,11 +534,11 @@ const generateProofURL = async (variant: string): Promise<string | null> => {
 }
 
 /* helper – generate proofs for all products and return their CDN URLs */
-const generateProofURLs = async (): Promise<string[]> => {
-  const urls: string[] = []
+const generateProofURLs = async (): Promise<Record<string, string>> => {
+  const urls: Record<string, string> = {}
   for (const p of products) {
     const url = await generateProofURL(p.variantHandle)
-    if (url) urls.push(url)
+    if (url) urls[p.variantHandle] = url
   }
   return urls
 }

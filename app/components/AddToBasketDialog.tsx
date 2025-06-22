@@ -13,7 +13,7 @@ interface Props {
   coverUrl: string
   products?: { title: string; variantHandle: string }[]
   onAdd?: (variant: string) => void
-  generateProofUrls?: () => Promise<string[]>
+  generateProofUrls?: () => Promise<Record<string, string>>
 }
 
 const DEFAULT_OPTIONS = [
@@ -40,11 +40,11 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
   const handleAdd = async () => {
     if (!choice) return
 
-    let proofs: string[] = []
+    let proofs: Record<string, string> = {}
     if (generateProofUrls) {
       try {
         const urls = await generateProofUrls()
-        if (Array.isArray(urls) && urls.length) proofs = urls
+        if (urls && Object.keys(urls).length) proofs = urls
         else {
           console.warn('Proof generation failed')
           return
@@ -55,8 +55,8 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
       }
     }
 
-    if (!proofs.length) return
-    addItem({ slug, title, variant: choice, image: coverUrl, proofUrls: proofs })
+    if (!Object.keys(proofs).length) return
+    addItem({ slug, title, variant: choice, image: coverUrl, proofs })
     onAdd?.(choice)
     onClose()
     setChoice(null)
