@@ -503,12 +503,28 @@ export class CropTool {
       .on('scaling', (e: fabric.IEvent) => {
         // keep the pre‑determined opposite edges fixed
         const f = this.frame!;
+        const i = this.img!;
         const w = f.width!  * f.scaleX!;
         const h = f.height! * f.scaleY!;
         if (anchorEdge.left   !== undefined) f.left = anchorEdge.left;
         if (anchorEdge.top    !== undefined) f.top  = anchorEdge.top;
         if (anchorEdge.right  !== undefined) f.left = anchorEdge.right  - w;
         if (anchorEdge.bottom !== undefined) f.top  = anchorEdge.bottom - h;
+
+        // if frame grows beyond bitmap bounds, enlarge bitmap uniformly
+        const needed = this.coverScale();
+        if (needed > (i.scaleX ?? 1)) {
+          i.scaleX = i.scaleY = needed;
+          const newW = i.getScaledWidth();
+          const newH = i.getScaledHeight();
+          if (anchorEdge.left   !== undefined) i.left = anchorEdge.left;
+          if (anchorEdge.top    !== undefined) i.top  = anchorEdge.top;
+          if (anchorEdge.right  !== undefined) i.left = anchorEdge.right  - newW;
+          if (anchorEdge.bottom !== undefined) i.top  = anchorEdge.bottom - newH;
+          this.clamp(true, false);       // update limits without repositioning
+          i.setCoords();
+        }
+
         this.clampFrame();            // keep window within bitmap limits
         this.frame!.setCoords();
         this.updateMasks();
@@ -735,6 +751,7 @@ export class CropTool {
   private clampFrame = () => {
     if (!this.img || !this.frame) return
     const { img, frame } = this
+
     const iw = img.getScaledWidth()
     const ih = img.getScaledHeight()
 
@@ -744,17 +761,17 @@ export class CropTool {
     if (frame.left! < minL) frame.left = minL
     if (frame.top!  < minT) frame.top  = minT
 
-    const fw = frame.width!*frame.scaleX!, fh = frame.height!*frame.scaleY!
-    if (frame.left! + fw > maxR)
-      frame.scaleX = (maxR - frame.left!) / frame.width!
-    if (frame.top! + fh > maxB)
-      frame.scaleY = (maxB - frame.top!) / frame.height!
+    const fw = frame.width! * frame.scaleX!
+    const fh = frame.height! * frame.scaleY!
+
+    if (frame.left! + fw > maxR) frame.left = maxR - fw
+    if (frame.top!  + fh > maxB) frame.top  = maxB - fh
 
     // Update bitmap's minimum scale so it can never shrink smaller
-    const minSX = frame.width! * frame.scaleX! / img.width!
-    const minSY = frame.height! * frame.scaleY! / img.height!
+    const minSX = fw / img.width!
+    const minSY = fh / img.height!
     img.minScaleLimit = Math.max(minSX, minSY)
-    
+
     frame.setCoords()
   }
 
