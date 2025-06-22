@@ -56,9 +56,7 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     }
 
     if (!proofs[choice]) {
-      alert('Unable to create your proof. Please try again.')
-      setLoading(false)
-      return
+      console.warn('Proof not generated for', choice)
     }
 
     const size = CARD_SIZES.find((s) => s.id === choice)
