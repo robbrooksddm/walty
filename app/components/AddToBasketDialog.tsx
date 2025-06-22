@@ -13,7 +13,7 @@ interface Props {
   coverUrl: string
   products?: { title: string; variantHandle: string }[]
   onAdd?: (variant: string) => void
-  generateProofUrl?: (variant: string) => Promise<string | null>
+  generateProofUrls?: (variants: string[]) => Promise<Record<string, string>>
 }
 
 const DEFAULT_OPTIONS = [
@@ -23,7 +23,7 @@ const DEFAULT_OPTIONS = [
   { label: 'Giant Card', handle: 'gc-large' },
 ]
 
-export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd, generateProofUrl }: Props) {
+export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd, generateProofUrls }: Props) {
   const [choice, setChoice] = useState<string | null>(null)
   const { addItem } = useBasket()
 
@@ -37,9 +37,12 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     if (!choice) return
 
     let proof = ''
-    if (generateProofUrl) {
+    let proofs: Record<string, string> = {}
+    if (generateProofUrls) {
       try {
-        const url = await generateProofUrl(choice)
+        const urls = await generateProofUrls(options.map(o => o.handle))
+        proofs = urls
+        const url = urls[choice]
         if (typeof url === 'string' && url) {
           proof = url
         } else {
@@ -53,7 +56,7 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     }
 
     if (!proof) return
-    addItem({ slug, title, variant: choice, image: coverUrl, proof })
+    addItem({ slug, title, variant: choice, image: coverUrl, proofs })
     onAdd?.(choice)
     onClose()
     setChoice(null)

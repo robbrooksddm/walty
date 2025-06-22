@@ -501,7 +501,7 @@ const fetchProofBlob = async (
     const res = await fetch('/api/proof', {
       method : 'POST',
       headers: { 'content-type': 'application/json' },
-      body   : JSON.stringify({ pages, pageImages, sku, id: templateId, filename }),
+      body   : JSON.stringify({ pages, pageImages, sku, id: templateId ?? slug, filename }),
     })
     if (res.ok) {
       return await res.blob()
@@ -513,15 +513,17 @@ const fetchProofBlob = async (
 }
 
 /* helper – generate proof, upload to Sanity and return its CDN URL */
-const generateProofURL = async (variant: string): Promise<string | null> => {
-  const showGuides = products.find(p => p.variantHandle === variant)?.showProofSafeArea ?? false
+const generateProofURL = async (variantHandle: string): Promise<string | null> => {
+  const product = products.find(p => p.variantHandle === variantHandle)
+  const sku = product?.slug ?? variantHandle
+  const showGuides = product?.showProofSafeArea ?? false
   const { pages, pageImages } = collectProofData(showGuides)
-  const blob = await fetchProofBlob(variant, `${variant}.jpg`, pages, pageImages)
+  const blob = await fetchProofBlob(sku, `${variantHandle}.jpg`, pages, pageImages)
   if (!blob) return null
 
   try {
     const form = new FormData()
-    form.append('file', new File([blob], `${variant}.jpg`, { type: blob.type }))
+    form.append('file', new File([blob], `${variantHandle}.jpg`, { type: blob.type }))
     const res = await fetch('/api/upload', { method: 'POST', body: form })
     if (res.ok) {
       const { url } = await res.json()
@@ -531,6 +533,20 @@ const generateProofURL = async (variant: string): Promise<string | null> => {
     console.error('proof upload', err)
   }
   return null
+}
+
+const generateProofURLs = async (
+  handles: string[],
+): Promise<Record<string, string>> => {
+  const entries = await Promise.all(
+    handles.map(async h => [h, await generateProofURL(h)] as const),
+  )
+  const urls: Record<string, string> = {}
+  for (const [h, url] of entries) {
+    if (url) urls[h] = url
+  }
+  if (Object.keys(urls).length === 0) throw new Error('proof generation failed')
+  return urls
 }
 
 /* download proofs for all products */
@@ -758,7 +774,7 @@ const handleProofAll = async () => {
         title={title}
         coverUrl={coverImage || ''}
         products={products}
-        generateProofUrl={generateProofURL}
+        generateProofUrls={generateProofURLs}
       />
     </div>
   )
