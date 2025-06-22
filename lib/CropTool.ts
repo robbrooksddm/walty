@@ -195,12 +195,43 @@ export class CropTool {
         render            : (ctx, left, top) => drawL(ctx, left, top, rot),
       });
 
-    // keep only the 4 corner controls; no sides, no rotation
+    /** side control factory */
+    const mkSide = (x: number, y: number, axis: 'x' | 'y') =>
+      new fabric.Control({
+        x, y,
+        offsetX: 0, offsetY: 0,
+        sizeX: 12 / this.SCALE,
+        sizeY: 12 / this.SCALE,
+        cursorStyleHandler: (fabric as any).controlsUtils.scaleCursorStyleHandler,
+        actionHandler     : axis === 'x'
+          ? (fabric as any).controlsUtils.scalingX
+          : (fabric as any).controlsUtils.scalingY,
+        actionName        : 'scale',
+        render            : (ctx, left, top) => {
+          ctx.save();
+          ctx.translate(left, top);
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeStyle = '#00000055';
+          ctx.lineWidth = 0.5 / this.SCALE;
+          const sz = 6 / this.SCALE;
+          ctx.beginPath();
+          ctx.rect(-sz / 2, -sz / 2, sz, sz);
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        },
+      });
+
+    // add corner + side controls (like Canva)
     (this.frame as any).controls = {
       tl: mkCorner(-0.5, -0.5,  0),                // top‑left
       tr: mkCorner( 0.5, -0.5,  Math.PI / 2),      // top‑right
       br: mkCorner( 0.5,  0.5,  Math.PI),          // bottom‑right
       bl: mkCorner(-0.5,  0.5, -Math.PI / 2),      // bottom‑left
+      ml: mkSide(-0.5, 0, 'x'),
+      mr: mkSide( 0.5, 0, 'x'),
+      mt: mkSide(0, -0.5, 'y'),
+      mb: mkSide(0,  0.5, 'y'),
     } as Record<string, fabric.Control>;
 
     /* ③ add both to canvas and keep z‑order intuitive              */
@@ -247,7 +278,7 @@ export class CropTool {
       // If the user begins scaling the crop frame, remember the
       // *opposite* edges so they remain fixed during the drag.
       if (t === this.frame && (e as any).transform?.action === 'scale') {
-        const c = (e as any).transform.corner;             // 'tl', 'tr', 'br', 'bl'
+        const c = (e as any).transform.corner;             // 'tl', 'tr', 'br', 'bl', 'ml', 'mr', 'mt', 'mb'
         const f = this.frame!;
         const left   = f.left!;
         const top    = f.top!;
@@ -271,6 +302,18 @@ export class CropTool {
           case 'bl':                   // dragging bottom‑left   → lock top & right
             anchorEdge.top   = top;
             anchorEdge.right = right;
+            break;
+          case 'ml':                   // dragging middle‑left   → lock right
+            anchorEdge.right = right;
+            break;
+          case 'mr':                   // dragging middle‑right  → lock left
+            anchorEdge.left = left;
+            break;
+          case 'mt':                   // dragging middle‑top    → lock bottom
+            anchorEdge.bottom = bottom;
+            break;
+          case 'mb':                   // dragging middle‑bottom → lock top
+            anchorEdge.top = top;
             break;
         }
         // 🔒 Freeze the photo's position so scaling the frame can't drag it.
@@ -303,6 +346,18 @@ export class CropTool {
           case 'bl':
             imgEdge.top   = top;
             imgEdge.right = right;
+            break;
+          case 'ml':
+            imgEdge.right = right;
+            break;
+          case 'mr':
+            imgEdge.left = left;
+            break;
+          case 'mt':
+            imgEdge.bottom = bottom;
+            break;
+          case 'mb':
+            imgEdge.top = top;
             break;
         }
       }
@@ -511,6 +566,13 @@ export class CropTool {
         if (anchorEdge.bottom !== undefined) f.top  = anchorEdge.bottom - h;
         this.clampFrame();            // keep window within bitmap limits
         this.frame!.setCoords();
+        if (this.img) {
+          const need = this.coverScale();
+          if ((this.img.scaleX ?? 1) < need) {
+            this.img.scaleX = this.img.scaleY = need;
+            this.clamp(true);
+          }
+        }
         this.updateMasks();
         this.frameScaling = true;       // flag ON while corner is dragged
         // no extra requestRenderAll() – avoids double clear of contextTop    // flag ON while corner is being dragged
@@ -523,6 +585,13 @@ export class CropTool {
         }
         this.clampFrame();            // enforce bounds once scale is done
         this.frame!.setCoords();
+        if (this.img) {
+          const need = this.coverScale();
+          if ((this.img.scaleX ?? 1) < need) {
+            this.img.scaleX = this.img.scaleY = need;
+          }
+          this.clamp(true);
+        }
         // restore both handle sets
         this.frame!.hasControls = true;
         if (this.img) this.img.hasControls = true;
