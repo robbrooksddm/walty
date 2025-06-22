@@ -645,6 +645,8 @@ useEffect(() => {
     scaleY : number
     natW   : number
     natH   : number
+    origW  : number
+    origH  : number
   }>();
 
   const startCrop = (e: fabric.IEvent) => {
@@ -653,18 +655,22 @@ useEffect(() => {
     if (!t || t.type !== 'image') return;
     if (!c || !['ml','mr','mt','mb'].includes(c)) return;
     const el = t.getElement() as HTMLImageElement;
+    const w = t.width || el.naturalWidth || 1;
+    const h = t.height || el.naturalHeight || 1;
     cropState.set(t, {
       corner : c,
       cropX  : t.cropX || 0,
       cropY  : t.cropY || 0,
-      width  : t.width || el.naturalWidth || 1,
-      height : t.height || el.naturalHeight || 1,
+      width  : w,
+      height : h,
       left   : t.left || 0,
       top    : t.top || 0,
       scaleX : t.scaleX || 1,
       scaleY : t.scaleY || 1,
-      natW   : el.naturalWidth  || t.width || 1,
-      natH   : el.naturalHeight || t.height || 1,
+      natW   : el.naturalWidth  || w,
+      natH   : el.naturalHeight || h,
+      origW  : w,
+      origH  : h,
     });
   };
 
@@ -675,17 +681,20 @@ useEffect(() => {
     if (!st) return;
 
     const corner = st.corner;
-    const sx = img.scaleX || 1;
-    const sy = img.scaleY || 1;
+    const tr = (e as any).transform;
+    const sx = tr?.scaleX ?? img.scaleX ?? 1;
+    const sy = tr?.scaleY ?? img.scaleY ?? 1;
+    const rx = sx / (st.scaleX || 1);
+    const ry = sy / (st.scaleY || 1);
 
     img.scaleX = st.scaleX;
     img.scaleY = st.scaleY;
 
     let { cropX, cropY, width, height, left, top } = st;
-    let scale = st.scaleX;
+    let scale = corner === 'mb' || corner === 'mt' ? st.scaleY : st.scaleX;
 
     if (corner === 'mr' || corner === 'ml') {
-      let w = st.width * sx;
+      let w = st.origW * rx;
       if (corner === 'mr') {
         const maxW = st.width + (st.natW - (st.cropX + st.width));
         if (w <= maxW) {
@@ -709,7 +718,7 @@ useEffect(() => {
         }
       }
     } else if (corner === 'mb' || corner === 'mt') {
-      let h = st.height * sy;
+      let h = st.origH * ry;
       if (corner === 'mb') {
         const maxH = st.height + (st.natH - (st.cropY + st.height));
         if (h <= maxH) {
@@ -736,7 +745,6 @@ useEffect(() => {
 
     img.set({ cropX, cropY, width, height, left, top, scaleX: scale, scaleY: scale });
     img.setCoords();
-    const tr = (e as any).transform;
     if (tr) {
       tr.scaleX = scale;
       tr.scaleY = scale;
