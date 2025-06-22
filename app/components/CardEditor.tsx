@@ -536,9 +536,14 @@ const generateProofURL = async (variant: string): Promise<string | null> => {
 /* helper – generate proofs for all products and return their CDN URLs */
 const generateProofURLs = async (): Promise<Record<string, string>> => {
   const urls: Record<string, string> = {}
-  for (const p of products) {
-    const url = await generateProofURL(p.variantHandle)
-    if (url) urls[p.variantHandle] = url
+  const handles =
+    products.length > 0
+      ? products.map((p) => p.variantHandle)
+      : ['digital', 'gc-mini', 'gc-classic', 'gc-large']
+
+  for (const h of handles) {
+    const url = await generateProofURL(h)
+    if (url) urls[h] = url
   }
   return urls
 }

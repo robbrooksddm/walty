@@ -25,6 +25,7 @@ const DEFAULT_OPTIONS = [
 
 export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd, generateProofUrls }: Props) {
   const [choice, setChoice] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
   const { addItem } = useBasket()
 
   const options =
@@ -40,26 +41,34 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
   const handleAdd = async () => {
     if (!choice) return
 
+    setLoading(true)
     let proofs: Record<string, string> = {}
     if (generateProofUrls) {
       try {
         const urls = await generateProofUrls()
-        if (urls && Object.keys(urls).length) proofs = urls
-        else {
+        if (urls && Object.keys(urls).length) {
+          proofs = urls
+        } else {
           console.warn('Proof generation failed')
+          setLoading(false)
           return
         }
       } catch (err) {
         console.error('proof generation', err)
+        setLoading(false)
         return
       }
     }
 
-    if (!Object.keys(proofs).length) return
+    if (!Object.keys(proofs).length) {
+      setLoading(false)
+      return
+    }
     addItem({ slug, title, variant: choice, image: coverUrl, proofs })
     onAdd?.(choice)
     onClose()
     setChoice(null)
+    setLoading(false)
   }
 
   return (
@@ -86,7 +95,8 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
                 <li key={opt.handle}>
                   <button
                     onClick={() => handleSelect(opt.handle)}
-                    className={`w-full flex items-center justify-between border rounded-md p-3 ${choice === opt.handle ? 'border-[--walty-orange] bg-[--walty-cream]' : 'border-gray-300 hover:bg-[--walty-cream]'}`}
+                    disabled={loading}
+                    className={`w-full flex items-center justify-between border rounded-md p-3 ${choice === opt.handle ? 'border-[--walty-orange] bg-[--walty-cream]' : 'border-gray-300 hover:bg-[--walty-cream]'} ${loading ? 'opacity-50 pointer-events-none' : ''}`}
                   >
                     <span>{opt.label}</span>
                     {choice === opt.handle && <Check className="text-[--walty-orange]" size={20} />}
@@ -98,10 +108,14 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
               <button onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2">Back to editor</button>
               <button
                 onClick={handleAdd}
-                disabled={!choice}
-                className={`rounded-md px-4 py-2 font-semibold text-white ${choice ? 'bg-[--walty-orange] hover:bg-orange-600' : 'bg-gray-300 cursor-not-allowed'}`}
+                disabled={!choice || loading}
+                className={`rounded-md px-4 py-2 font-semibold text-white ${
+                  choice && !loading
+                    ? 'bg-[--walty-orange] hover:bg-orange-600'
+                    : 'bg-gray-300 cursor-not-allowed'
+                }`}
               >
-                Add to basket
+                {loading ? 'Adding…' : 'Add to basket'}
               </button>
             </div>
           </Dialog.Panel>
