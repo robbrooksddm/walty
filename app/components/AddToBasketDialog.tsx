@@ -30,10 +30,13 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
   const { addItem } = useBasket()
 
   const options =
-    products?.filter((p): p is { title: string; variantHandle: string } =>
-      Boolean(p && p.title && p.variantHandle),
-    ).map(p => ({ label: p.title, handle: p.variantHandle })) ??
-    DEFAULT_OPTIONS
+    Array.isArray(products) && products.length > 0
+      ? products
+          .filter((p): p is { title: string; variantHandle: string } =>
+            Boolean(p && p.title && p.variantHandle),
+          )
+          .map((p) => ({ label: p.title, handle: p.variantHandle }))
+      : DEFAULT_OPTIONS
 
   const handleSelect = (variant: string) => {
     setChoice(variant)
