@@ -743,10 +743,6 @@ useEffect(() => {
 
     img.set({ cropX, cropY, width, height, left, top, scaleX, scaleY });
     img.setCoords();
-    if (tr) {
-      tr.scaleX = scaleX;
-      tr.scaleY = scaleY;
-    }
     fc.requestRenderAll();
   };
 
