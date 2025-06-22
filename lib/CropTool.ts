@@ -195,12 +195,30 @@ export class CropTool {
         render            : (ctx, left, top) => drawL(ctx, left, top, rot),
       });
 
-    // keep only the 4 corner controls; no sides, no rotation
+    /** side control factory for cropping behaviour */
+    const mkSide = (x: number, y: number) =>
+      new fabric.Control({
+        x, y,
+        offsetX: 0, offsetY: 0,
+        sizeX: 10 / this.SCALE,
+        sizeY: 10 / this.SCALE,
+        cursorStyleHandler: (fabric as any).controlsUtils.scaleCursorStyleHandler,
+        actionHandler     : y === 0
+          ? (fabric as any).controlsUtils.scalingXOrSkewingY
+          : (fabric as any).controlsUtils.scalingYOrSkewingX,
+        actionName        : 'scale',
+      });
+
+    // keep 4 corner controls and 4 side handles
     (this.frame as any).controls = {
       tl: mkCorner(-0.5, -0.5,  0),                // top‑left
       tr: mkCorner( 0.5, -0.5,  Math.PI / 2),      // top‑right
       br: mkCorner( 0.5,  0.5,  Math.PI),          // bottom‑right
       bl: mkCorner(-0.5,  0.5, -Math.PI / 2),      // bottom‑left
+      ml: mkSide(-0.5, 0),                         // middle-left
+      mr: mkSide( 0.5, 0),                         // middle-right
+      mt: mkSide(0, -0.5),                         // middle-top
+      mb: mkSide(0,  0.5),                         // middle-bottom
     } as Record<string, fabric.Control>;
 
     /* ③ add both to canvas and keep z‑order intuitive              */
@@ -247,7 +265,7 @@ export class CropTool {
       // If the user begins scaling the crop frame, remember the
       // *opposite* edges so they remain fixed during the drag.
       if (t === this.frame && (e as any).transform?.action === 'scale') {
-        const c = (e as any).transform.corner;             // 'tl', 'tr', 'br', 'bl'
+        const c = (e as any).transform.corner;             // 'tl', 'tr', 'br', 'bl', 'ml', ...
         const f = this.frame!;
         const left   = f.left!;
         const top    = f.top!;
@@ -271,6 +289,18 @@ export class CropTool {
           case 'bl':                   // dragging bottom‑left   → lock top & right
             anchorEdge.top   = top;
             anchorEdge.right = right;
+            break;
+          case 'ml':                   // dragging middle-left   → lock right edge
+            anchorEdge.right = right;
+            break;
+          case 'mr':                   // dragging middle-right  → lock left edge
+            anchorEdge.left = left;
+            break;
+          case 'mt':                   // dragging middle-top    → lock bottom edge
+            anchorEdge.bottom = bottom;
+            break;
+          case 'mb':                   // dragging middle-bottom → lock top edge
+            anchorEdge.top = top;
             break;
         }
         // 🔒 Freeze the photo's position so scaling the frame can't drag it.
@@ -509,11 +539,14 @@ export class CropTool {
         if (anchorEdge.top    !== undefined) f.top  = anchorEdge.top;
         if (anchorEdge.right  !== undefined) f.left = anchorEdge.right  - w;
         if (anchorEdge.bottom !== undefined) f.top  = anchorEdge.bottom - h;
+
+        // allow the bitmap to enlarge as the frame expands
+        this.clamp(true);
         this.clampFrame();            // keep window within bitmap limits
         this.frame!.setCoords();
         this.updateMasks();
-        this.frameScaling = true;       // flag ON while corner is dragged
-        // no extra requestRenderAll() – avoids double clear of contextTop    // flag ON while corner is being dragged
+        this.frameScaling = true;       // flag ON while handle is dragged
+        // no extra requestRenderAll() – avoids double clear of contextTop
       })
       .on('scaled', () => {
         // 🔓 Re‑enable normal movement on the bitmap
@@ -521,6 +554,7 @@ export class CropTool {
           this.img.lockMovementX = false;
           this.img.lockMovementY = false;
         }
+        this.clamp(true);             // final ensure bitmap covers frame
         this.clampFrame();            // enforce bounds once scale is done
         this.frame!.setCoords();
         // restore both handle sets
@@ -746,9 +780,9 @@ export class CropTool {
 
     const fw = frame.width!*frame.scaleX!, fh = frame.height!*frame.scaleY!
     if (frame.left! + fw > maxR)
-      frame.scaleX = (maxR - frame.left!) / frame.width!
+      frame.left = maxR - fw
     if (frame.top! + fh > maxB)
-      frame.scaleY = (maxB - frame.top!) / frame.height!
+      frame.top = maxB - fh
 
     // Update bitmap's minimum scale so it can never shrink smaller
     const minSX = frame.width! * frame.scaleX! / img.width!
