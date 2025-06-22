@@ -645,6 +645,8 @@ useEffect(() => {
     startScaleY : number
     natW        : number
     natH        : number
+    startX      : number
+    startY      : number
   }>();
 
   const startCrop = (e: fabric.IEvent) => {
@@ -655,6 +657,7 @@ useEffect(() => {
     const el = t.getElement() as HTMLImageElement;
     const w = t.width || el.naturalWidth || 1;
     const h = t.height || el.naturalHeight || 1;
+    const ptr = fc.getPointer((e as any).e);
     cropState.set(t, {
       corner     : c,
       startCropX : t.cropX || 0,
@@ -667,6 +670,8 @@ useEffect(() => {
       startScaleY: t.scaleY || 1,
       natW       : el.naturalWidth  || w,
       natH       : el.naturalHeight || h,
+      startX     : ptr.x,
+      startY     : ptr.y,
     });
   };
 
@@ -677,12 +682,19 @@ useEffect(() => {
     if (!st) return;
 
     const corner = st.corner;
-    const tr = (e as any).transform;
-    const sx = tr?.scaleX ?? img.scaleX ?? 1;
-    const sy = tr?.scaleY ?? img.scaleY ?? 1;
-
-    const newW = st.startWidth * sx;
-    const newH = st.startHeight * sy;
+    const ptr    = fc.getPointer((e as any).e);
+    const dx = ptr.x - st.startX;
+    const dy = ptr.y - st.startY;
+    const newW = corner === 'mr'
+      ? st.startWidth + dx / st.startScaleX
+      : corner === 'ml'
+        ? st.startWidth - dx / st.startScaleX
+        : st.startWidth;
+    const newH = corner === 'mb'
+      ? st.startHeight + dy / st.startScaleY
+      : corner === 'mt'
+        ? st.startHeight - dy / st.startScaleY
+        : st.startHeight;
 
     let cropX = st.startCropX;
     let cropY = st.startCropY;
