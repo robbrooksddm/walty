@@ -653,7 +653,10 @@ useEffect(() => {
     const t = (e as any).transform?.target as fabric.Image | undefined;
     const c = (e as any).transform?.corner as string | undefined;
     if (!t || t.type !== 'image') return;
-    if (!c || !['ml', 'mr', 'mt', 'mb'].includes(c)) return;
+    if (!c || !['ml', 'mr', 'mt', 'mb'].includes(c)) {
+      cropState.delete(t);
+      return;
+    }
     const el = t.getElement() as HTMLImageElement;
     const w = t.width || el.naturalWidth || 1;
     const h = t.height || el.naturalHeight || 1;
