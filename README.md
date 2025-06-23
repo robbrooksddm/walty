@@ -22,6 +22,7 @@ Create a `.env` file and include your Google Fonts API key:
 
 ```
 GOOGLE_FONTS_API_KEY=your_key_here
+PRODIGI_API_KEY=your_prodigi_key
 ```
 
 This is required for the font picker to load the full list of Google Fonts.
@@ -47,4 +48,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 ⚠️  **Image crop is partially implemented – stable build, but crop needs fixes.**
 
 ## CMS-driven preview
-Templates store a `previewSpec` and linked product variants. The editor reads this data so every template opens with the correct canvas size and safe-area guides.
+Products now store a `previewSpec` and page settings. Templates link to these products so the editor opens with the correct canvas size and safe‑area guides.

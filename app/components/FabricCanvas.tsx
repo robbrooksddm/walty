@@ -45,6 +45,8 @@ export interface PreviewSpec {
   previewWidthPx: number
   previewHeightPx: number
   maxMobileWidthPx?: number
+  safeInsetXPx?: number
+  safeInsetYPx?: number
 }
 
 let currentSpec: PrintSpec = {
@@ -57,6 +59,8 @@ let currentSpec: PrintSpec = {
 let currentPreview: PreviewSpec = {
   previewWidthPx: 420,
   previewHeightPx: 580,
+  safeInsetXPx: 0,
+  safeInsetYPx: 0,
 }
 
 let safeInsetXIn = 0
@@ -87,6 +91,13 @@ export const setPrintSpec = (spec: PrintSpec) => {
 export const setSafeInset = (xIn: number, yIn: number) => {
   safeInsetXIn = xIn
   safeInsetYIn = yIn
+  recompute()
+}
+
+export const setSafeInsetPx = (xPx: number, yPx: number) => {
+  const scale = SCALE || (PREVIEW_W / PAGE_W)
+  safeInsetXIn = xPx / (currentSpec.dpi * scale)
+  safeInsetYIn = yPx / (currentSpec.dpi * scale)
   recompute()
 }
 

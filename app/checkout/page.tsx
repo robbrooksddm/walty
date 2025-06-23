@@ -1,27 +1,22 @@
-import CheckoutClient from './CheckoutClient';
+'use client'
+import CheckoutClient from './CheckoutClient'
+import { useBasket } from '@/lib/useBasket'
+import { CARD_SIZES } from './sizeOptions'
 
 export default function CheckoutPage() {
-  // Seed dummy cart items and addresses
-  const items = [
-    {
-      id: '1',
-      coverUrl: '/templates/daisy/daisy-front-cover.jpg',
-      title: 'Birthday Card',
-      sku: 'BDY-001',
-      variant: 'classic',
-      qty: 1,
-      price: 3.5,
-    },
-    {
-      id: '2',
-      coverUrl: '/templates/daisy/daisy-inner-left.jpg',
-      title: 'Thank You Card',
-      sku: 'THX-002',
-      variant: 'mini',
-      qty: 2,
-      price: 2.5,
-    },
-  ];
+  const { items } = useBasket()
+
+  const cartItems = items.map((it) => ({
+    id: it.id,
+    coverUrl: it.image,
+    proofUrl: it.proofs[it.variant] ?? '',
+    proofs: it.proofs,
+    title: it.title,
+    sku: it.slug,
+    variant: it.variant,
+    qty: it.qty,
+    price: CARD_SIZES.find((s) => s.id === it.variant)?.price ?? 0,
+  }))
 
   const addresses = [
     {
@@ -42,5 +37,5 @@ export default function CheckoutPage() {
     },
   ];
 
-  return <CheckoutClient initialItems={items} initialAddresses={addresses} />;
+  return <CheckoutClient initialItems={cartItems} initialAddresses={addresses} />;
 }
