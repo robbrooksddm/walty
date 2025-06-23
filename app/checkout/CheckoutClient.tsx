@@ -9,6 +9,8 @@ import { CARD_SIZES } from './sizeOptions';
 export interface CartItem {
   id: string;
   coverUrl: string;
+  proofUrl: string;
+  proofs: Record<string, string>;
   title: string;
   sku: string;
   variant: string;
@@ -65,7 +67,14 @@ export default function CheckoutClient({
     if (!size) return;
     setCartItems((prev) =>
       prev.map((it) =>
-        it.id === id ? { ...it, variant, price: size.price } : it,
+        it.id === id
+          ? {
+              ...it,
+              variant,
+              price: size.price,
+              proofUrl: it.proofs[variant] || it.proofUrl,
+            }
+          : it,
       ),
     );
   };
@@ -74,6 +83,37 @@ export default function CheckoutClient({
     setCartItems((prev) =>
       prev.map((it) => (it.id === id ? { ...it, addressId } : it)),
     );
+  };
+
+  const sendOrders = async () => {
+    for (const item of cartItems) {
+      const addr = addresses.find((a) => a.id === item.addressId);
+      try {
+        const res = await fetch('/api/order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            variantHandle: item.variant,
+            fulfilHandle: 'toSender_flat_std',
+            assets: [{ url: item.proofUrl }],
+            copies: item.qty,
+            address: addr || undefined,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        console.log('order', data);
+      } catch (err) {
+        console.error('order error', err);
+      }
+    }
+  };
+
+  const handleContinue = async (
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
+  ) => {
+    e.preventDefault();
+    await sendOrders();
+    document.getElementById('payment')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const subtotal = cartItems.reduce((sum, it) => sum + it.qty * it.price, 0);
@@ -117,11 +157,12 @@ export default function CheckoutClient({
         </div>
         <div className="lg:w-1/3 lg:sticky lg:top-4 mt-8 lg:mt-0">
           <Summary subtotal={subtotal} shipping={shipping} vat={vat} total={total} />
-          <a href="#payment" className="block mt-4">
-            <button className="w-full rounded-md bg-walty-orange text-walty-cream px-4 py-2 hover:bg-orange-600 transition">
-              Continue to payment
-            </button>
-          </a>
+          <button
+            onClick={handleContinue}
+            className="block w-full mt-4 rounded-md bg-walty-orange text-walty-cream px-4 py-2 hover:bg-orange-600 transition"
+          >
+            Continue to payment
+          </button>
         </div>
       </div>
 

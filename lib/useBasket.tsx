@@ -3,15 +3,20 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 export interface BasketItem {
-  sku: string;
+  id: string;
+  slug: string;
+  title: string;
+  variant: string;
+  image: string;
+  proofs: Record<string, string>;
   qty: number;
 }
 
 interface BasketContextValue {
   items: BasketItem[];
-  addItem: (sku: string) => void;
-  removeItem: (sku: string) => void;
-  updateQty: (sku: string, qty: number) => void;
+  addItem: (item: { slug: string; title: string; variant: string; image: string; proofs: Record<string, string> }) => void;
+  removeItem: (id: string) => void;
+  updateQty: (id: string, qty: number) => void;
 }
 
 const BasketContext = createContext<BasketContextValue>({
@@ -26,7 +31,20 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined") return [];
     try {
       const stored = window.localStorage.getItem("basket");
-      return stored ? JSON.parse(stored) : [];
+      const parsed = stored ? JSON.parse(stored) : [];
+      const map: Record<string, string> = {
+        mini: "gc-mini",
+        classic: "gc-classic",
+        giant: "gc-large",
+      };
+      return Array.isArray(parsed)
+        ? parsed.map((it: any) => ({
+            ...it,
+            proofs: it.proofs || (it.proof ? { [it.variant]: it.proof } : {}),
+            variant: map[it.variant] ?? it.variant,
+            id: `${it.slug}_${map[it.variant] ?? it.variant}`,
+          }))
+        : [];
     } catch {
       return [];
     }
@@ -40,26 +58,31 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items]);
 
-  const addItem = (sku: string) => {
+  const addItem = (
+    item: {
+      slug: string;
+      title: string;
+      variant: string;
+      image: string;
+      proofs: Record<string, string>;
+    },
+  ) => {
     setItems((prev) => {
-      const existing = prev.find((it) => it.sku === sku);
+      const id = `${item.slug}_${item.variant}`
+      const existing = prev.find((it) => it.id === id)
       if (existing) {
-        return prev.map((it) =>
-          it.sku === sku ? { ...it, qty: it.qty + 1 } : it
-        );
+        return prev.map((it) => (it.id === id ? { ...it, qty: it.qty + 1 } : it))
       }
-      return [...prev, { sku, qty: 1 }];
-    });
+      return [...prev, { id, qty: 1, ...item }]
+    })
+  }
+
+  const removeItem = (id: string) => {
+    setItems((prev) => prev.filter((it) => it.id !== id))
   };
 
-  const removeItem = (sku: string) => {
-    setItems((prev) => prev.filter((it) => it.sku !== sku));
-  };
-
-  const updateQty = (sku: string, qty: number) => {
-    setItems((prev) =>
-      prev.map((it) => (it.sku === sku ? { ...it, qty } : it))
-    );
+  const updateQty = (id: string, qty: number) => {
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, qty } : it)))
   };
 
   return (

@@ -85,7 +85,7 @@ export const structure: StructureResolver = (S: StructureBuilder) =>
                           S.documentTypeList('cardTemplate')
                             .title('Portrait')
                             .filter(
-                              '_type == "cardTemplate" && previewSpec.previewHeightPx > previewSpec.previewWidthPx'
+                              '_type == "cardTemplate" && products[0]->previewSpec.previewHeightPx > products[0]->previewSpec.previewWidthPx'
                             )
                             .child((id) => cardTemplateNode(S, id)),
                         ),
@@ -95,7 +95,7 @@ export const structure: StructureResolver = (S: StructureBuilder) =>
                           S.documentTypeList('cardTemplate')
                             .title('Landscape')
                             .filter(
-                              '_type == "cardTemplate" && previewSpec.previewWidthPx > previewSpec.previewHeightPx'
+                              '_type == "cardTemplate" && products[0]->previewSpec.previewWidthPx > products[0]->previewSpec.previewHeightPx'
                             )
                             .child((id) => cardTemplateNode(S, id)),
                         ),
@@ -105,7 +105,7 @@ export const structure: StructureResolver = (S: StructureBuilder) =>
                           S.documentTypeList('cardTemplate')
                             .title('Square')
                             .filter(
-                              '_type == "cardTemplate" && previewSpec.previewWidthPx == previewSpec.previewHeightPx'
+                              '_type == "cardTemplate" && products[0]->previewSpec.previewWidthPx == products[0]->previewSpec.previewHeightPx'
                             )
                             .child((id) => cardTemplateNode(S, id)),
                         ),
@@ -176,6 +176,8 @@ export const structure: StructureResolver = (S: StructureBuilder) =>
               S.documentTypeListItem('product').title('Products'),
               S.documentTypeListItem('cardProduct').title('Variants'),
               S.documentTypeListItem('printSpec').title('Print specs'),
+              S.documentTypeListItem('fulfilOption').title('Fulfil options'),
+              S.documentTypeListItem('skuMap').title('SKU maps'),
             ]),
         ),
 

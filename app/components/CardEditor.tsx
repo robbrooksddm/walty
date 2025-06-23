@@ -14,6 +14,7 @@ import FabricCanvas, {
   setPrintSpec,
   setPreviewSpec,
   setSafeInset,
+  setSafeInsetPx,
   PrintSpec,
   PreviewSpec,
   previewW,
@@ -72,23 +73,33 @@ function CoachMark({ anchor, onClose }: { anchor: DOMRect | null; onClose: () =>
 }
 
 /* ────────────────────────────────────────────────────────────────── */
-export default function CardEditor({
-  initialPages,
-  templateId,
-  printSpec,
-  previewSpec,
-  products = [],
-  mode = 'customer',
-  onSave,
-}: {
+export interface CardEditorProps {
   initialPages: TemplatePage[] | undefined
   templateId?: string
+  slug: string
+  title: string
+  coverImage?: string
   printSpec?: PrintSpec
   previewSpec?: PreviewSpec
   products?: TemplateProduct[]
+  proofUrl?: string
   mode?: Mode
   onSave?: SaveFn
-}) {
+}
+
+export default function CardEditor({
+  initialPages,
+  templateId,
+  slug,
+  title,
+  coverImage,
+  printSpec,
+  previewSpec,
+  products = [],
+  proofUrl = '',
+  mode = 'customer',
+  onSave,
+}: CardEditorProps) {
   if (printSpec) {
     setPrintSpec(printSpec)
     setEditorSpec(printSpec)
@@ -100,7 +111,15 @@ export default function CardEditor({
     setPreviewSpec(previewSpec)
   }
   useEffect(() => {
-    if (!printSpec || !previewSpec || !products.length) return
+    if (!printSpec || !previewSpec) return
+
+    // 1️⃣  explicit safe insets from the preview spec
+    if (previewSpec.safeInsetXPx || previewSpec.safeInsetYPx) {
+      setSafeInsetPx(previewSpec.safeInsetXPx ?? 0, previewSpec.safeInsetYPx ?? 0)
+      return
+    }
+
+    if (!products.length) return
     const baseW = printSpec.trimWidthIn + printSpec.bleedIn * 2
     const baseH = printSpec.trimHeightIn + printSpec.bleedIn * 2
     const baseRatio = baseW / baseH
@@ -157,25 +176,50 @@ export default function CardEditor({
 
   const [thumbs, setThumbs] = useState<string[]>(['', '', '', ''])
 
+  const THUMB_MULT = 0.25
+  const THUMB_DELAY = 300
+  const thumbTimer = useRef<NodeJS.Timeout | null>(null)
+  const lastThumb = useRef(0)
+
   const updateThumbFromCanvas = (idx: number, fc: fabric.Canvas) => {
-    try {
-      if (!(fc as any).lowerCanvasEl) return
-      fc.renderAll()
-      console.log('Fabric canvas px', fc.getWidth(), fc.getHeight())
-      console.log('Expected page px', pageW(), pageH())
-      console.log('Export multiplier', EXPORT_MULT())
-      const url = fc.toDataURL({
-        format: 'jpeg',
-        quality: 0.8,
-        multiplier: EXPORT_MULT(),
-      })
-      setThumbs(prev => {
-        const next = [...prev]
-        next[idx] = url
-        return next
-      })
-    } catch (err) {
-      console.error('thumb failed', err)
+    const run = () => {
+      try {
+        if (!(fc as any).lowerCanvasEl) return
+        fc.renderAll()
+        requestAnimationFrame(() => {
+          try {
+            const canvasEl = fc.toCanvasElement(THUMB_MULT)
+            canvasEl.toBlob(
+              blob => {
+                if (!blob) return
+                const url = URL.createObjectURL(blob)
+                setThumbs(prev => {
+                  const next = [...prev]
+                  next[idx] = url
+                  return next
+                })
+              },
+              'image/jpeg',
+              0.8,
+            )
+          } catch (err) {
+            console.error('thumb blob failed', err)
+          }
+        })
+      } catch (err) {
+        console.error('thumb failed', err)
+      }
+    }
+    const now = Date.now()
+    if (now - lastThumb.current > THUMB_DELAY) {
+      lastThumb.current = now
+      run()
+    } else {
+      if (thumbTimer.current) clearTimeout(thumbTimer.current)
+      thumbTimer.current = setTimeout(() => {
+        lastThumb.current = Date.now()
+        run()
+      }, THUMB_DELAY)
     }
   }
 
@@ -187,11 +231,13 @@ export default function CardEditor({
   useLayoutEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ pageIdx: number; canvas: fabric.Canvas }>).detail
-      if (detail.canvas) updateThumbFromCanvas(detail.pageIdx, detail.canvas)
+      if (detail.canvas && detail.pageIdx === activeIdx) {
+        updateThumbFromCanvas(detail.pageIdx, detail.canvas)
+      }
     }
     document.addEventListener('card-canvas-rendered', handler)
     return () => document.removeEventListener('card-canvas-rendered', handler)
-  }, [])
+  }, [activeIdx])
 
   useEffect(() => {
     canvasMap.forEach((fc, idx) => {
@@ -446,7 +492,7 @@ const handlePreview = () => {
 }
 
 /* helper – gather pages and rendered images once */
-const collectProofData = () => {
+const collectProofData = (showGuides = false) => {
   canvasMap.forEach(fc => {
     const tool = (fc as any)?._cropTool as CropTool | undefined
     if (tool?.isActive) tool.commit()
@@ -461,7 +507,7 @@ const collectProofData = () => {
   canvasMap.forEach(fc => {
     if (!fc) { pageImages.push(''); return }
     const guides = fc.getObjects().filter(o => (o as any)._guide)
-    guides.forEach(g => g.set('visible', false))
+    guides.forEach(g => g.set('visible', showGuides))
     fc.renderAll()
     pageImages.push(
       fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT() })
@@ -482,7 +528,7 @@ const fetchProofBlob = async (
     const res = await fetch('/api/proof', {
       method : 'POST',
       headers: { 'content-type': 'application/json' },
-      body   : JSON.stringify({ pages, pageImages, sku, id: templateId, filename }),
+      body   : JSON.stringify({ pages, pageImages, sku, id: templateId ?? slug, filename }),
     })
     if (res.ok) {
       return await res.blob()
@@ -493,15 +539,51 @@ const fetchProofBlob = async (
   return null
 }
 
+/* helper – generate proof, upload to Sanity and return its CDN URL */
+const generateProofURL = async (variantHandle: string): Promise<string | null> => {
+  const product = products.find(p => p.variantHandle === variantHandle)
+  const sku = product?.slug ?? variantHandle
+  const showGuides = product?.showProofSafeArea ?? false
+  const { pages, pageImages } = collectProofData(showGuides)
+  const blob = await fetchProofBlob(sku, `${variantHandle}.jpg`, pages, pageImages)
+  if (!blob) return null
+
+  try {
+    const form = new FormData()
+    form.append('file', new File([blob], `${variantHandle}.jpg`, { type: blob.type }))
+    const res = await fetch('/api/upload', { method: 'POST', body: form })
+    if (res.ok) {
+      const { url } = await res.json()
+      return typeof url === 'string' && url ? url : null
+    }
+  } catch (err) {
+    console.error('proof upload', err)
+  }
+  return null
+}
+
+const generateProofURLs = async (
+  handles: string[],
+): Promise<Record<string, string>> => {
+  const entries = await Promise.all(
+    handles.map(async h => [h, await generateProofURL(h)] as const),
+  )
+  const urls: Record<string, string> = {}
+  for (const [h, url] of entries) {
+    if (url) urls[h] = url
+  }
+  if (Object.keys(urls).length === 0) throw new Error('proof generation failed')
+  return urls
+}
+
 /* download proofs for all products */
 const handleProofAll = async () => {
   if (!products.length) return
-  const { pages, pageImages } = collectProofData()
-  
   const JSZip = (await import('jszip')).default
 
   const zip = new JSZip()
   for (const p of products) {
+    const { pages, pageImages } = collectProofData(p.showProofSafeArea)
     const name = `${p.slug}.jpg`
     const blob = await fetchProofBlob(p.slug, name, pages, pageImages)
     if (blob) zip.file(name, blob)
@@ -715,6 +797,11 @@ const handleProofAll = async () => {
       <AddToBasketDialog
         open={basketOpen}
         onClose={() => setBasketOpen(false)}
+        slug={slug}
+        title={title}
+        coverUrl={coverImage || ''}
+        products={products}
+        generateProofUrls={generateProofURLs}
       />
     </div>
   )

@@ -8,6 +8,10 @@ import product       from './product'
 import productMockup from './productMockup'
 import sitePage      from './sitePage'
 
+/* commerce ---------------------------------------------- */
+import fulfilOption from './commerce/fulfilOption'
+import skuMap      from './commerce/skuMap'
+
 /* AI-related ---------------------------------------------------- */
 import aiPlaceholder from './aiPlaceholder'
 import aiLayer       from './aiLayer'
@@ -32,6 +36,8 @@ export const schemaTypes = [
   cardProduct,
   productMockup,
   sitePage,
+  fulfilOption,
+  skuMap,
   aiPlaceholder,
   printSpec,
 

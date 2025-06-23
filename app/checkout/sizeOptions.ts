@@ -1,4 +1,4 @@
-import { Square, RectangleHorizontal, Expand } from 'lucide-react'
+import { Square, RectangleHorizontal, Expand, Image } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 export interface CardSize {
@@ -9,7 +9,8 @@ export interface CardSize {
 }
 
 export const CARD_SIZES: CardSize[] = [
-  { id: 'mini', label: 'Mini Card', price: 2.5, Icon: Square },
-  { id: 'classic', label: 'Classic Card', price: 3.5, Icon: RectangleHorizontal },
-  { id: 'giant', label: 'Giant Card', price: 5, Icon: Expand },
+  { id: 'digital', label: 'Digital Card', price: 0, Icon: Image },
+  { id: 'gc-mini', label: 'Mini Card', price: 2.5, Icon: Square },
+  { id: 'gc-classic', label: 'Classic Card', price: 3.5, Icon: RectangleHorizontal },
+  { id: 'gc-large', label: 'Giant Card', price: 5, Icon: Expand },
 ]
