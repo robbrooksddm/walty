@@ -62,6 +62,10 @@ export default function CheckoutClient({
     setCartItems((prev) => prev.map((it) => (it.id === id ? { ...it, qty } : it)));
   };
 
+  const removeItem = (id: string) => {
+    setCartItems((prev) => prev.filter((it) => it.id !== id));
+  };
+
   const updateVariant = (id: string, variant: string) => {
     const size = CARD_SIZES.find((s) => s.id === variant);
     if (!size) return;
@@ -149,11 +153,12 @@ export default function CheckoutClient({
           <Basket
             items={cartItems}
             addresses={addresses}
-            onQtyChange={updateQty}
-            onAddressChange={updateItemAddress}
-            onVariantChange={updateVariant}
-            onAddNew={openDrawer}
-          />
+          onQtyChange={updateQty}
+          onAddressChange={updateItemAddress}
+          onVariantChange={updateVariant}
+          onAddNew={openDrawer}
+          onRemove={removeItem}
+        />
         </div>
         <div className="lg:w-1/3 lg:sticky lg:top-4 mt-8 lg:mt-0">
           <Summary subtotal={subtotal} shipping={shipping} vat={vat} total={total} />
