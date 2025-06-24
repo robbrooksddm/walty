@@ -85,6 +85,10 @@ export default function CheckoutClient({
     );
   };
 
+  const removeItem = (id: string) => {
+    setCartItems((prev) => prev.filter((it) => it.id !== id));
+  };
+
   const sendOrders = async () => {
     for (const item of cartItems) {
       const addr = addresses.find((a) => a.id === item.addressId);
@@ -153,6 +157,7 @@ export default function CheckoutClient({
             onAddressChange={updateItemAddress}
             onVariantChange={updateVariant}
             onAddNew={openDrawer}
+            onRemove={removeItem}
           />
         </div>
         <div className="lg:w-1/3 lg:sticky lg:top-4 mt-8 lg:mt-0">
