@@ -1,6 +1,7 @@
 "use client";
 import Image from 'next/image';
 import Link from 'next/link';
+import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { Address, CartItem } from './CheckoutClient';
 import { CARD_SIZES } from './sizeOptions';
@@ -44,18 +45,19 @@ export default function Basket({
               </div>
             </div>
             <div className="flex-1 space-y-2">
-              <div className="font-recoleta font-bold text-walty-teal">£{selected.price.toFixed(2)}</div>
+              <div className="font-recoleta font-bold text-walty-teal text-2xl">£{selected.price.toFixed(2)}</div>
               <div className="relative mt-2 ml-auto w-fit">
                 <div className="relative inline-block">
                   <button
                     type="button"
                     onClick={() => setOpenId(openId === item.id ? null : item.id)}
-                    className="flex items-center justify-between gap-2 bg-walty-cream border border-walty-teal text-walty-teal rounded-md px-3 py-1.5 min-w-[216px]"
+                    className="flex items-center justify-between gap-2 bg-walty-cream border border-walty-teal text-walty-teal rounded-md px-3 py-2.5 min-w-[216px]"
                   >
                     <span className="flex items-center gap-1">
                       <selected.Icon className="w-4 h-4" />
                       {selected.label}
                     </span>
+                    <ChevronDown className="w-4 h-4" />
                   </button>
                   {openId === item.id && (
                     <ul className="absolute z-10 mt-1 w-full rounded-md border border-walty-teal bg-walty-cream shadow-card">
