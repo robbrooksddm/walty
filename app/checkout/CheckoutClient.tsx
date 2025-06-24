@@ -122,11 +122,10 @@ export default function CheckoutClient({
 
   const subtotal = cartItems.reduce((sum, it) => sum + it.qty * it.price, 0);
   const shipping = 0; // TODO: replace with API calculation
-  const vat = 0; // TODO: replace with API calculation
-  const total = subtotal + shipping + vat;
+  const total = subtotal + shipping;
 
   const placeOrder = () => {
-    console.log({ cartItems, addresses, totals: { subtotal, shipping, vat, total } });
+    console.log({ cartItems, addresses, totals: { subtotal, shipping, total } });
   };
 
   return (
@@ -161,12 +160,12 @@ export default function CheckoutClient({
           />
         </div>
         <div className="lg:w-1/3 lg:sticky lg:top-4 mt-8 lg:mt-0">
-          <Summary subtotal={subtotal} shipping={shipping} vat={vat} total={total} />
+          <Summary subtotal={subtotal} shipping={shipping} total={total} />
           <button
             onClick={handleContinue}
             className="block w-full mt-4 rounded-md bg-walty-orange text-walty-cream px-4 py-2 hover:bg-orange-600 transition"
           >
-            Continue to payment
+            Onward to Postage! →
           </button>
         </div>
       </div>
