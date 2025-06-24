@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef } from "react";
+import { ChevronDown } from "lucide-react";
 import { useBasket } from "@/lib/useBasket";
 import Summary from "../Summary";
 import { CARD_SIZES } from "../sizeOptions";
@@ -13,12 +14,14 @@ export default function PaymentPage() {
   const shipping = 0;
   const total = subtotal + shipping;
 
-  const [openStep, setOpenStep] = useState(0);
+  const [activeStep, setActiveStep] = useState(0);
+  const [maxStep, setMaxStep] = useState(0);
   const refs = [useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null)];
 
   const handleComplete = (idx: number) => {
     if (idx < refs.length - 1) {
-      setOpenStep(idx + 1);
+      setMaxStep(idx + 1);
+      setActiveStep(idx + 1);
       requestAnimationFrame(() => {
         refs[idx + 1].current?.scrollIntoView({ behavior: "smooth" });
       });
@@ -44,33 +47,44 @@ export default function PaymentPage() {
       </div>
       <div className="lg:flex lg:items-start lg:gap-8">
         <div className="lg:w-2/3 space-y-4">
-          {[0, 1, 2].map((n) => (
-            <div
-              key={n}
-              ref={refs[n]}
-              className={`bg-white rounded-md shadow-card transition-all overflow-hidden ${
-                openStep === n ? "p-4" : "p-4 max-h-16"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-walty-teal text-white flex items-center justify-center font-bold">
-                  {n + 1}
-                </div>
-                <h3 className="font-recoleta text-walty-teal">Section {n + 1}</h3>
-              </div>
-              {openStep === n && (
-                <div className="mt-4 space-y-2">
-                  <p className="text-sm text-gray-600">Placeholder content for section {n + 1}</p>
+          {[0, 1, 2].map((n) => {
+            const disabled = n > maxStep;
+            return (
+              <div
+                key={n}
+                ref={refs[n]}
+                className={`bg-white rounded-md shadow-card transition-all overflow-hidden ${
+                  activeStep === n ? "p-4" : "p-4 max-h-16"
+                } ${disabled ? "opacity-50 pointer-events-none" : ""}`}
+              >
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => handleComplete(n)}
-                    className="rounded-md bg-walty-orange text-walty-cream px-4 py-2"
+                    onClick={() => !disabled && setActiveStep(n)}
+                    className={`p-1 -ml-1 transition-transform ${
+                      activeStep === n ? "rotate-0" : "-rotate-90"
+                    }`}
                   >
-                    Continue
+                    <ChevronDown className="w-4 h-4" />
                   </button>
+                  <div className="w-8 h-8 rounded-full bg-walty-teal text-white flex items-center justify-center font-bold">
+                    {n + 1}
+                  </div>
+                  <h3 className="font-recoleta text-walty-teal">Section {n + 1}</h3>
                 </div>
-              )}
-            </div>
-          ))}
+                {activeStep === n && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm text-gray-600">Placeholder content for section {n + 1}</p>
+                    <button
+                      onClick={() => handleComplete(n)}
+                      className="rounded-md bg-walty-orange text-walty-cream px-4 py-2"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
         <div className="lg:w-1/3 lg:sticky lg:top-4 mt-8 lg:mt-0">
           <Summary subtotal={subtotal} shipping={shipping} total={total} />
