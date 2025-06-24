@@ -180,7 +180,7 @@ export default function CheckoutClient({
                 <p className="text-sm">Are the items going to one address or multiple?</p>
                 <div className="flex justify-end gap-4 pt-2">
                   <button onClick={() => { setShipDialog(false); router.push('/checkout/address'); }} className="rounded-md bg-walty-orange text-walty-cream px-4 py-2">One address</button>
-                  <button onClick={() => { setShipDialog(false); }} className="rounded-md border border-gray-300 px-4 py-2">Multiple</button>
+                  <button onClick={() => { setShipDialog(false); router.push('/checkout/address/multiple'); }} className="rounded-md border border-gray-300 px-4 py-2">Multiple</button>
                 </div>
               </Dialog.Panel>
             </Transition.Child>
