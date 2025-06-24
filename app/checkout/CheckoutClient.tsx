@@ -79,6 +79,10 @@ export default function CheckoutClient({
     );
   };
 
+  const removeItem = (id: string) => {
+    setCartItems((prev) => prev.filter((it) => it.id !== id));
+  };
+
   const updateItemAddress = (id: string, addressId: string) => {
     setCartItems((prev) =>
       prev.map((it) => (it.id === id ? { ...it, addressId } : it)),
@@ -153,6 +157,7 @@ export default function CheckoutClient({
             onAddressChange={updateItemAddress}
             onVariantChange={updateVariant}
             onAddNew={openDrawer}
+            onRemove={removeItem}
           />
         </div>
         <div className="lg:w-1/3 lg:sticky lg:top-4 mt-8 lg:mt-0">
