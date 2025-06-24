@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useBasket } from "@/lib/useBasket";
 import { useAddressBook, Address } from "@/lib/useAddressBook";
+import { useAddressAssignments } from "@/lib/useAddressAssignments";
 import AddressDrawer from "../../AddressDrawer";
 import Summary from "../../Summary";
 import { CARD_SIZES } from "../../sizeOptions";
@@ -14,19 +15,8 @@ export default function MultipleAddressPage() {
   const { addresses, addAddress } = useAddressBook();
   const [drawerFor, setDrawerFor] = useState<string | null>(null);
   const [selectFor, setSelectFor] = useState<string | null>(null);
+  const { assignments, assign } = useAddressAssignments();
   const router = useRouter();
-
-  const setAssignment = (itemId: string, addrId: string) => {
-    try {
-      const map = JSON.parse(
-        window.localStorage.getItem("addressAssignments") || "{}"
-      );
-      map[itemId] = addrId;
-      window.localStorage.setItem("addressAssignments", JSON.stringify(map));
-    } catch {
-      // ignore
-    }
-  };
 
   const subtotal = items.reduce(
     (sum, it) =>
@@ -60,6 +50,8 @@ export default function MultipleAddressPage() {
           <h2 className="font-recoleta text-xl text-walty-teal">Assign Recipients</h2>
           {items.map((item) => {
             const size = CARD_SIZES.find((s) => s.id === item.variant);
+            const assigned = assignments[item.id];
+            const addr = addresses.find((a) => a.id === assigned);
             return (
               <div key={item.id} className="relative flex gap-4 items-start bg-white p-4 rounded-md shadow-card">
                 <div className="flex-shrink-0">
@@ -69,12 +61,15 @@ export default function MultipleAddressPage() {
                 </div>
                 <div className="flex-1 space-y-3">
                   <div className="font-semibold">{size ? size.label : item.variant}</div>
+                  {addr && (
+                    <p className="text-sm text-walty-teal">Delivering to: {addr.name}</p>
+                  )}
                   {addresses.length > 0 ? (
                     <button
                       onClick={() => setSelectFor(item.id)}
                       className="rounded-md bg-walty-orange text-walty-cream px-4 py-2 hover:bg-orange-600 transition"
                     >
-                      Select recipient
+                      {addr ? 'Change recipient' : 'Select recipient'}
                     </button>
                   ) : (
                     <button
@@ -110,6 +105,7 @@ export default function MultipleAddressPage() {
         onClose={() => setDrawerFor(null)}
         onSave={(addr: Address) => {
           addAddress(addr);
+          if (drawerFor) assign(drawerFor, addr.id);
           setDrawerFor(null);
         }}
       />
@@ -125,7 +121,7 @@ export default function MultipleAddressPage() {
               <button
                 key={addr.id}
                 onClick={() => {
-                  setAssignment(selectFor, addr.id);
+                  assign(selectFor!, addr.id);
                   setSelectFor(null);
                 }}
                 className="w-full text-left border rounded-md p-3 hover:bg-walty-cream"

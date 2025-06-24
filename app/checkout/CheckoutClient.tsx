@@ -8,6 +8,7 @@ import Summary from './Summary';
 import PaymentPlaceholder from './PaymentPlaceholder';
 import { CARD_SIZES } from './sizeOptions';
 import { useAddressBook, Address } from '@/lib/useAddressBook';
+import { useAddressAssignments } from '@/lib/useAddressAssignments';
 
 export interface CartItem {
   id: string;
@@ -31,12 +32,19 @@ export default function CheckoutClient({
 }) {
   const [cartItems, setCartItems] = useState<CartItem[]>(initialItems);
   const { addresses, addAddress } = useAddressBook();
+  const { assignments, assign } = useAddressAssignments();
   const [addressesLoaded, setAddressesLoaded] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [paymentComplete, setPaymentComplete] = useState(false);
   const [shipDialog, setShipDialog] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setCartItems((prev) =>
+      prev.map((it) => ({ ...it, addressId: assignments[it.id] || it.addressId }))
+    );
+  }, [assignments]);
 
   useEffect(() => {
     if (!addressesLoaded && addresses.length === 0 && initialAddresses.length > 0) {
@@ -58,6 +66,7 @@ export default function CheckoutClient({
           it.id === activeItemId ? { ...it, addressId: addr.id } : it,
         ),
       );
+      assign(activeItemId, addr.id);
     }
     setDrawerOpen(false);
   };
@@ -87,10 +96,12 @@ export default function CheckoutClient({
     setCartItems((prev) =>
       prev.map((it) => (it.id === id ? { ...it, addressId } : it)),
     );
+    assign(id, addressId);
   };
 
   const removeItem = (id: string) => {
     setCartItems((prev) => prev.filter((it) => it.id !== id));
+    assign(id, '');
   };
 
   const handleContinue = (

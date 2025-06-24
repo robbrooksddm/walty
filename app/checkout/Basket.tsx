@@ -129,7 +129,12 @@ export default function Basket({
                 ))}
                 <option value="new">Add new address…</option>
               </select>
-              </div>
+              {item.addressId && (
+                <p className="text-sm mt-1 text-walty-teal">
+                  Delivering to: {addresses.find((a) => a.id === item.addressId)?.name}
+                </p>
+              )}
+            </div>
             </div>
           </div>
         );
