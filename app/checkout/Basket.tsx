@@ -31,9 +31,6 @@ export default function Basket({
             <Image src={item.coverUrl} alt="" width={80} height={112} className="object-cover w-full h-full" />
           </div>
           <div className="flex-1 space-y-2">
-            <div className="font-medium text-walty-teal">{item.title}</div>
-            <div className="text-sm text-gray-600">SKU: {item.sku}</div>
-            <div className="text-sm text-gray-600">£{item.price.toFixed(2)} each</div>
             <div className="relative mt-2">
               <label className="block text-sm font-recoleta text-walty-teal mb-1">Size</label>
               {(() => {
@@ -49,7 +46,6 @@ export default function Basket({
                         <selected.Icon className="w-4 h-4" />
                         {selected.label}
                       </span>
-                      <span className="font-sans">£{selected.price.toFixed(2)}</span>
                     </button>
                     {openId === item.id && (
                       <ul className="absolute z-10 mt-1 w-full rounded-md border border-walty-teal bg-walty-cream shadow-card">
@@ -69,7 +65,6 @@ export default function Basket({
                                 <opt.Icon className="w-4 h-4" />
                                 {opt.label}
                               </span>
-                              <span className="font-sans text-walty-teal">£{opt.price.toFixed(2)}</span>
                             </button>
                           </li>
                         ))}
