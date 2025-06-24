@@ -1,10 +1,14 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect, Fragment } from 'react';
+import { useRouter } from 'next/navigation';
+import { Dialog, Transition } from '@headlessui/react';
 import Basket from './Basket';
 import AddressDrawer from './AddressDrawer';
 import Summary from './Summary';
 import PaymentPlaceholder from './PaymentPlaceholder';
 import { CARD_SIZES } from './sizeOptions';
+import { useAddressBook, Address } from '@/lib/useAddressBook';
+import { useAddressAssignments } from '@/lib/useAddressAssignments';
 
 export interface CartItem {
   id: string;
@@ -19,15 +23,6 @@ export interface CartItem {
   addressId?: string;
 }
 
-export interface Address {
-  id: string;
-  name: string;
-  line1: string;
-  city: string;
-  postcode: string;
-  country: string;
-}
-
 export default function CheckoutClient({
   initialItems,
   initialAddresses,
@@ -36,10 +31,27 @@ export default function CheckoutClient({
   initialAddresses: Address[];
 }) {
   const [cartItems, setCartItems] = useState<CartItem[]>(initialItems);
-  const [addresses, setAddresses] = useState<Address[]>(initialAddresses);
+  const { addresses, addAddress } = useAddressBook();
+  const { assignments, assign } = useAddressAssignments();
+  const [addressesLoaded, setAddressesLoaded] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [paymentComplete, setPaymentComplete] = useState(false);
+  const [shipDialog, setShipDialog] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    setCartItems((prev) =>
+      prev.map((it) => ({ ...it, addressId: assignments[it.id] || it.addressId }))
+    );
+  }, [assignments]);
+
+  useEffect(() => {
+    if (!addressesLoaded && addresses.length === 0 && initialAddresses.length > 0) {
+      initialAddresses.forEach((a) => addAddress(a));
+      setAddressesLoaded(true);
+    }
+  }, [addressesLoaded, addresses.length, initialAddresses, addAddress]);
 
   const openDrawer = (itemId: string) => {
     setActiveItemId(itemId);
@@ -47,13 +59,14 @@ export default function CheckoutClient({
   };
 
   const handleSaveAddress = (addr: Address) => {
-    setAddresses((prev) => [...prev, addr]);
+    addAddress(addr);
     if (activeItemId) {
       setCartItems((prev) =>
         prev.map((it) =>
           it.id === activeItemId ? { ...it, addressId: addr.id } : it,
         ),
       );
+      assign(activeItemId, addr.id);
     }
     setDrawerOpen(false);
   };
@@ -83,46 +96,27 @@ export default function CheckoutClient({
     setCartItems((prev) =>
       prev.map((it) => (it.id === id ? { ...it, addressId } : it)),
     );
+    assign(id, addressId);
   };
 
-  const sendOrders = async () => {
-    for (const item of cartItems) {
-      const addr = addresses.find((a) => a.id === item.addressId);
-      try {
-        const res = await fetch('/api/order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            variantHandle: item.variant,
-            fulfilHandle: 'toSender_flat_std',
-            assets: [{ url: item.proofUrl }],
-            copies: item.qty,
-            address: addr || undefined,
-          }),
-        });
-        const data = await res.json().catch(() => ({}));
-        console.log('order', data);
-      } catch (err) {
-        console.error('order error', err);
-      }
-    }
+  const removeItem = (id: string) => {
+    setCartItems((prev) => prev.filter((it) => it.id !== id));
+    assign(id, '');
   };
 
-  const handleContinue = async (
+  const handleContinue = (
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
   ) => {
     e.preventDefault();
-    await sendOrders();
-    document.getElementById('payment')?.scrollIntoView({ behavior: 'smooth' });
+    setShipDialog(true);
   };
 
   const subtotal = cartItems.reduce((sum, it) => sum + it.qty * it.price, 0);
   const shipping = 0; // TODO: replace with API calculation
-  const vat = 0; // TODO: replace with API calculation
-  const total = subtotal + shipping + vat;
+  const total = subtotal + shipping;
 
   const placeOrder = () => {
-    console.log({ cartItems, addresses, totals: { subtotal, shipping, vat, total } });
+    console.log({ cartItems, addresses, totals: { subtotal, shipping, total } });
   };
 
   return (
@@ -153,15 +147,16 @@ export default function CheckoutClient({
             onAddressChange={updateItemAddress}
             onVariantChange={updateVariant}
             onAddNew={openDrawer}
+            onRemove={removeItem}
           />
         </div>
         <div className="lg:w-1/3 lg:sticky lg:top-4 mt-8 lg:mt-0">
-          <Summary subtotal={subtotal} shipping={shipping} vat={vat} total={total} />
+          <Summary subtotal={subtotal} shipping={shipping} total={total} />
           <button
             onClick={handleContinue}
             className="block w-full mt-4 rounded-md bg-walty-orange text-walty-cream px-4 py-2 hover:bg-orange-600 transition"
           >
-            Continue to payment
+            Onward to Postage! →
           </button>
         </div>
       </div>
@@ -186,6 +181,23 @@ export default function CheckoutClient({
         onClose={() => setDrawerOpen(false)}
         onSave={handleSaveAddress}
       />
+      {shipDialog && (
+        <Transition.Root show={true} as={Fragment}>
+          <Dialog as="div" className="fixed inset-0 z-50 flex items-center justify-center" onClose={() => setShipDialog(false)}>
+            <div className="fixed inset-0 bg-black/60" aria-hidden="true" />
+            <Transition.Child as={Fragment} enter="ease-out duration-200" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-150" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
+              <Dialog.Panel className="relative z-10 bg-white rounded shadow-lg w-[min(90vw,420px)] p-6 space-y-4">
+                <Dialog.Title className="font-recoleta text-lg text-walty-teal">Send items to?</Dialog.Title>
+                <p className="text-sm">Are the items going to one address or multiple?</p>
+                <div className="flex justify-end gap-4 pt-2">
+                  <button onClick={() => { setShipDialog(false); router.push('/checkout/address'); }} className="rounded-md bg-walty-orange text-walty-cream px-4 py-2">One address</button>
+                  <button onClick={() => { setShipDialog(false); router.push('/checkout/address/multiple'); }} className="rounded-md border border-gray-300 px-4 py-2">Multiple</button>
+                </div>
+              </Dialog.Panel>
+            </Transition.Child>
+          </Dialog>
+        </Transition.Root>
+      )}
     </div>
   );
 }

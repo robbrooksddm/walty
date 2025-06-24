@@ -5,6 +5,7 @@ import { Domine, Inter } from "next/font/google";
 import { recoleta } from "@/lib/fonts"; // local font
 import WaltyNavWrapper from "@/components/site/WaltyNavWrapper"; // shows/hides navbar
 import { BasketProvider } from "@/lib/useBasket";
+import { AddressBookProvider } from "@/lib/useAddressBook";
 
 export const domine = Domine({
   weight: ["400", "700"],
@@ -29,10 +30,12 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${domine.variable} ${recoleta.variable}`}
       >
-        <BasketProvider>
-          <WaltyNavWrapper />
-          {children}
-        </BasketProvider>
+        <AddressBookProvider>
+          <BasketProvider>
+            <WaltyNavWrapper />
+            {children}
+          </BasketProvider>
+        </AddressBookProvider>
       </body>
     </html>
   );
