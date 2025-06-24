@@ -16,7 +16,7 @@ export default function AddressPage() {
         {addresses.map((addr) => (
           <button
             key={addr.id}
-            onClick={() => router.push('/checkout')}
+            onClick={() => router.push('/checkout/payment')}
             className="w-full text-left border rounded-md p-4 hover:bg-walty-cream"
           >
             <div className="font-semibold">{addr.name}</div>

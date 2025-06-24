@@ -87,7 +87,7 @@ export default function MultipleAddressPage() {
         <div className="lg:w-1/3 lg:sticky lg:top-4 mt-8 lg:mt-0">
           <Summary subtotal={subtotal} shipping={shipping} total={total} hideVoucher />
           <button
-            onClick={() => router.push('/checkout')}
+            onClick={() => router.push('/checkout/payment')}
             className="block w-full mt-4 rounded-md bg-walty-orange text-walty-cream px-4 py-2 hover:bg-orange-600 transition"
           >
             Continue to checkout
