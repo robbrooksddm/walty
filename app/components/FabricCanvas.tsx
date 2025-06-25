@@ -110,13 +110,21 @@ export const setSafeInsetPx = (xPx: number, yPx: number) => {
 }
 
 export const setPreviewSpec = (spec: PreviewSpec) => {
+  const safeX = spec.safeInsetXPx ?? (spec as any).safeInsetX
+  const safeY = spec.safeInsetYPx ?? (spec as any).safeInsetY
+
   currentPreview = {
     ...spec,
     // allow legacy field names
-    safeInsetXPx: spec.safeInsetXPx ?? (spec as any).safeInsetX,
-    safeInsetYPx: spec.safeInsetYPx ?? (spec as any).safeInsetY,
+    safeInsetXPx: safeX,
+    safeInsetYPx: safeY,
   }
   recompute()
+
+  const hasValue =
+    (safeX != null && safeX !== 0) ||
+    (safeY != null && safeY !== 0)
+  if (hasValue) setSafeInsetPx(safeX ?? 0, safeY ?? 0)
 }
 
 /* ---------- size helpers ---------------------------------------- */
