@@ -92,6 +92,9 @@ export const setSafeInset = (xIn: number, yIn: number) => {
   safeInsetXIn = xIn
   safeInsetYIn = yIn
   recompute()
+  if (typeof document !== 'undefined') {
+    document.dispatchEvent(new Event('safe-inset-changed'))
+  }
 }
 
 export const setSafeInsetPx = (xPx: number, yPx: number) => {
@@ -99,6 +102,9 @@ export const setSafeInsetPx = (xPx: number, yPx: number) => {
   safeInsetXIn = xPx / (currentSpec.dpi * scale)
   safeInsetYIn = yPx / (currentSpec.dpi * scale)
   recompute()
+  if (typeof document !== 'undefined') {
+    document.dispatchEvent(new Event('safe-inset-changed'))
+  }
 }
 
 export const setPreviewSpec = (spec: PreviewSpec) => {
@@ -615,6 +621,13 @@ useEffect(() => {
   window.addEventListener('scroll', updateOffset, { passive: true });
   window.addEventListener('resize', updateOffset);
 
+  const refreshGuides = () => {
+    addGuides(fc, mode);
+    fc.requestRenderAll();
+  };
+  document.addEventListener('safe-inset-changed', refreshGuides);
+  refreshGuides();
+
   /* ── Crop‑tool wiring ────────────────────────────────────── */
   // create a reusable crop helper and keep it in a ref
   const crop = new CropTool(fc, SCALE, SEL_COLOR, state => {
@@ -1053,6 +1066,7 @@ window.addEventListener('keydown', onKey)
       fc.off('before:transform', startCrop);
       fc.off('object:scaling', duringCrop);
       fc.off('object:scaled', endCrop);
+      document.removeEventListener('safe-inset-changed', refreshGuides);
       onReady(null)
       cropToolRef.current?.abort()
       fc.dispose()
