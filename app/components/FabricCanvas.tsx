@@ -47,6 +47,10 @@ export interface PreviewSpec {
   maxMobileWidthPx?: number
   safeInsetXPx?: number
   safeInsetYPx?: number
+  /** legacy field name */
+  safeInsetX?: number
+  /** legacy field name */
+  safeInsetY?: number
 }
 
 let currentSpec: PrintSpec = {
@@ -61,6 +65,8 @@ let currentPreview: PreviewSpec = {
   previewHeightPx: 580,
   safeInsetXPx: 0,
   safeInsetYPx: 0,
+  safeInsetX: 0,
+  safeInsetY: 0,
 }
 
 let safeInsetXIn = 0
@@ -104,7 +110,12 @@ export const setSafeInsetPx = (xPx: number, yPx: number) => {
 }
 
 export const setPreviewSpec = (spec: PreviewSpec) => {
-  currentPreview = spec
+  currentPreview = {
+    ...spec,
+    // allow legacy field names
+    safeInsetXPx: spec.safeInsetXPx ?? (spec as any).safeInsetX ?? 0,
+    safeInsetYPx: spec.safeInsetYPx ?? (spec as any).safeInsetY ?? 0,
+  }
   recompute()
 }
 
