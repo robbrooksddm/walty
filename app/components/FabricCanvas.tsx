@@ -626,6 +626,8 @@ useEffect(() => {
     fc.requestRenderAll();
   };
   document.addEventListener('safe-inset-changed', refreshGuides);
+  // ensure guides are drawn even if the event fired before mount
+  refreshGuides();
 
   /* ── Crop‑tool wiring ────────────────────────────────────── */
   // create a reusable crop helper and keep it in a ref
