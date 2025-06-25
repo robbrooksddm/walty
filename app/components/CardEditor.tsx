@@ -15,6 +15,7 @@ import FabricCanvas, {
   setPreviewSpec,
   setSafeInset,
   setSafeInsetPx,
+  refreshGuides,
   PrintSpec,
   PreviewSpec,
   previewW,
@@ -116,6 +117,7 @@ export default function CardEditor({
     // 1️⃣  explicit safe insets from the preview spec
     if (previewSpec.safeInsetXPx || previewSpec.safeInsetYPx) {
       setSafeInsetPx(previewSpec.safeInsetXPx ?? 0, previewSpec.safeInsetYPx ?? 0)
+      refreshGuides()
       return
     }
 
@@ -140,6 +142,7 @@ export default function CardEditor({
     const insetX = (baseW - safeW) / 2 + printSpec.bleedIn + 0.125
     const insetY = (baseH - safeH) / 2 + printSpec.bleedIn + 0.125
     setSafeInset(insetX, insetY)
+    refreshGuides()
   }, [printSpec, previewSpec, products])
   /* 1 ─ hydrate Zustand once ------------------------------------- */
   useEffect(() => {

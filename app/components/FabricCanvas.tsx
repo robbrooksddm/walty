@@ -92,6 +92,7 @@ export const setSafeInset = (xIn: number, yIn: number) => {
   safeInsetXIn = xIn
   safeInsetYIn = yIn
   recompute()
+  refreshGuides()
 }
 
 export const setSafeInsetPx = (xPx: number, yPx: number) => {
@@ -99,6 +100,7 @@ export const setSafeInsetPx = (xPx: number, yPx: number) => {
   safeInsetXIn = xPx / (currentSpec.dpi * scale)
   safeInsetYIn = yPx / (currentSpec.dpi * scale)
   recompute()
+  refreshGuides()
 }
 
 export const setPreviewSpec = (spec: PreviewSpec) => {
@@ -432,6 +434,15 @@ const addGuides = (fc: fabric.Canvas, mode: Mode) => {
       mk([bleed, PAGE_H - bleed, bleed, bleed], 'bleed', '#f87171'),
     ].forEach(l => fc.add(l))
   }
+}
+
+const mountedCanvases: { fc: fabric.Canvas; mode: Mode }[] = []
+
+export const refreshGuides = () => {
+  mountedCanvases.forEach(({ fc, mode }) => {
+    addGuides(fc, mode)
+    fc.requestRenderAll()
+  })
 }
 
 /* ---------- white backdrop -------------------------------------- */
@@ -1039,7 +1050,10 @@ window.addEventListener('keydown', onKey)
   /* ── 6 ▸ Expose canvas & tidy up ──────────────────────────── */
   // expose editing ref so external controls can pause re-hydration
   ;(fc as any)._editingRef = isEditing
-  fcRef.current = fc; onReady(fc)
+  fcRef.current = fc
+  mountedCanvases.push({ fc, mode })
+  refreshGuides()
+  onReady(fc)
 
     return () => {
       fc.upperCanvasEl.removeEventListener('contextmenu', ctxMenu)
@@ -1055,6 +1069,8 @@ window.addEventListener('keydown', onKey)
       fc.off('object:scaled', endCrop);
       onReady(null)
       cropToolRef.current?.abort()
+      const idx = mountedCanvases.findIndex(c => c.fc === fc)
+      if (idx !== -1) mountedCanvases.splice(idx, 1)
       fc.dispose()
     }
 // eslint-disable-next-line react-hooks/exhaustive-deps
