@@ -63,10 +63,10 @@ let currentSpec: PrintSpec = {
 let currentPreview: PreviewSpec = {
   previewWidthPx: 420,
   previewHeightPx: 580,
-  safeInsetXPx: 0,
-  safeInsetYPx: 0,
-  safeInsetX: 0,
-  safeInsetY: 0,
+  safeInsetXPx: undefined,
+  safeInsetYPx: undefined,
+  safeInsetX: undefined,
+  safeInsetY: undefined,
 }
 
 let safeInsetXIn = 0
@@ -113,8 +113,8 @@ export const setPreviewSpec = (spec: PreviewSpec) => {
   currentPreview = {
     ...spec,
     // allow legacy field names
-    safeInsetXPx: spec.safeInsetXPx ?? (spec as any).safeInsetX ?? 0,
-    safeInsetYPx: spec.safeInsetYPx ?? (spec as any).safeInsetY ?? 0,
+    safeInsetXPx: spec.safeInsetXPx ?? (spec as any).safeInsetX,
+    safeInsetYPx: spec.safeInsetYPx ?? (spec as any).safeInsetY,
   }
   recompute()
 }
