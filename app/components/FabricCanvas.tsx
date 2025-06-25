@@ -92,6 +92,7 @@ export const setSafeInset = (xIn: number, yIn: number) => {
   safeInsetXIn = xIn
   safeInsetYIn = yIn
   recompute()
+  document.dispatchEvent(new Event('safe-inset-change'))
 }
 
 export const setSafeInsetPx = (xPx: number, yPx: number) => {
@@ -99,11 +100,13 @@ export const setSafeInsetPx = (xPx: number, yPx: number) => {
   safeInsetXIn = xPx / (currentSpec.dpi * scale)
   safeInsetYIn = yPx / (currentSpec.dpi * scale)
   recompute()
+  document.dispatchEvent(new Event('safe-inset-change'))
 }
 
 export const setPreviewSpec = (spec: PreviewSpec) => {
   currentPreview = spec
   recompute()
+  document.dispatchEvent(new Event('safe-inset-change'))
 }
 
 /* ---------- size helpers ---------------------------------------- */
@@ -1040,6 +1043,8 @@ window.addEventListener('keydown', onKey)
   // expose editing ref so external controls can pause re-hydration
   ;(fc as any)._editingRef = isEditing
   fcRef.current = fc; onReady(fc)
+  // refresh guides now that the canvas exists
+  document.dispatchEvent(new Event('safe-inset-change'))
 
     return () => {
       fc.upperCanvasEl.removeEventListener('contextmenu', ctxMenu)
@@ -1073,6 +1078,21 @@ window.addEventListener('keydown', onKey)
       }
     }
   }, [isCropping])
+
+  /* ---------- refresh guides when safe insets change ----------- */
+  useEffect(() => {
+    const handler = () => {
+      const fc = fcRef.current
+      if (!fc) return
+      addGuides(fc, mode)
+      hoverRef.current?.bringToFront()
+      fc.requestRenderAll()
+    }
+    document.addEventListener("safe-inset-change", handler)
+    handler()
+    return () => document.removeEventListener("safe-inset-change", handler)
+  }, [mode])
+
 
 
 
