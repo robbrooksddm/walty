@@ -114,16 +114,19 @@ export default function CardEditor({
     if (!printSpec || !previewSpec) return
 
     // 1️⃣  explicit safe insets from the preview spec
-    const legacyX =
+    const explicitX =
       previewSpec.safeInsetXPx ??
       (previewSpec as any).safeInsetX ??
       undefined
-    const legacyY =
+    const explicitY =
       previewSpec.safeInsetYPx ??
       (previewSpec as any).safeInsetY ??
       undefined
-    if (legacyX !== undefined || legacyY !== undefined) {
-      setSafeInsetPx(legacyX ?? 0, legacyY ?? 0)
+    const hasValue =
+      (explicitX != null && explicitX !== 0) ||
+      (explicitY != null && explicitY !== 0)
+    if (hasValue) {
+      setSafeInsetPx(explicitX ?? 0, explicitY ?? 0)
       return
     }
 
