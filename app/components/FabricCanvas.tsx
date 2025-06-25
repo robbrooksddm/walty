@@ -92,6 +92,7 @@ export const setSafeInset = (xIn: number, yIn: number) => {
   safeInsetXIn = xIn
   safeInsetYIn = yIn
   recompute()
+  document.dispatchEvent(new Event('safe-inset-change'))
 }
 
 export const setSafeInsetPx = (xPx: number, yPx: number) => {
@@ -99,11 +100,13 @@ export const setSafeInsetPx = (xPx: number, yPx: number) => {
   safeInsetXIn = xPx / (currentSpec.dpi * scale)
   safeInsetYIn = yPx / (currentSpec.dpi * scale)
   recompute()
+  document.dispatchEvent(new Event('safe-inset-change'))
 }
 
 export const setPreviewSpec = (spec: PreviewSpec) => {
   currentPreview = spec
   recompute()
+  document.dispatchEvent(new Event('safe-inset-change'))
 }
 
 /* ---------- size helpers ---------------------------------------- */
@@ -1073,6 +1076,20 @@ window.addEventListener('keydown', onKey)
       }
     }
   }, [isCropping])
+
+  /* ---------- refresh guides when safe insets change ----------- */
+  useEffect(() => {
+    const handler = () => {
+      const fc = fcRef.current
+      if (!fc) return
+      addGuides(fc, mode)
+      hoverRef.current?.bringToFront()
+      fc.requestRenderAll()
+    }
+    document.addEventListener("safe-inset-change", handler)
+    return () => document.removeEventListener("safe-inset-change", handler)
+  }, [mode])
+
 
 
 
