@@ -1086,8 +1086,9 @@ window.addEventListener('keydown', onKey)
       hoverRef.current?.bringToFront()
       fc.requestRenderAll()
     }
-    document.addEventListener("safe-inset-change", handler)
-    return () => document.removeEventListener("safe-inset-change", handler)
+    document.addEventListener('safe-inset-change', handler)
+    handler()
+    return () => document.removeEventListener('safe-inset-change', handler)
   }, [mode])
 
 
