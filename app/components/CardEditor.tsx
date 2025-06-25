@@ -116,6 +116,7 @@ export default function CardEditor({
     // 1️⃣  explicit safe insets from the preview spec
     if (previewSpec.safeInsetXPx || previewSpec.safeInsetYPx) {
       setSafeInsetPx(previewSpec.safeInsetXPx ?? 0, previewSpec.safeInsetYPx ?? 0)
+      document.dispatchEvent(new Event('safe-inset-changed'))
       return
     }
 
@@ -140,6 +141,7 @@ export default function CardEditor({
     const insetX = (baseW - safeW) / 2 + printSpec.bleedIn + 0.125
     const insetY = (baseH - safeH) / 2 + printSpec.bleedIn + 0.125
     setSafeInset(insetX, insetY)
+    document.dispatchEvent(new Event('safe-inset-changed'))
   }, [printSpec, previewSpec, products])
   /* 1 ─ hydrate Zustand once ------------------------------------- */
   useEffect(() => {

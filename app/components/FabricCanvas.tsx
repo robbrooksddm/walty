@@ -1074,6 +1074,19 @@ window.addEventListener('keydown', onKey)
     }
   }, [isCropping])
 
+  /* ---------- safe inset redraw --------------------------- */
+  useEffect(() => {
+    const fc = fcRef.current
+    if (!fc) return
+    const handler = () => {
+      addGuides(fc, mode)
+      hoverRef.current?.bringToFront()
+      fc.requestRenderAll()
+    }
+    document.addEventListener('safe-inset-changed', handler)
+    return () => document.removeEventListener('safe-inset-changed', handler)
+  }, [mode])
+
 
 
   /* ---------- redraw on page change ----------------------------- */
