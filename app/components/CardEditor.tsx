@@ -113,12 +113,6 @@ export default function CardEditor({
   useEffect(() => {
     if (!printSpec || !previewSpec) return
 
-    // 1️⃣  explicit safe insets from the preview spec
-    if (previewSpec.safeInsetXPx || previewSpec.safeInsetYPx) {
-      setSafeInsetPx(previewSpec.safeInsetXPx ?? 0, previewSpec.safeInsetYPx ?? 0)
-      return
-    }
-
     if (!products.length) return
     const baseW = printSpec.trimWidthIn + printSpec.bleedIn * 2
     const baseH = printSpec.trimHeightIn + printSpec.bleedIn * 2
