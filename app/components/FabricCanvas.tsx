@@ -92,6 +92,9 @@ export const setSafeInset = (xIn: number, yIn: number) => {
   safeInsetXIn = xIn
   safeInsetYIn = yIn
   recompute()
+  if (typeof document !== 'undefined') {
+    document.dispatchEvent(new CustomEvent('safe-inset-change'))
+  }
 }
 
 export const setSafeInsetPx = (xPx: number, yPx: number) => {
@@ -99,6 +102,9 @@ export const setSafeInsetPx = (xPx: number, yPx: number) => {
   safeInsetXIn = xPx / (currentSpec.dpi * scale)
   safeInsetYIn = yPx / (currentSpec.dpi * scale)
   recompute()
+  if (typeof document !== 'undefined') {
+    document.dispatchEvent(new CustomEvent('safe-inset-change'))
+  }
 }
 
 export const setPreviewSpec = (spec: PreviewSpec) => {
@@ -864,6 +870,12 @@ fc.on('mouse:over', e => {
 })
 
 addGuides(fc, mode)                           // add guides based on mode
+  const updateGuides = () => {
+    addGuides(fc, mode)
+    hoverRef.current?.bringToFront()
+    fc.requestRenderAll()
+  }
+  document.addEventListener('safe-inset-change', updateGuides)
   /* ── 4.5 ▸ Fabric ➜ Zustand sync ──────────────────────────── */
   fc.on('object:modified', e=>{
     isEditing.current = true
@@ -1053,6 +1065,7 @@ window.addEventListener('keydown', onKey)
       fc.off('before:transform', startCrop);
       fc.off('object:scaling', duringCrop);
       fc.off('object:scaled', endCrop);
+      document.removeEventListener('safe-inset-change', updateGuides)
       onReady(null)
       cropToolRef.current?.abort()
       fc.dispose()
