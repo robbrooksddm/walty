@@ -92,6 +92,9 @@ export const setSafeInset = (xIn: number, yIn: number) => {
   safeInsetXIn = xIn
   safeInsetYIn = yIn
   recompute()
+  if (typeof document !== 'undefined') {
+    document.dispatchEvent(new Event('safe-inset-changed'))
+  }
 }
 
 export const setSafeInsetPx = (xPx: number, yPx: number) => {
@@ -99,6 +102,9 @@ export const setSafeInsetPx = (xPx: number, yPx: number) => {
   safeInsetXIn = xPx / (currentSpec.dpi * scale)
   safeInsetYIn = yPx / (currentSpec.dpi * scale)
   recompute()
+  if (typeof document !== 'undefined') {
+    document.dispatchEvent(new Event('safe-inset-changed'))
+  }
 }
 
 export const setPreviewSpec = (spec: PreviewSpec) => {
@@ -1040,6 +1046,8 @@ window.addEventListener('keydown', onKey)
   // expose editing ref so external controls can pause re-hydration
   ;(fc as any)._editingRef = isEditing
   fcRef.current = fc; onReady(fc)
+  const refreshGuides = () => addGuides(fc, mode)
+  document.addEventListener('safe-inset-changed', refreshGuides)
 
     return () => {
       fc.upperCanvasEl.removeEventListener('contextmenu', ctxMenu)
@@ -1047,6 +1055,7 @@ window.addEventListener('keydown', onKey)
       if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
       window.removeEventListener('scroll', updateOffset)
       window.removeEventListener('resize', updateOffset)
+      document.removeEventListener('safe-inset-changed', refreshGuides)
       // tidy up crop‑tool listeners
       fc.off('mouse:dblclick', dblHandler);
       window.removeEventListener('keydown', keyCropHandler);
