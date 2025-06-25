@@ -63,8 +63,8 @@ export async function getTemplatePages(
       variantHandle,
       price,
       "printSpec": coalesce(printSpec->, printSpec),
-      "showSafeArea": ^.showSafeArea,
-      "showProofSafeArea": ^.showProofSafeArea
+      "showSafeArea": ^.^.showSafeArea,
+      "showProofSafeArea": ^.^.showProofSafeArea
     },
     pages[]{
       layers[]{
