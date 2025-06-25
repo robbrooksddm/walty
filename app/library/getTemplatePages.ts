@@ -55,7 +55,13 @@ export async function getTemplatePages(
     )
   ] | order(_updatedAt desc)[0]{
     coverImage,
-    "previewSpec": products[0]->previewSpec,
+    "previewSpec": products[0]->previewSpec{
+      previewWidthPx,
+      previewHeightPx,
+      maxMobileWidthPx,
+      safeInsetXPx,
+      safeInsetYPx
+    },
     "products": products[]->variants[]->{
       _id,
       title,
