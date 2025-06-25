@@ -15,6 +15,7 @@ import FabricCanvas, {
   setPreviewSpec,
   setSafeInset,
   setSafeInsetPx,
+  addGuides,
   PrintSpec,
   PreviewSpec,
   previewW,
@@ -173,6 +174,16 @@ export default function CardEditor({
   const onReady = (idx: number, fc: fabric.Canvas | null) =>
     setCanvasMap(list => { const next = [...list]; next[idx] = fc; return next })
   const activeFc = canvasMap[activeIdx]
+
+  // refresh guide overlays whenever safe-inset values change
+  useEffect(() => {
+    canvasMap.forEach(fc => {
+      if (fc) {
+        addGuides(fc, mode)
+        fc.requestRenderAll()
+      }
+    })
+  }, [canvasMap, mode, printSpec, previewSpec, products])
 
   const [thumbs, setThumbs] = useState<string[]>(['', '', '', ''])
 
