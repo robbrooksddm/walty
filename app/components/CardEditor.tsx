@@ -114,9 +114,45 @@ export default function CardEditor({
     if (!printSpec || !previewSpec) return
 
     // 1️⃣  explicit safe insets from the preview spec
-    if (previewSpec.safeInsetXPx || previewSpec.safeInsetYPx) {
-      setSafeInsetPx(previewSpec.safeInsetXPx ?? 0, previewSpec.safeInsetYPx ?? 0)
+    const explicitX =
+      previewSpec.safeInsetXPx ??
+      (previewSpec as any).safeInsetX ??
+      undefined
+    const explicitY =
+      previewSpec.safeInsetYPx ??
+      (previewSpec as any).safeInsetY ??
+      undefined
+    const hasValue =
+      (explicitX != null && explicitX !== 0) ||
+      (explicitY != null && explicitY !== 0)
+    if (hasValue) {
+      setSafeInsetPx(explicitX ?? 0, explicitY ?? 0)
       return
+    }
+
+    // 2️⃣  use product-level preview spec if present
+    const prodSafe = products.find(p =>
+      p.safeInsetXPx || p.safeInsetYPx || p.safeInsetX || p.safeInsetY ||
+      (p.previewSpec?.safeInsetXPx ?? (p.previewSpec as any)?.safeInsetX) ||
+      (p.previewSpec?.safeInsetYPx ?? (p.previewSpec as any)?.safeInsetY)
+    )
+    if (prodSafe) {
+      const x =
+        prodSafe.safeInsetXPx ??
+        prodSafe.safeInsetX ??
+        prodSafe.previewSpec?.safeInsetXPx ??
+        (prodSafe.previewSpec as any)?.safeInsetX ??
+        0
+      const y =
+        prodSafe.safeInsetYPx ??
+        prodSafe.safeInsetY ??
+        prodSafe.previewSpec?.safeInsetYPx ??
+        (prodSafe.previewSpec as any)?.safeInsetY ??
+        0
+      if (x !== 0 || y !== 0) {
+        setSafeInsetPx(x, y)
+        return
+      }
     }
 
     if (!products.length) return

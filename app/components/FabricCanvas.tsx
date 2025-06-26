@@ -47,6 +47,10 @@ export interface PreviewSpec {
   maxMobileWidthPx?: number
   safeInsetXPx?: number
   safeInsetYPx?: number
+  /** legacy field name */
+  safeInsetX?: number
+  /** legacy field name */
+  safeInsetY?: number
 }
 
 let currentSpec: PrintSpec = {
@@ -59,8 +63,10 @@ let currentSpec: PrintSpec = {
 let currentPreview: PreviewSpec = {
   previewWidthPx: 420,
   previewHeightPx: 580,
-  safeInsetXPx: 0,
-  safeInsetYPx: 0,
+  safeInsetXPx: undefined,
+  safeInsetYPx: undefined,
+  safeInsetX: undefined,
+  safeInsetY: undefined,
 }
 
 let safeInsetXIn = 0
@@ -104,8 +110,21 @@ export const setSafeInsetPx = (xPx: number, yPx: number) => {
 }
 
 export const setPreviewSpec = (spec: PreviewSpec) => {
-  currentPreview = spec
+  const safeX = spec.safeInsetXPx ?? (spec as any).safeInsetX
+  const safeY = spec.safeInsetYPx ?? (spec as any).safeInsetY
+
+  currentPreview = {
+    ...spec,
+    // allow legacy field names
+    safeInsetXPx: safeX,
+    safeInsetYPx: safeY,
+  }
   recompute()
+
+  const hasValue =
+    (safeX != null && safeX !== 0) ||
+    (safeY != null && safeY !== 0)
+  if (hasValue) setSafeInsetPx(safeX ?? 0, safeY ?? 0)
 }
 
 /* ---------- size helpers ---------------------------------------- */

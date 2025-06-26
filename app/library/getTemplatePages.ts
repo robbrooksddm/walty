@@ -26,6 +26,12 @@ export interface TemplateProduct {
   printSpec?: PrintSpec
   showSafeArea?: boolean
   showProofSafeArea?: boolean
+  previewSpec?: PreviewSpec
+  /** legacy fields for safe insets */
+  safeInsetXPx?: number
+  safeInsetYPx?: number
+  safeInsetX?: number
+  safeInsetY?: number
 }
 
 export interface TemplateData {
@@ -63,6 +69,11 @@ export async function getTemplatePages(
       variantHandle,
       price,
       "printSpec": coalesce(printSpec->, printSpec),
+      "previewSpec": ^.^.previewSpec,
+      "safeInsetXPx": coalesce(^.^.previewSpec.safeInsetXPx, ^.^.safeInsetXPx,
+                              ^.^.previewSpec.safeInsetX,  ^.^.safeInsetX),
+      "safeInsetYPx": coalesce(^.^.previewSpec.safeInsetYPx, ^.^.safeInsetYPx,
+                              ^.^.previewSpec.safeInsetY,  ^.^.safeInsetY),
       "showSafeArea": ^.^.showSafeArea,
       "showProofSafeArea": ^.^.showProofSafeArea
     },
