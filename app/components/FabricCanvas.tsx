@@ -122,9 +122,7 @@ export const setPreviewSpec = (spec: PreviewSpec) => {
   }
   recompute()
 
-  const hasValue =
-    (safeX != null && safeX !== 0) ||
-    (safeY != null && safeY !== 0)
+  const hasValue = safeX != null || safeY != null
   if (hasValue) setSafeInsetPx(safeX ?? 0, safeY ?? 0)
 }
 
