@@ -132,17 +132,20 @@ export default function CardEditor({
 
     // 2️⃣  use product-level preview spec if present
     const prodSafe = products.find(p =>
+      p.safeInsetXPx || p.safeInsetYPx ||
       (p.previewSpec?.safeInsetXPx ?? (p.previewSpec as any)?.safeInsetX) ||
       (p.previewSpec?.safeInsetYPx ?? (p.previewSpec as any)?.safeInsetY)
     )
-    if (prodSafe && prodSafe.previewSpec) {
+    if (prodSafe) {
       const x =
-        prodSafe.previewSpec.safeInsetXPx ??
-        (prodSafe.previewSpec as any).safeInsetX ??
+        prodSafe.safeInsetXPx ??
+        prodSafe.previewSpec?.safeInsetXPx ??
+        (prodSafe.previewSpec as any)?.safeInsetX ??
         0
       const y =
-        prodSafe.previewSpec.safeInsetYPx ??
-        (prodSafe.previewSpec as any).safeInsetY ??
+        prodSafe.safeInsetYPx ??
+        prodSafe.previewSpec?.safeInsetYPx ??
+        (prodSafe.previewSpec as any)?.safeInsetY ??
         0
       if (x !== 0 || y !== 0) {
         setSafeInsetPx(x, y)
