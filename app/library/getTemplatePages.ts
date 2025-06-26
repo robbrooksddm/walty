@@ -61,17 +61,7 @@ export async function getTemplatePages(
     )
   ] | order(_updatedAt desc)[0]{
     coverImage,
-    "previewSpec": {
-      ...(products[0]->previewSpec),
-      "safeInsetXPx": coalesce(products[0]->previewSpec.safeInsetXPx,
-                               products[0]->safeInsetXPx,
-                               products[0]->previewSpec.safeInsetX,
-                               products[0]->safeInsetX),
-      "safeInsetYPx": coalesce(products[0]->previewSpec.safeInsetYPx,
-                               products[0]->safeInsetYPx,
-                               products[0]->previewSpec.safeInsetY,
-                               products[0]->safeInsetY),
-    },
+    "previewSpec": products[0]->previewSpec,
     "products": products[]->variants[]->{
       _id,
       title,
@@ -80,10 +70,10 @@ export async function getTemplatePages(
       price,
       "printSpec": coalesce(printSpec->, printSpec),
       "previewSpec": ^.^.previewSpec,
-      "safeInsetXPx": coalesce(^.^.previewSpec.safeInsetXPx, ^.^.safeInsetXPx,
-                              ^.^.previewSpec.safeInsetX,  ^.^.safeInsetX),
-      "safeInsetYPx": coalesce(^.^.previewSpec.safeInsetYPx, ^.^.safeInsetYPx,
-                              ^.^.previewSpec.safeInsetY,  ^.^.safeInsetY),
+      "safeInsetXPx": coalesce(^.^.previewSpec.safeInsetXPx, ^.^.safeInsetXPx),
+      "safeInsetYPx": coalesce(^.^.previewSpec.safeInsetYPx, ^.^.safeInsetYPx),
+      "safeInsetX": coalesce(^.^.previewSpec.safeInsetX, ^.^.safeInsetX),
+      "safeInsetY": coalesce(^.^.previewSpec.safeInsetY, ^.^.safeInsetY),
       "showSafeArea": ^.^.showSafeArea,
       "showProofSafeArea": ^.^.showProofSafeArea
     },
@@ -139,7 +129,36 @@ console.log(
   const rawProducts = Array.isArray(raw?.products) ? raw.products.filter(Boolean) : []
   const spec = (rawProducts[0]?.printSpec || undefined) as PrintSpec | undefined
   console.log('\u25BA getTemplatePages spec =', JSON.stringify(spec, null, 2))
-  const previewSpec = raw?.previewSpec as PreviewSpec | undefined
+  let previewSpec = raw?.previewSpec as PreviewSpec | undefined
+
+  // merge safe insets from the first product that defines them
+  const withSafe = rawProducts.find(p =>
+    (p as any).previewSpec?.safeInsetXPx ||
+    (p as any).previewSpec?.safeInsetYPx ||
+    (p as any).previewSpec?.safeInsetX   ||
+    (p as any).previewSpec?.safeInsetY   ||
+    (p as any).safeInsetXPx              ||
+    (p as any).safeInsetYPx              ||
+    (p as any).safeInsetX                ||
+    (p as any).safeInsetY
+  ) as (TemplateProduct & {previewSpec?: PreviewSpec}) | undefined
+
+  if (withSafe) {
+    const x =
+      withSafe.previewSpec?.safeInsetXPx ??
+      (withSafe.previewSpec as any)?.safeInsetX ??
+      (withSafe as any).safeInsetXPx ??
+      (withSafe as any).safeInsetX
+    const y =
+      withSafe.previewSpec?.safeInsetYPx ??
+      (withSafe.previewSpec as any)?.safeInsetY ??
+      (withSafe as any).safeInsetYPx ??
+      (withSafe as any).safeInsetY
+
+    if (!previewSpec) previewSpec = { previewWidthPx: 420, previewHeightPx: 580 }
+    if (x !== undefined) previewSpec.safeInsetXPx = x
+    if (y !== undefined) previewSpec.safeInsetYPx = y
+  }
 
   const pagesOut = names.map((name, i) => ({
     name,
