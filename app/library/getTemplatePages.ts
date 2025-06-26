@@ -24,9 +24,9 @@ export interface TemplateProduct {
   variantHandle: string
   price?: number
   printSpec?: PrintSpec
-  previewSpec?: PreviewSpec
   showSafeArea?: boolean
   showProofSafeArea?: boolean
+  previewSpec?: PreviewSpec
 }
 
 export interface TemplateData {
@@ -64,9 +64,9 @@ export async function getTemplatePages(
       variantHandle,
       price,
       "printSpec": coalesce(printSpec->, printSpec),
-      "previewSpec": ^.previewSpec,
-      "showSafeArea": ^.showSafeArea,
-      "showProofSafeArea": ^.showProofSafeArea
+      "previewSpec": ^.^.previewSpec,
+      "showSafeArea": ^.^.showSafeArea,
+      "showProofSafeArea": ^.^.showProofSafeArea
     },
     pages[]{
       layers[]{
