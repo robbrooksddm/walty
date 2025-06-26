@@ -437,22 +437,30 @@ const addGuides = (fc: fabric.Canvas, mode: Mode) => {
   if (SAFE_X > 0 || SAFE_Y > 0) {
     const safeX = SAFE_X
     const safeY = SAFE_Y
-    ;[
+    const guides = [
       mk([safeX, safeY, PAGE_W - safeX, safeY], 'safe-zone', '#34d399'),
       mk([PAGE_W - safeX, safeY, PAGE_W - safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
       mk([PAGE_W - safeX, PAGE_H - safeY, safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
       mk([safeX, PAGE_H - safeY, safeX, safeY], 'safe-zone', '#34d399'),
-    ].forEach(l => fc.add(l))
+    ]
+    guides.forEach(l => {
+      fc.add(l)
+      l.bringToFront()
+    })
   }
 
   if (mode === 'staff') {
     const bleed = mm(currentSpec.bleedIn * 25.4)
-    ;[
+    const guides = [
       mk([bleed, bleed, PAGE_W - bleed, bleed], 'bleed', '#f87171'),
       mk([PAGE_W - bleed, bleed, PAGE_W - bleed, PAGE_H - bleed], 'bleed', '#f87171'),
       mk([PAGE_W - bleed, PAGE_H - bleed, bleed, PAGE_H - bleed], 'bleed', '#f87171'),
       mk([bleed, PAGE_H - bleed, bleed, bleed], 'bleed', '#f87171'),
-    ].forEach(l => fc.add(l))
+    ]
+    guides.forEach(l => {
+      fc.add(l)
+      l.bringToFront()
+    })
   }
 }
 
