@@ -61,7 +61,17 @@ export async function getTemplatePages(
     )
   ] | order(_updatedAt desc)[0]{
     coverImage,
-    "previewSpec": products[0]->previewSpec,
+    "previewSpec": {
+      ...(products[0]->previewSpec),
+      "safeInsetXPx": coalesce(products[0]->previewSpec.safeInsetXPx,
+                               products[0]->safeInsetXPx,
+                               products[0]->previewSpec.safeInsetX,
+                               products[0]->safeInsetX),
+      "safeInsetYPx": coalesce(products[0]->previewSpec.safeInsetYPx,
+                               products[0]->safeInsetYPx,
+                               products[0]->previewSpec.safeInsetY,
+                               products[0]->safeInsetY),
+    },
     "products": products[]->variants[]->{
       _id,
       title,
