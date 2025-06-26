@@ -114,6 +114,7 @@ export const setPreviewSpec = (spec: PreviewSpec) => {
   const safeY = spec.safeInsetYPx ?? (spec as any).safeInsetY
 
   currentPreview = {
+    ...currentPreview,
     ...spec,
     // allow legacy field names
     safeInsetXPx: safeX,
