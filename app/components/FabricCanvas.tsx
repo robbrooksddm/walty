@@ -59,8 +59,6 @@ let currentSpec: PrintSpec = {
 let currentPreview: PreviewSpec = {
   previewWidthPx: 420,
   previewHeightPx: 580,
-  safeInsetXPx: 0,
-  safeInsetYPx: 0,
 }
 
 let safeInsetXIn = 0
@@ -104,7 +102,7 @@ export const setSafeInsetPx = (xPx: number, yPx: number) => {
 }
 
 export const setPreviewSpec = (spec: PreviewSpec) => {
-  currentPreview = spec
+  currentPreview = { ...currentPreview, ...spec }
   recompute()
 }
 
@@ -394,8 +392,11 @@ const syncLayersFromCanvas = (fc: fabric.Canvas, pageIdx: number) => {
 type Mode = 'staff' | 'customer'
 type GuideName = 'safe-zone' | 'bleed'
 
+const guides: fabric.Line[] = []
+
 const addGuides = (fc: fabric.Canvas, mode: Mode) => {
-  fc.getObjects().filter(o => (o as any)._guide).forEach(o => fc.remove(o))
+  guides.forEach(g => fc.remove(g))
+  guides.length = 0
   const strokeW = mm(0.5)
   const mk = (
     xy: [number, number, number, number],
@@ -422,7 +423,7 @@ const addGuides = (fc: fabric.Canvas, mode: Mode) => {
       mk([PAGE_W - safeX, safeY, PAGE_W - safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
       mk([PAGE_W - safeX, PAGE_H - safeY, safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
       mk([safeX, PAGE_H - safeY, safeX, safeY], 'safe-zone', '#34d399'),
-    ].forEach(l => fc.add(l))
+    ].forEach(l => { fc.add(l); guides.push(l); l.bringToFront(); })
   }
 
   if (mode === 'staff') {
@@ -432,8 +433,9 @@ const addGuides = (fc: fabric.Canvas, mode: Mode) => {
       mk([PAGE_W - bleed, bleed, PAGE_W - bleed, PAGE_H - bleed], 'bleed', '#f87171'),
       mk([PAGE_W - bleed, PAGE_H - bleed, bleed, PAGE_H - bleed], 'bleed', '#f87171'),
       mk([bleed, PAGE_H - bleed, bleed, bleed], 'bleed', '#f87171'),
-    ].forEach(l => fc.add(l))
+    ].forEach(l => { fc.add(l); guides.push(l); l.bringToFront(); })
   }
+  guides.forEach(l => l.bringToFront())
 }
 
 /* ---------- white backdrop -------------------------------------- */
