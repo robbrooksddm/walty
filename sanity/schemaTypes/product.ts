@@ -60,6 +60,18 @@ export default defineType({
         title: 'Safe inset Y (px)',
         initialValue: 0,
       }),
+      defineField({
+        name: 'safeInsetX',
+        type: 'number',
+        title: 'Safe inset X (inches)',
+        hidden: true,
+      }),
+      defineField({
+        name: 'safeInsetY',
+        type: 'number',
+        title: 'Safe inset Y (inches)',
+        hidden: true,
+      }),
     ],
   }),
 

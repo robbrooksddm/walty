@@ -47,6 +47,8 @@ export interface PreviewSpec {
   maxMobileWidthPx?: number
   safeInsetXPx?: number
   safeInsetYPx?: number
+  safeInsetX?: number
+  safeInsetY?: number
 }
 
 let currentSpec: PrintSpec = {
@@ -59,8 +61,6 @@ let currentSpec: PrintSpec = {
 let currentPreview: PreviewSpec = {
   previewWidthPx: 420,
   previewHeightPx: 580,
-  safeInsetXPx: 0,
-  safeInsetYPx: 0,
 }
 
 let safeInsetXIn = 0
@@ -104,7 +104,22 @@ export const setSafeInsetPx = (xPx: number, yPx: number) => {
 }
 
 export const setPreviewSpec = (spec: PreviewSpec) => {
-  currentPreview = spec
+  currentPreview = { ...currentPreview, ...spec }
+
+  if (spec.safeInsetXPx === undefined && spec.safeInsetX !== undefined) {
+    currentPreview.safeInsetXPx = spec.safeInsetX * currentSpec.dpi
+  }
+  if (spec.safeInsetYPx === undefined && spec.safeInsetY !== undefined) {
+    currentPreview.safeInsetYPx = spec.safeInsetY * currentSpec.dpi
+  }
+
+  if (currentPreview.safeInsetXPx !== undefined) {
+    safeInsetXIn = currentPreview.safeInsetXPx / currentSpec.dpi
+  }
+  if (currentPreview.safeInsetYPx !== undefined) {
+    safeInsetYIn = currentPreview.safeInsetYPx / currentSpec.dpi
+  }
+
   recompute()
 }
 
@@ -414,26 +429,30 @@ const addGuides = (fc: fabric.Canvas, mode: Mode) => {
       { _guide: name },
     )
 
+  const lines: fabric.Line[] = []
+
   if (SAFE_X > 0 || SAFE_Y > 0) {
     const safeX = SAFE_X
     const safeY = SAFE_Y
-    ;[
+    lines.push(
       mk([safeX, safeY, PAGE_W - safeX, safeY], 'safe-zone', '#34d399'),
       mk([PAGE_W - safeX, safeY, PAGE_W - safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
       mk([PAGE_W - safeX, PAGE_H - safeY, safeX, PAGE_H - safeY], 'safe-zone', '#34d399'),
       mk([safeX, PAGE_H - safeY, safeX, safeY], 'safe-zone', '#34d399'),
-    ].forEach(l => fc.add(l))
+    )
   }
 
   if (mode === 'staff') {
     const bleed = mm(currentSpec.bleedIn * 25.4)
-    ;[
+    lines.push(
       mk([bleed, bleed, PAGE_W - bleed, bleed], 'bleed', '#f87171'),
       mk([PAGE_W - bleed, bleed, PAGE_W - bleed, PAGE_H - bleed], 'bleed', '#f87171'),
       mk([PAGE_W - bleed, PAGE_H - bleed, bleed, PAGE_H - bleed], 'bleed', '#f87171'),
       mk([bleed, PAGE_H - bleed, bleed, bleed], 'bleed', '#f87171'),
-    ].forEach(l => fc.add(l))
+    )
   }
+
+  lines.forEach(l => { fc.add(l); l.bringToFront() })
 }
 
 /* ---------- white backdrop -------------------------------------- */

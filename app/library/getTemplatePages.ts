@@ -24,6 +24,11 @@ export interface TemplateProduct {
   variantHandle: string
   price?: number
   printSpec?: PrintSpec
+  previewSpec?: PreviewSpec
+  safeInsetXPx?: number
+  safeInsetYPx?: number
+  safeInsetX?: number
+  safeInsetY?: number
   showSafeArea?: boolean
   showProofSafeArea?: boolean
 }
@@ -55,7 +60,13 @@ export async function getTemplatePages(
     )
   ] | order(_updatedAt desc)[0]{
     coverImage,
-    "previewSpec": products[0]->previewSpec,
+    "previewSpec": products[0]->{
+      previewSpec,
+      safeInsetXPx,
+      safeInsetYPx,
+      safeInsetX,
+      safeInsetY,
+    },
     "products": products[]->variants[]->{
       _id,
       title,
@@ -63,6 +74,11 @@ export async function getTemplatePages(
       variantHandle,
       price,
       "printSpec": coalesce(printSpec->, printSpec),
+      previewSpec,
+      safeInsetXPx: ^.^.safeInsetXPx,
+      safeInsetYPx: ^.^.safeInsetYPx,
+      safeInsetX: ^.^.safeInsetX,
+      safeInsetY: ^.^.safeInsetY,
       "showSafeArea": ^.^.showSafeArea,
       "showProofSafeArea": ^.^.showProofSafeArea
     },
@@ -89,7 +105,13 @@ export async function getTemplatePages(
   const raw = await client.fetch<{
     pages?: any[]
     coverImage?: any
-    previewSpec?: PreviewSpec
+    previewSpec?: {
+      previewSpec?: PreviewSpec
+      safeInsetXPx?: number
+      safeInsetYPx?: number
+      safeInsetX?: number
+      safeInsetY?: number
+    }
     products?: {
       _id: string
       title: string
@@ -97,6 +119,11 @@ export async function getTemplatePages(
       variantHandle: string
       price?: number
       printSpec?: PrintSpec
+      previewSpec?: PreviewSpec
+      safeInsetXPx?: number
+      safeInsetYPx?: number
+      safeInsetX?: number
+      safeInsetY?: number
       showSafeArea?: boolean
       showProofSafeArea?: boolean
     }[]
@@ -118,7 +145,19 @@ console.log(
   const rawProducts = Array.isArray(raw?.products) ? raw.products.filter(Boolean) : []
   const spec = (rawProducts[0]?.printSpec || undefined) as PrintSpec | undefined
   console.log('\u25BA getTemplatePages spec =', JSON.stringify(spec, null, 2))
-  const previewSpec = raw?.previewSpec as PreviewSpec | undefined
+
+  const previewRaw = raw?.previewSpec
+  let previewSpec: PreviewSpec | undefined = previewRaw?.previewSpec || (previewRaw as any)
+  if (previewSpec && previewRaw) {
+    if (previewSpec.safeInsetXPx === undefined) {
+      if (previewRaw.safeInsetXPx !== undefined) previewSpec.safeInsetXPx = previewRaw.safeInsetXPx
+      else if (previewRaw.safeInsetX !== undefined && spec) previewSpec.safeInsetXPx = previewRaw.safeInsetX * spec.dpi
+    }
+    if (previewSpec.safeInsetYPx === undefined) {
+      if (previewRaw.safeInsetYPx !== undefined) previewSpec.safeInsetYPx = previewRaw.safeInsetYPx
+      else if (previewRaw.safeInsetY !== undefined && spec) previewSpec.safeInsetYPx = previewRaw.safeInsetY * spec.dpi
+    }
+  }
 
   const pagesOut = names.map((name, i) => ({
     name,
