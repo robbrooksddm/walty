@@ -135,16 +135,8 @@ export async function getTemplatePages(
 
   const names = ['front', 'inner-L', 'inner-R', 'back'] as const
 
-// ─── DEBUG – show what actually came back from Sanity ───
-console.log(
-  '\n▶ getTemplatePages raw =\n',
-  JSON.stringify(raw, null, 2),
-  '\n',
-)
-
   const rawProducts = Array.isArray(raw?.products) ? raw.products.filter(Boolean) : []
   const spec = (rawProducts[0]?.printSpec || undefined) as PrintSpec | undefined
-  console.log('\u25BA getTemplatePages spec =', JSON.stringify(spec, null, 2))
 
   const previewRaw = raw?.previewSpec
   let previewSpec: PreviewSpec | undefined = previewRaw?.previewSpec || (previewRaw as any)
