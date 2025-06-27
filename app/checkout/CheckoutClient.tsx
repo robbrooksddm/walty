@@ -119,6 +119,30 @@ export default function CheckoutClient({
     console.log({ cartItems, addresses, totals: { subtotal, shipping, total } });
   };
 
+  const TEST_FULFIL_HANDLE = 'toSender_flat_std';
+
+  const sendTestOrder = async () => {
+    const item = cartItems[0];
+    if (!item) return;
+    try {
+      const res = await fetch('/api/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          variantHandle: item.variant,
+          fulfilHandle: TEST_FULFIL_HANDLE,
+          assets: [{ url: item.proofUrl }],
+          copies: item.qty,
+          address: addresses.find(a => a.id === item.addressId) || null,
+        }),
+      });
+      const text = await res.text();
+      console.log('Prodigi response', text);
+    } catch (err) {
+      console.error('test order', err);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 font-sans">
       {/* Progress bar */}
@@ -173,6 +197,12 @@ export default function CheckoutClient({
           onClick={placeOrder}
         >
           Place order
+        </button>
+        <button
+          onClick={sendTestOrder}
+          className="ml-4 rounded-md border border-walty-orange text-walty-orange px-6 py-3 hover:bg-walty-orange/10"
+        >
+          Test Prodigi Order
         </button>
       </div>
 
