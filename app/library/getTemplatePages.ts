@@ -65,7 +65,7 @@ export async function getTemplatePages(
       safeInsetXPx,
       safeInsetYPx,
       safeInsetX,
-      safeInsetY,
+      safeInsetY
     },
     "products": products[]->variants[]->{
       _id,
