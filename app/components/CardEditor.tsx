@@ -122,6 +122,21 @@ export default function CardEditor({
       return
     }
 
+    // 2️⃣  check products for explicit safe inset fields
+    const pxX = products.find(p => p.safeInsetXPx !== undefined)?.safeInsetXPx
+    const pxY = products.find(p => p.safeInsetYPx !== undefined)?.safeInsetYPx
+    const inX = products.find(p => p.safeInsetX !== undefined)?.safeInsetX
+    const inY = products.find(p => p.safeInsetY !== undefined)?.safeInsetY
+
+    if (pxX !== undefined || pxY !== undefined) {
+      setSafeInsetPx(pxX ?? 0, pxY ?? 0)
+      return
+    }
+    if (inX !== undefined || inY !== undefined) {
+      setSafeInset(inX ?? 0, inY ?? 0)
+      return
+    }
+
     if (!products.length) return
     const baseW = printSpec.trimWidthIn + printSpec.bleedIn * 2
     const baseH = printSpec.trimHeightIn + printSpec.bleedIn * 2

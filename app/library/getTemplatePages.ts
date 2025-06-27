@@ -133,6 +133,25 @@ export async function getTemplatePages(
   const spec = (rawProducts[0]?.printSpec || undefined) as PrintSpec | undefined
 
   const previewSpec = raw?.previewSpec
+
+  let prodPxX: number | undefined
+  let prodPxY: number | undefined
+  let prodInX: number | undefined
+  let prodInY: number | undefined
+  for (const p of rawProducts) {
+    if (prodPxX === undefined && p.safeInsetXPx !== undefined) prodPxX = p.safeInsetXPx
+    if (prodPxY === undefined && p.safeInsetYPx !== undefined) prodPxY = p.safeInsetYPx
+    if (prodInX === undefined && p.safeInsetX !== undefined) prodInX = p.safeInsetX
+    if (prodInY === undefined && p.safeInsetY !== undefined) prodInY = p.safeInsetY
+  }
+
+  if (previewSpec) {
+    if (previewSpec.safeInsetXPx === undefined) previewSpec.safeInsetXPx = prodPxX
+    if (previewSpec.safeInsetYPx === undefined) previewSpec.safeInsetYPx = prodPxY
+    if (previewSpec.safeInsetX === undefined) previewSpec.safeInsetX = prodInX
+    if (previewSpec.safeInsetY === undefined) previewSpec.safeInsetY = prodInY
+  }
+
   if (previewSpec && spec) {
     if (previewSpec.safeInsetXPx === undefined && previewSpec.safeInsetX !== undefined) {
       previewSpec.safeInsetXPx = previewSpec.safeInsetX * spec.dpi
