@@ -114,7 +114,10 @@ export default function CardEditor({
     if (!printSpec || !previewSpec) return
 
     // 1️⃣  explicit safe insets from the preview spec
-    if (previewSpec.safeInsetXPx || previewSpec.safeInsetYPx) {
+    if (
+      previewSpec.safeInsetXPx !== undefined ||
+      previewSpec.safeInsetYPx !== undefined
+    ) {
       setSafeInsetPx(previewSpec.safeInsetXPx ?? 0, previewSpec.safeInsetYPx ?? 0)
       return
     }

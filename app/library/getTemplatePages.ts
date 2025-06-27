@@ -60,12 +60,12 @@ export async function getTemplatePages(
     )
   ] | order(_updatedAt desc)[0]{
     coverImage,
-    "previewSpec": products[0]->{
-      previewSpec,
-      "safeInsetXPx": previewSpec.safeInsetXPx,
-      "safeInsetYPx": previewSpec.safeInsetYPx,
-      "safeInsetX": previewSpec.safeInsetX,
-      "safeInsetY": previewSpec.safeInsetY,
+    "previewSpec": products[0]->previewSpec{
+      ...,
+      "safeInsetXPx": safeInsetXPx,
+      "safeInsetYPx": safeInsetYPx,
+      "safeInsetX": safeInsetX,
+      "safeInsetY": safeInsetY,
     },
     "products": products[]->variants[]->{
       _id,
@@ -105,13 +105,7 @@ export async function getTemplatePages(
   const raw = await client.fetch<{
     pages?: any[]
     coverImage?: any
-    previewSpec?: {
-      previewSpec?: PreviewSpec
-      safeInsetXPx?: number
-      safeInsetYPx?: number
-      safeInsetX?: number
-      safeInsetY?: number
-    }
+    previewSpec?: PreviewSpec
     products?: {
       _id: string
       title: string
@@ -138,16 +132,13 @@ export async function getTemplatePages(
   const rawProducts = Array.isArray(raw?.products) ? raw.products.filter(Boolean) : []
   const spec = (rawProducts[0]?.printSpec || undefined) as PrintSpec | undefined
 
-  const previewRaw = raw?.previewSpec
-  let previewSpec: PreviewSpec | undefined = previewRaw?.previewSpec || (previewRaw as any)
-  if (previewSpec && previewRaw) {
-    if (previewSpec.safeInsetXPx === undefined) {
-      if (previewRaw.safeInsetXPx !== undefined) previewSpec.safeInsetXPx = previewRaw.safeInsetXPx
-      else if (previewRaw.safeInsetX !== undefined && spec) previewSpec.safeInsetXPx = previewRaw.safeInsetX * spec.dpi
+  const previewSpec = raw?.previewSpec
+  if (previewSpec && spec) {
+    if (previewSpec.safeInsetXPx === undefined && previewSpec.safeInsetX !== undefined) {
+      previewSpec.safeInsetXPx = previewSpec.safeInsetX * spec.dpi
     }
-    if (previewSpec.safeInsetYPx === undefined) {
-      if (previewRaw.safeInsetYPx !== undefined) previewSpec.safeInsetYPx = previewRaw.safeInsetYPx
-      else if (previewRaw.safeInsetY !== undefined && spec) previewSpec.safeInsetYPx = previewRaw.safeInsetY * spec.dpi
+    if (previewSpec.safeInsetYPx === undefined && previewSpec.safeInsetY !== undefined) {
+      previewSpec.safeInsetYPx = previewSpec.safeInsetY * spec.dpi
     }
   }
 
