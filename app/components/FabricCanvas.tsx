@@ -601,15 +601,17 @@ useEffect(() => {
   /* --- keep Fabric’s wrapper the same size as the visible preview --- */
   const container = canvasRef.current!.parentElement as HTMLElement | null;
   if (container) {
-    container.style.width  = `${PREVIEW_W}px`;
-    container.style.height = `${PREVIEW_H}px`;
-    container.style.maxWidth  = `${PREVIEW_W}px`;
-    container.style.maxHeight = `${PREVIEW_H}px`;
+    container.style.width  = `${PREVIEW_W * zoom}px`;
+    container.style.height = `${PREVIEW_H * zoom}px`;
+    container.style.maxWidth  = `${PREVIEW_W * zoom}px`;
+    container.style.maxHeight = `${PREVIEW_H * zoom}px`;
   }
   addBackdrop(fc);
   // keep the preview scaled to the configured width
   const initScale = BASE_SCALE * zoom
   fc.setViewportTransform([initScale, 0, 0, initScale, 0, 0])
+  fc.setWidth(PREVIEW_W * zoom)
+  fc.setHeight(PREVIEW_H * zoom)
   enableSnapGuides(fc, PAGE_W, PAGE_H);
 
   /* keep event coordinates aligned with any scroll/resize */
@@ -1071,6 +1073,15 @@ window.addEventListener('keydown', onKey)
     if (!fc) return
     const scale = BASE_SCALE * zoom
     fc.setViewportTransform([scale, 0, 0, scale, 0, 0])
+    fc.setWidth(PREVIEW_W * zoom)
+    fc.setHeight(PREVIEW_H * zoom)
+    const container = canvasRef.current?.parentElement as HTMLElement | null
+    if (container) {
+      container.style.width  = `${PREVIEW_W * zoom}px`
+      container.style.height = `${PREVIEW_H * zoom}px`
+      container.style.maxWidth  = `${PREVIEW_W * zoom}px`
+      container.style.maxHeight = `${PREVIEW_H * zoom}px`
+    }
     hoverRef.current?.set({ strokeWidth: 1 / scale })
     cropToolRef.current?.setScale(scale)
     fc.requestRenderAll()
@@ -1291,9 +1302,9 @@ img.on('mouseup', () => {
     <>
       <canvas
         ref={canvasRef}
-        width={PREVIEW_W}
-        height={PREVIEW_H}
-        style={{ width: PREVIEW_W, height: PREVIEW_H }}   // lock CSS size
+        width={PREVIEW_W * zoom}
+        height={PREVIEW_H * zoom}
+        style={{ width: PREVIEW_W * zoom, height: PREVIEW_H * zoom }}
         className="border shadow rounded"
       />
       {menuPos && (

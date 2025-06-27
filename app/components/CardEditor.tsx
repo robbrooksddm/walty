@@ -636,7 +636,7 @@ const handleProofAll = async () => {
     )
   }
 
-  const boxWidth = previewW()
+  const boxWidth = previewW() * zoom
   const box = `flex-shrink-0`
 
   /* ---------------- UI ------------------------------------------ */
