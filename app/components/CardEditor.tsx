@@ -286,6 +286,7 @@ export default function CardEditor({
 
   /* 5 ─ save ------------------------------------------------------ */
   const [saving, setSaving] = useState(false)
+  const [zoom, setZoom] = useState(1)
   const handleSave = async () => {
     if (!onSave) return
     setSaving(true)
@@ -632,7 +633,7 @@ const handleProofAll = async () => {
     )
   }
 
-  const boxWidth = previewW()
+  const boxWidth = previewW() * zoom
   const box = `flex-shrink-0`
 
   /* ---------------- UI ------------------------------------------ */
@@ -655,6 +656,8 @@ const handleProofAll = async () => {
           onProof={mode === 'staff' ? handleProofAll : undefined}
           saving={saving}
           mode={mode}
+          onZoomIn={() => setZoom(z => Math.min(z + 0.1, 2))}
+          onZoomOut={() => setZoom(z => Math.max(z - 0.1, 0.5))}
         />
       )}
       
@@ -721,6 +724,7 @@ const handleProofAll = async () => {
                 isCropping={cropping[0]}
                 onCroppingChange={state => handleCroppingChange(0, state)}
                 mode={mode}
+                zoom={zoom}
               />
             </div>
             {/* inside */}
@@ -733,6 +737,7 @@ const handleProofAll = async () => {
                   isCropping={cropping[1]}
                   onCroppingChange={state => handleCroppingChange(1, state)}
                   mode={mode}
+                  zoom={zoom}
                 />
               </div>
               <div className={box} style={{ width: boxWidth }}>
@@ -743,6 +748,7 @@ const handleProofAll = async () => {
                   isCropping={cropping[2]}
                   onCroppingChange={state => handleCroppingChange(2, state)}
                   mode={mode}
+                  zoom={zoom}
                 />
               </div>
             </div>
@@ -755,6 +761,7 @@ const handleProofAll = async () => {
                 isCropping={cropping[3]}
                 onCroppingChange={state => handleCroppingChange(3, state)}
                 mode={mode}
+                zoom={zoom}
               />
             </div>
           </div>
