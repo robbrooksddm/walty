@@ -27,11 +27,13 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
   const [choice, setChoice] = useState<string | null>(null)
   const { addItem } = useBasket()
 
-  const options =
-    products?.filter((p): p is { title: string; variantHandle: string } =>
-      Boolean(p && p.title && p.variantHandle),
-    ).map(p => ({ label: p.title, handle: p.variantHandle })) ??
-    DEFAULT_OPTIONS
+  const options = products && products.length
+    ? products
+        .filter((p): p is { title: string; variantHandle: string } =>
+          Boolean(p && p.title && p.variantHandle),
+        )
+        .map(p => ({ label: p.title, handle: p.variantHandle }))
+    : DEFAULT_OPTIONS
 
   const handleAdd = async () => {
     if (!choice) return
@@ -60,6 +62,26 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     onAdd?.(choice)
     onClose()
     setChoice(null)
+  }
+
+  const handleTest = async () => {
+    if (!choice || !generateProofUrls) return
+    try {
+      const urls = await generateProofUrls(options.map(o => o.handle))
+      const proof = urls[choice]
+      if (!proof) throw new Error('proof generation failed')
+      await fetch('/api/order', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          variantHandle: choice,
+          fulfilHandle: 'toRecipient_flat_std',
+          assets: [{ url: proof }],
+        }),
+      })
+    } catch (err) {
+      console.error('test order', err)
+    }
   }
 
   return (
@@ -96,6 +118,13 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
             </ul>
             <div className="flex justify-end gap-4 pt-2">
               <button onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2">Back to editor</button>
+              <button
+                onClick={handleTest}
+                disabled={!choice}
+                className={`rounded-md px-4 py-2 font-semibold text-white ${choice ? 'bg-sky-600 hover:bg-sky-700' : 'bg-gray-300 cursor-not-allowed'}`}
+              >
+                Test order
+              </button>
               <button
                 onClick={handleAdd}
                 disabled={!choice}
