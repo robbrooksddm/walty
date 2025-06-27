@@ -74,7 +74,7 @@ export async function getTemplatePages(
       variantHandle,
       price,
       "printSpec": coalesce(printSpec->, printSpec),
-      previewSpec,
+      "previewSpec": ^.^.previewSpec,
       "safeInsetXPx": ^.^.previewSpec.safeInsetXPx,
       "safeInsetYPx": ^.^.previewSpec.safeInsetYPx,
       "safeInsetX": ^.^.previewSpec.safeInsetX,
@@ -132,7 +132,10 @@ export async function getTemplatePages(
   const rawProducts = Array.isArray(raw?.products) ? raw.products.filter(Boolean) : []
   const spec = (rawProducts[0]?.printSpec || undefined) as PrintSpec | undefined
 
-  const previewSpec = raw?.previewSpec
+  let previewSpec: PreviewSpec | undefined = raw?.previewSpec
+  if (!previewSpec && rawProducts[0]?.previewSpec) {
+    previewSpec = { ...rawProducts[0].previewSpec }
+  }
 
   let prodPxX: number | undefined
   let prodPxY: number | undefined
@@ -143,6 +146,11 @@ export async function getTemplatePages(
     if (prodPxY === undefined && p.safeInsetYPx !== undefined) prodPxY = p.safeInsetYPx
     if (prodInX === undefined && p.safeInsetX !== undefined) prodInX = p.safeInsetX
     if (prodInY === undefined && p.safeInsetY !== undefined) prodInY = p.safeInsetY
+  }
+
+  if (!previewSpec) previewSpec = {
+    previewWidthPx: 420,
+    previewHeightPx: 580,
   }
 
   if (previewSpec) {
