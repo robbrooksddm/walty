@@ -33,6 +33,15 @@ export class CropTool {
     this.onChange= onChange
   }
 
+  public setScale (scale: number) {
+    this.SCALE = scale
+    if (this.frame) {
+      this.frame.strokeWidth = 1 / this.SCALE
+      this.frame.setCoords()
+    }
+    this.masks.forEach(m => { m.strokeWidth = 1 / this.SCALE })
+  }
+
   public setRatio (r: number | null) {
     this.ratio = r
     if (this.frame) {
