@@ -2,7 +2,14 @@
 
 import React from "react";
 import IconButton from "./toolbar/IconButton";
-import { RotateCcw, RotateCw, Save, Download } from "lucide-react";
+import {
+  RotateCcw,
+  RotateCw,
+  Save,
+  Download,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
 
 type Mode = 'staff' | 'customer';
 interface Props {
@@ -10,16 +17,24 @@ interface Props {
   onRedo: () => void;
   onSave: () => void | Promise<void>;
   onProof?: () => void | Promise<void>;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
   saving: boolean;
   mode?: Mode;
 }
 
-export default function EditorCommands({ onUndo, onRedo, onSave, onProof, saving, mode = 'customer' }: Props) {
+export default function EditorCommands({ onUndo, onRedo, onSave, onProof, onZoomIn, onZoomOut, saving, mode = 'customer' }: Props) {
   return (
     <div className="fixed top-14   right-6 z-40 flex items-center gap-3
                      bg-white shadow rounded-md px-3 py-3 pointer-events-auto select-none" style={{ top: "var(--walty-header-h)" }}>
       <IconButton Icon={RotateCcw} label="Undo" onClick={onUndo} />
       <IconButton Icon={RotateCw} label="Redo" onClick={onRedo} />
+      {onZoomOut && (
+        <IconButton Icon={ZoomOut} label="Zoom out" onClick={onZoomOut} />
+      )}
+      {onZoomIn && (
+        <IconButton Icon={ZoomIn} label="Zoom in" onClick={onZoomIn} />
+      )}
       <button
         type="button"
         onClick={onSave}
