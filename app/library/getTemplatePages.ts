@@ -74,13 +74,13 @@ export async function getTemplatePages(
       variantHandle,
       price,
       "printSpec": coalesce(printSpec->, printSpec),
-      "previewSpec": ^.previewSpec,
-      "safeInsetXPx": ^.previewSpec.safeInsetXPx,
-      "safeInsetYPx": ^.previewSpec.safeInsetYPx,
-      "safeInsetX": ^.previewSpec.safeInsetX,
-      "safeInsetY": ^.previewSpec.safeInsetY,
-      "showSafeArea": ^.showSafeArea,
-      "showProofSafeArea": ^.showProofSafeArea
+      "previewSpec": ^.^.previewSpec,
+      "safeInsetXPx": ^.^.previewSpec.safeInsetXPx,
+      "safeInsetYPx": ^.^.previewSpec.safeInsetYPx,
+      "safeInsetX": ^.^.previewSpec.safeInsetX,
+      "safeInsetY": ^.^.previewSpec.safeInsetY,
+      "showSafeArea": ^.^.showSafeArea,
+      "showProofSafeArea": ^.^.showProofSafeArea
     },
     pages[]{
       layers[]{
