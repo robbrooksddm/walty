@@ -62,10 +62,10 @@ export async function getTemplatePages(
     coverImage,
     "previewSpec": products[0]->{
       previewSpec,
-      safeInsetXPx,
-      safeInsetYPx,
-      safeInsetX,
-      safeInsetY
+      "safeInsetXPx": previewSpec.safeInsetXPx,
+      "safeInsetYPx": previewSpec.safeInsetYPx,
+      "safeInsetX": previewSpec.safeInsetX,
+      "safeInsetY": previewSpec.safeInsetY,
     },
     "products": products[]->variants[]->{
       _id,
@@ -75,10 +75,10 @@ export async function getTemplatePages(
       price,
       "printSpec": coalesce(printSpec->, printSpec),
       previewSpec,
-      "safeInsetXPx": ^.^.safeInsetXPx,
-      "safeInsetYPx": ^.^.safeInsetYPx,
-      "safeInsetX": ^.^.safeInsetX,
-      "safeInsetY": ^.^.safeInsetY,
+      "safeInsetXPx": ^.^.previewSpec.safeInsetXPx,
+      "safeInsetYPx": ^.^.previewSpec.safeInsetYPx,
+      "safeInsetX": ^.^.previewSpec.safeInsetX,
+      "safeInsetY": ^.^.previewSpec.safeInsetY,
       "showSafeArea": ^.^.showSafeArea,
       "showProofSafeArea": ^.^.showProofSafeArea
     },
