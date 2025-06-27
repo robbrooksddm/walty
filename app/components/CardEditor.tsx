@@ -157,6 +157,10 @@ export default function CardEditor({
   const updateLayer = useEditor(s => s.updateLayer)
   const undo = useEditor(s => s.undo)
   const redo = useEditor(s => s.redo)
+  const zoom      = useEditor(s => s.zoom)
+  const setZoom   = useEditor(s => s.setZoom)
+  const zoomIn    = () => setZoom(Math.min(zoom + 0.25, 3))
+  const zoomOut   = () => setZoom(Math.max(zoom - 0.25, 0.5))
 
 
   /* 3 ─ visible section ------------------------------------------ */
@@ -632,7 +636,7 @@ const handleProofAll = async () => {
     )
   }
 
-  const boxWidth = previewW()
+  const boxWidth = previewW() * zoom
   const box = `flex-shrink-0`
 
   /* ---------------- UI ------------------------------------------ */
@@ -653,6 +657,9 @@ const handleProofAll = async () => {
           onRedo={redo}
           onSave={handleSave}
           onProof={mode === 'staff' ? handleProofAll : undefined}
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
+          zoom={zoom}
           saving={saving}
           mode={mode}
         />

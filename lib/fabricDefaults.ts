@@ -1,22 +1,31 @@
 /*  fabricDefaults.ts  */
-import { fabric } from 'fabric';
+import { fabric } from 'fabric'
 
 /* ————— constants ————— */
-export const SCALE        = 420 / 1772;        // or the real SCALE you compute
-export const SEL_COLOR    = '#2EC4B6';         // brand teal – shared everywhere
-export const HANDLE_SHADOW = 'rgba(0,0,0,0.15)';
-export const HANDLE_BLUR   = 1 / SCALE;
+export const SEL_COLOR     = '#2EC4B6'         // brand teal – shared everywhere
+export const HANDLE_SHADOW = 'rgba(0,0,0,0.15)'
 
-/* ————— global Fabric defaults ————— */
-(fabric.Object.prototype as any).cornerSize        = Math.round(3 / SCALE);
-(fabric.Object.prototype as any).touchCornerSize   = Math.round(3 / SCALE);
-(fabric.Object.prototype as any).borderScaleFactor = 1;
-(fabric.Object.prototype as any).borderColor       = SEL_COLOR;
-(fabric.Object.prototype as any).borderDashArray   = [];
-(fabric.Object.prototype as any).cornerStrokeColor = '#fff';
-(fabric.Object.prototype as any).cornerColor       = '#fff';
-(fabric.Object.prototype as any).transparentCorners= false;
-(fabric.Object.prototype as any).cornerStyle       = 'circle';
+/*
+ * Initialise Fabric control sizes based on the preview scale.
+ * Must be called before any canvases are created.
+ */
+export function initFabricDefaults (scale: number) {
+  const blur = 1 / scale
+
+  ;(fabric.Object.prototype as any).cornerSize        = Math.round(3 / scale)
+  ;(fabric.Object.prototype as any).touchCornerSize   = Math.round(3 / scale)
+  ;(fabric.Object.prototype as any).borderScaleFactor = 1
+  ;(fabric.Object.prototype as any).borderColor       = SEL_COLOR
+  ;(fabric.Object.prototype as any).borderDashArray   = []
+  ;(fabric.Object.prototype as any).cornerStrokeColor = '#fff'
+  ;(fabric.Object.prototype as any).cornerColor       = '#fff'
+  ;(fabric.Object.prototype as any).transparentCorners= false
+  ;(fabric.Object.prototype as any).cornerStyle       = 'circle'
+
+  HANDLE_BLUR = blur
+}
+
+let HANDLE_BLUR = 1
 
 /* ───────────────── helpers ──────────────────────────────── */
 
