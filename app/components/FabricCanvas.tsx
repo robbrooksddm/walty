@@ -433,7 +433,12 @@ const addGuides = (fc: fabric.Canvas, mode: Mode) => {
 
   const lines: fabric.Line[] = []
 
-  if (SAFE_X > 0 || SAFE_Y > 0) {
+  if (
+    SAFE_X > 0 ||
+    SAFE_Y > 0 ||
+    currentPreview.safeInsetXPx !== undefined ||
+    currentPreview.safeInsetYPx !== undefined
+  ) {
     const safeX = SAFE_X
     const safeY = SAFE_Y
     lines.push(
