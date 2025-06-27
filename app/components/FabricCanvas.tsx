@@ -86,6 +86,7 @@ export const setPrintSpec = (spec: PrintSpec) => {
   console.log('FabricCanvas setSpec', spec.trimWidthIn, spec.trimHeightIn)
   currentSpec = spec
   recompute()
+  document.dispatchEvent(new CustomEvent('safe-inset-change'))
 }
 
 export const setSafeInset = (xIn: number, yIn: number) => {
@@ -121,6 +122,7 @@ export const setPreviewSpec = (spec: PreviewSpec) => {
   }
 
   recompute()
+  document.dispatchEvent(new CustomEvent('safe-inset-change'))
 }
 
 /* ---------- size helpers ---------------------------------------- */
