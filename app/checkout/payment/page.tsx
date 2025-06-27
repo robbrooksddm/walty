@@ -30,6 +30,26 @@ export default function PaymentPage() {
     }
   };
 
+  const sendTestOrder = async () => {
+    const item = items[0];
+    if (!item) return;
+    try {
+      const res = await fetch('/api/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          variantHandle: item.variant,
+          fulfilHandle: 'toRecipient_flat_std',
+          assets: [{ url: item.proofs[item.variant] || item.image }],
+          copies: item.qty,
+        }),
+      });
+      console.log('Prodigi response →', await res.json());
+    } catch (err) {
+      console.error('order error', err);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 font-sans">
       <div className="flex items-center mb-6">
@@ -127,6 +147,12 @@ export default function PaymentPage() {
         </div>
         <div className="lg:w-1/3 lg:sticky lg:top-4 mt-8 lg:mt-0">
           <Summary subtotal={subtotal} shipping={shipping} total={total} />
+          <button
+            onClick={sendTestOrder}
+            className="mt-4 w-full rounded-md border border-gray-300 p-2"
+          >
+            Send test order to Prodigi
+          </button>
         </div>
       </div>
     </div>

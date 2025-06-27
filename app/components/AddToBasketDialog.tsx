@@ -41,7 +41,7 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     let proofs: Record<string, string> = {}
     if (generateProofUrls) {
       try {
-        const urls = await generateProofUrls([choice])
+        const urls = await generateProofUrls(options.map(o => o.handle))
         proofs = urls
       } catch (err) {
         console.error('proof generation', err)
