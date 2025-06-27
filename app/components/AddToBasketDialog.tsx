@@ -27,35 +27,27 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
   const [choice, setChoice] = useState<string | null>(null)
   const { addItem } = useBasket()
 
-  const options =
-    products?.filter((p): p is { title: string; variantHandle: string } =>
+  const filtered = (products || [])
+    .filter((p): p is { title: string; variantHandle: string } =>
       Boolean(p && p.title && p.variantHandle),
-    ).map(p => ({ label: p.title, handle: p.variantHandle })) ??
-    DEFAULT_OPTIONS
+    )
+    .map(p => ({ label: p.title, handle: p.variantHandle }))
+
+  const options = filtered.length ? filtered : DEFAULT_OPTIONS
 
   const handleAdd = async () => {
     if (!choice) return
 
-    let proof = ''
     let proofs: Record<string, string> = {}
     if (generateProofUrls) {
       try {
-        const urls = await generateProofUrls(options.map(o => o.handle))
+        const urls = await generateProofUrls([choice])
         proofs = urls
-        const url = urls[choice]
-        if (typeof url === 'string' && url) {
-          proof = url
-        } else {
-          console.warn('Proof generation failed for', choice)
-          return
-        }
       } catch (err) {
         console.error('proof generation', err)
-        return
       }
     }
 
-    if (!proof) return
     addItem({ slug, title, variant: choice, image: coverUrl, proofs })
     onAdd?.(choice)
     onClose()
