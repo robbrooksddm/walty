@@ -736,8 +736,11 @@ const handleProofAll = async () => {
   return (
     <div
       ref={containerRef}
-      className="flex flex-col h-screen box-border"
-      style={{ paddingTop: "calc(var(--walty-header-h) + var(--walty-toolbar-h))" }}
+      className="flex flex-col h-screen box-border overflow-y-auto"
+      style={{
+        paddingTop: 'var(--walty-header-h)',
+        scrollbarGutter: 'stable',
+      }}
     >
       <WaltyEditorHeader                     /* ② mount new component */
         onPreview={handlePreview}
