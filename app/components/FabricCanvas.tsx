@@ -617,6 +617,83 @@ useEffect(() => {
   fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0]);
   enableSnapGuides(fc, PAGE_W, PAGE_H);
 
+  /* ---------- selection overlay above canvas -------------------- */
+  let selGhost: HTMLDivElement | null = null
+  const ensureGhost = () => {
+    if (!selGhost) {
+      selGhost = document.createElement('div')
+      selGhost.className = 'selection-ghost'
+      selGhost.innerHTML = `
+        <div class="handle tl"></div>
+        <div class="handle tr"></div>
+        <div class="handle bl"></div>
+        <div class="handle br"></div>
+        <div class="handle ml"></div>
+        <div class="handle mr"></div>
+        <div class="handle mt"></div>
+        <div class="handle mb"></div>`
+      selGhost.style.display = 'none'
+      document.body.appendChild(selGhost)
+
+      const forward = (type: string) => (e: PointerEvent) => {
+        if (!fc.upperCanvasEl) return
+        const ev = new PointerEvent(type, {
+          bubbles: true,
+          clientX: e.clientX,
+          clientY: e.clientY,
+          screenX: e.screenX,
+          screenY: e.screenY,
+          pointerId: e.pointerId,
+          pointerType: e.pointerType,
+          pressure: e.pressure,
+          buttons: e.buttons
+        })
+        fc.upperCanvasEl.dispatchEvent(ev)
+      }
+      selGhost.addEventListener('pointerdown', e => {
+        selGhost!.setPointerCapture(e.pointerId)
+        forward('pointerdown')(e)
+      })
+      selGhost.addEventListener('pointermove', forward('pointermove'))
+      const up = (e: PointerEvent) => {
+        forward('pointerup')(e)
+        selGhost!.releasePointerCapture(e.pointerId)
+      }
+      selGhost.addEventListener('pointerup', up)
+      selGhost.addEventListener('pointercancel', up)
+    }
+  }
+
+  const syncSelGhost = () => {
+    if (!selGhost || !canvasRef.current) return
+    const obj = fc.getActiveObject() as fabric.Object | null
+    if (!obj || croppingRef.current) { selGhost.style.display = 'none'; return }
+    const box = obj.getBoundingRect(true, true)
+    // only show overlay if part of the selection sits outside the canvas
+    if (box.left >= 0 && box.top >= 0 &&
+        box.left + box.width  <= PAGE_W &&
+        box.top  + box.height <= PAGE_H) {
+      selGhost.style.display = 'none'
+      return
+    }
+    const rect = canvasRef.current.getBoundingClientRect()
+    const s = SCALE * zoom
+    selGhost.style.left   = `${rect.left + box.left * s}px`
+    selGhost.style.top    = `${rect.top  + box.top  * s}px`
+    selGhost.style.width  = `${box.width  * s}px`
+    selGhost.style.height = `${box.height * s}px`
+    selGhost.style.display = 'block'
+  }
+
+  fc.on('selection:created', () => { ensureGhost(); syncSelGhost() })
+    .on('selection:updated', syncSelGhost)
+    .on('selection:cleared', () => { if (selGhost) selGhost.style.display = 'none' })
+    .on('object:moving',   syncSelGhost)
+    .on('object:scaling',  syncSelGhost)
+    .on('object:rotating', syncSelGhost)
+  window.addEventListener('scroll', syncSelGhost, { passive: true })
+  window.addEventListener('resize', syncSelGhost)
+
   /* keep event coordinates aligned with any scroll/resize */
   const updateOffset = () => fc.calcOffset();
   updateOffset();
@@ -1061,6 +1138,15 @@ window.addEventListener('keydown', onKey)
       fc.off('before:transform', startCrop);
       fc.off('object:scaling', duringCrop);
       fc.off('object:scaled', endCrop);
+      fc.off('selection:created', syncSelGhost)
+        .off('selection:updated', syncSelGhost)
+        .off('selection:cleared', syncSelGhost)
+        .off('object:moving',   syncSelGhost)
+        .off('object:scaling',  syncSelGhost)
+        .off('object:rotating', syncSelGhost)
+      window.removeEventListener('scroll', syncSelGhost)
+      window.removeEventListener('resize', syncSelGhost)
+      selGhost?.remove()
       onReady(null)
       cropToolRef.current?.abort()
       fc.dispose()
