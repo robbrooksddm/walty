@@ -98,3 +98,30 @@ html {
   height:36px;
   margin-bottom:4px;
 }
+
+/* === selection overlay ======================================= */
+@layer utilities {
+  .selection-ghost {
+    @apply absolute pointer-events-none box-border;
+    outline: 1px solid #2ec4b6;
+    outline-offset: -1px;
+  }
+  .selection-ghost .handle {
+    position:absolute;
+    width:var(--size,8px);
+    height:var(--size,8px);
+    background:#fff;
+    border:1px solid #2ec4b6;
+    border-radius:50%;
+    box-shadow:0 0 2px rgba(0,0,0,0.3);
+    transform:translate(-50%, -50%);
+  }
+  .selection-ghost .tl{left:0;top:0}
+  .selection-ghost .tr{left:100%;top:0}
+  .selection-ghost .bl{left:0;top:100%}
+  .selection-ghost .br{left:100%;top:100%}
+  .selection-ghost .ml{left:0;top:50%}
+  .selection-ghost .mr{left:100%;top:50%}
+  .selection-ghost .mt{left:50%;top:0}
+  .selection-ghost .mb{left:50%;top:100%}
+}

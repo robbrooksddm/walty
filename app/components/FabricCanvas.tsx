@@ -617,6 +617,66 @@ useEffect(() => {
   fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0]);
   enableSnapGuides(fc, PAGE_W, PAGE_H);
 
+  /* ---------- selection overlay above canvas -------------------- */
+  let selGhost: HTMLDivElement | null = null
+  const ensureGhost = () => {
+    if (!selGhost) {
+      selGhost = document.createElement('div')
+      selGhost.className = 'selection-ghost'
+      selGhost.innerHTML = `
+        <div class="handle tl"></div>
+        <div class="handle tr"></div>
+        <div class="handle bl"></div>
+        <div class="handle br"></div>
+        <div class="handle ml"></div>
+        <div class="handle mr"></div>
+        <div class="handle mt"></div>
+        <div class="handle mb"></div>`
+      selGhost.style.display = 'none'
+      document.body.appendChild(selGhost)
+    }
+  }
+
+  const syncSelGhost = () => {
+    if (!selGhost || !canvasRef.current) return
+    const obj = fc.getActiveObject() as fabric.Object | null
+    if (!obj || croppingRef.current) { selGhost.style.display = 'none'; return }
+    const box = obj.getBoundingRect(true, true)
+    const canvasRect = canvasRef.current.getBoundingClientRect()
+    const s = SCALE * zoom
+    const left   = canvasRect.left + box.left * s
+    const top    = canvasRect.top  + box.top  * s
+    const width  = box.width  * s
+    const height = box.height * s
+
+    const fullyInside = left >= canvasRect.left &&
+                        top  >= canvasRect.top  &&
+                        left + width  <= canvasRect.right &&
+                        top  + height <= canvasRect.bottom
+    if (fullyInside) { selGhost.style.display = 'none'; return }
+
+    selGhost.style.left   = `${left}px`
+    selGhost.style.top    = `${top}px`
+    selGhost.style.width  = `${width}px`
+    selGhost.style.height = `${height}px`
+
+    const size = ((obj as any).cornerSize ?? fc.cornerSize ?? 8) * s
+    selGhost.querySelectorAll<HTMLDivElement>('.handle').forEach(h => {
+      h.style.setProperty('--size', `${size}px`)
+    })
+
+    selGhost.style.display = 'block'
+  }
+
+  fc.on('selection:created', () => { ensureGhost(); syncSelGhost() })
+    .on('selection:updated', syncSelGhost)
+    .on('selection:cleared', () => { if (selGhost) selGhost.style.display = 'none' })
+    .on('object:moving',   syncSelGhost)
+    .on('object:scaling',  syncSelGhost)
+    .on('object:rotating', syncSelGhost)
+  window.addEventListener('scroll', syncSelGhost, { passive: true })
+  window.addEventListener('resize', syncSelGhost)
+
   /* keep event coordinates aligned with any scroll/resize */
   const updateOffset = () => fc.calcOffset();
   updateOffset();
@@ -1061,6 +1121,15 @@ window.addEventListener('keydown', onKey)
       fc.off('before:transform', startCrop);
       fc.off('object:scaling', duringCrop);
       fc.off('object:scaled', endCrop);
+      fc.off('selection:created', syncSelGhost)
+        .off('selection:updated', syncSelGhost)
+        .off('selection:cleared', syncSelGhost)
+        .off('object:moving',   syncSelGhost)
+        .off('object:scaling',  syncSelGhost)
+        .off('object:rotating', syncSelGhost)
+      window.removeEventListener('scroll', syncSelGhost)
+      window.removeEventListener('resize', syncSelGhost)
+      selGhost?.remove()
       onReady(null)
       cropToolRef.current?.abort()
       fc.dispose()
