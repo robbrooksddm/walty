@@ -269,12 +269,14 @@ const syncGhost = (
   canvas: HTMLCanvasElement,
   zoom  : number,
 ) => {
-  const canvasRect = canvas.getBoundingClientRect()
+  const clip = canvas.parentElement?.parentElement as HTMLElement | null
+  const clipRect = clip ? clip.getBoundingClientRect() : canvas.getBoundingClientRect()
   const { left, top, width, height } = img.getBoundingRect()
 
+  const pad = 4 * zoom
   const s = SCALE * zoom
-  ghost.style.left   = `${canvasRect.left + left   * s}px`
-  ghost.style.top    = `${canvasRect.top  + top    * s}px`
+  ghost.style.left   = `${clipRect.left + (left - pad) * s}px`
+  ghost.style.top    = `${clipRect.top  + (top  - pad) * s}px`
   ghost.style.width  = `${width  * s}px`
   ghost.style.height = `${height * s}px`
 }
@@ -601,20 +603,31 @@ useEffect(() => {
   fc.upperCanvasEl.addEventListener('contextmenu', ctxMenu);
   /* --- keep Fabric’s wrapper the same size as the visible preview --- */
   const container = canvasRef.current!.parentElement as HTMLElement | null;
-  if (container) {
-    const pad = 4 * zoom;
-    container.style.width = `${PREVIEW_W * zoom}px`;
-    container.style.height = `${PREVIEW_H * zoom}px`;
-    container.style.maxWidth = `${PREVIEW_W * zoom}px`;
-    container.style.maxHeight = `${PREVIEW_H * zoom}px`;
-    container.style.padding = `${pad}px`;
+  const clip = container?.parentElement as HTMLElement | null;
+  const pad = 4 * zoom;
+  if (container && clip) {
+    clip.style.width = `${PREVIEW_W * zoom}px`;
+    clip.style.height = `${PREVIEW_H * zoom}px`;
+    clip.style.overflow = 'hidden';
+
+    container.style.width = `${PREVIEW_W * zoom + pad * 2}px`;
+    container.style.height = `${PREVIEW_H * zoom + pad * 2}px`;
+    container.style.margin = `-${pad}px`;
     container.style.overflow = 'visible';
   }
-  fc.setWidth(PREVIEW_W * zoom)
-  fc.setHeight(PREVIEW_H * zoom)
+  fc.setWidth(PREVIEW_W * zoom + pad * 2);
+  fc.setHeight(PREVIEW_H * zoom + pad * 2);
   addBackdrop(fc);
+  fc.clipPath = new fabric.Rect({
+    left: 0,
+    top: 0,
+    width: PAGE_W,
+    height: PAGE_H,
+    absolutePositioned: true,
+    evented: false,
+  });
   // keep the preview scaled to the configured width
-  fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0]);
+  fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, pad, pad]);
   enableSnapGuides(fc, PAGE_W, PAGE_H);
 
   /* keep event coordinates aligned with any scroll/resize */
@@ -1076,22 +1089,29 @@ window.addEventListener('keydown', onKey)
     if (!fc || !canvas) return
 
     const container = canvas.parentElement as HTMLElement | null
-    if (container) {
-      const pad = 4 * zoom
-      container.style.width = `${PREVIEW_W * zoom}px`
-      container.style.height = `${PREVIEW_H * zoom}px`
-      container.style.maxWidth = `${PREVIEW_W * zoom}px`
-      container.style.maxHeight = `${PREVIEW_H * zoom}px`
-      container.style.padding = `${pad}px`
+    const clip = container?.parentElement as HTMLElement | null
+    const pad = 4 * zoom
+    if (container && clip) {
+      clip.style.width = `${PREVIEW_W * zoom}px`
+      clip.style.height = `${PREVIEW_H * zoom}px`
+      clip.style.overflow = 'hidden'
+
+      container.style.width = `${PREVIEW_W * zoom + pad * 2}px`
+      container.style.height = `${PREVIEW_H * zoom + pad * 2}px`
+      container.style.margin = `-${pad}px`
       container.style.overflow = 'visible'
     }
 
-    fc.setWidth(PREVIEW_W * zoom)
-    fc.setHeight(PREVIEW_H * zoom)
-    canvas.style.width = `${PREVIEW_W * zoom}px`
-    canvas.style.height = `${PREVIEW_H * zoom}px`
+    fc.setWidth(PREVIEW_W * zoom + pad * 2)
+    fc.setHeight(PREVIEW_H * zoom + pad * 2)
+    canvas.style.width = `${PREVIEW_W * zoom + pad * 2}px`
+    canvas.style.height = `${PREVIEW_H * zoom + pad * 2}px`
 
-    fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
+    if (fc.clipPath) {
+      fc.clipPath.set({ width: PAGE_W, height: PAGE_H })
+    }
+
+    fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, pad, pad])
     if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
     fc.requestRenderAll()
   }, [zoom])
@@ -1300,14 +1320,16 @@ img.on('mouseup', () => {
 
   /* ---------- render ----------------------------------------- */
   return (
-    <>
-      <canvas
-        ref={canvasRef}
-        width={PREVIEW_W * zoom}
-        height={PREVIEW_H * zoom}
-        style={{ width: PREVIEW_W * zoom, height: PREVIEW_H * zoom }}
-        className="border shadow rounded"
-      />
+    <div className="canvas-wrap">
+      <div className="canvas-clip">
+        <canvas
+          ref={canvasRef}
+          width={PREVIEW_W * zoom}
+          height={PREVIEW_H * zoom}
+          style={{ width: PREVIEW_W * zoom, height: PREVIEW_H * zoom }}
+          className="border shadow rounded"
+        />
+      </div>
       {menuPos && (
         <ContextMenu
           pos={menuPos}
@@ -1316,6 +1338,6 @@ img.on('mouseup', () => {
           onClose={() => setMenuPos(null)}
         />
       )}
-    </>
+    </div>
   )
 }

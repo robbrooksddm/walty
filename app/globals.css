@@ -73,6 +73,11 @@ html {
   overflow: visible !important;
 }
 
+.canvas-clip {
+  overflow: hidden;
+  position: relative;
+}
+
 /* allow Fabric selection boxes outside the canvas bounds */
 .canvas-container {
   /* allow Fabric selection boxes outside the canvas bounds */
