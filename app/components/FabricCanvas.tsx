@@ -593,6 +593,22 @@ useEffect(() => {
   fc.backgroundColor = '#fff';
   fc.preserveObjectStacking = true;
 
+  /*
+   * Clip all drawing to the page bounds but keep the selection
+   * outlines visible outside the canvas.  Setting a clipPath on
+   * the canvas clips the lower drawing layer.  Controls and
+   * selection boxes render on the upper-canvas so we keep them
+   * visible by enabling controlsAboveOverlay.
+   */
+  fc.clipPath = new fabric.Rect({
+    left: 0,
+    top: 0,
+    width: PAGE_W,
+    height: PAGE_H,
+    absolutePositioned: true,
+  });
+  fc.controlsAboveOverlay = true;
+
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
