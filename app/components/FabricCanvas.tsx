@@ -279,6 +279,22 @@ const syncGhost = (
   ghost.style.height = `${height * s}px`
 }
 
+/* outline helper – position selection overlay */
+const syncOutline = (
+  obj    : fabric.Object,
+  el     : HTMLDivElement,
+  canvas : HTMLCanvasElement,
+  zoom   : number,
+) => {
+  const { left, top, width, height } = obj.getBoundingRect()
+  const rect = canvas.getBoundingClientRect()
+  const s = SCALE * zoom
+  el.style.left   = `${rect.left + left * s}px`
+  el.style.top    = `${rect.top  + top  * s}px`
+  el.style.width  = `${width  * s}px`
+  el.style.height = `${height * s}px`
+}
+
 const getSrcUrl = (raw: Layer): string | undefined => {
     /* 1 — explicit override from the editor */
     if (raw.srcUrl) return raw.srcUrl
@@ -476,6 +492,8 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const hydrating    = useRef(false)
   const isEditing    = useRef(false)
 
+  const outlineRef   = useRef<HTMLDivElement | null>(null)
+
   const cropToolRef = useRef<CropTool | null>(null)
   const croppingRef = useRef(false)
 
@@ -616,6 +634,34 @@ useEffect(() => {
   // keep the preview scaled to the configured width
   fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0]);
   enableSnapGuides(fc, PAGE_W, PAGE_H);
+
+  /* selection outline overlay */
+  const outline = document.createElement('div')
+  outline.className = 'sel-outline'
+  outline.style.display = 'none'
+  document.body.appendChild(outline)
+  outlineRef.current = outline
+
+  const updateOutline = () => {
+    const act = fc.getActiveObject() as fabric.Object | null
+    if (!canvasRef.current) return
+    if (!act) {
+      outline.style.display = 'none'
+      return
+    }
+    outline.style.display = 'block'
+    syncOutline(act, outline, canvasRef.current, zoom)
+  }
+
+  fc.on('selection:created', updateOutline)
+    .on('selection:updated', updateOutline)
+    .on('selection:cleared', updateOutline)
+    .on('object:moving', updateOutline)
+    .on('object:scaling', updateOutline)
+    .on('object:rotating', updateOutline)
+
+  window.addEventListener('scroll', updateOutline, { passive: true })
+  window.addEventListener('resize', updateOutline)
 
   /* keep event coordinates aligned with any scroll/resize */
   const updateOffset = () => fc.calcOffset();
@@ -1061,6 +1107,15 @@ window.addEventListener('keydown', onKey)
       fc.off('before:transform', startCrop);
       fc.off('object:scaling', duringCrop);
       fc.off('object:scaled', endCrop);
+      fc.off('selection:created', updateOutline)
+        .off('selection:updated', updateOutline)
+        .off('selection:cleared', updateOutline)
+        .off('object:moving', updateOutline)
+        .off('object:scaling', updateOutline)
+        .off('object:rotating', updateOutline)
+      window.removeEventListener('scroll', updateOutline)
+      window.removeEventListener('resize', updateOutline)
+      outline.remove()
       onReady(null)
       cropToolRef.current?.abort()
       fc.dispose()
@@ -1094,6 +1149,10 @@ window.addEventListener('keydown', onKey)
     fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
     if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
     fc.requestRenderAll()
+    if (outlineRef.current) {
+      const act = fc.getActiveObject() as fabric.Object | null
+      if (act) syncOutline(act, outlineRef.current, canvas, zoom)
+    }
   }, [zoom])
 
   /* ---------- crop mode toggle ------------------------------ */

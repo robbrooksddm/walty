@@ -79,6 +79,13 @@ html {
   overflow: visible !important;
 }
 
+/* active-selection outline shown outside the canvas */
+.sel-outline {
+  @apply absolute pointer-events-none box-border;
+  border: 1px dashed var(--walty-teal);
+  z-index: 50;
+}
+
 /* Center icon + helper text */
 .ai-ghost__center {
   display:flex;
