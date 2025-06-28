@@ -19,6 +19,7 @@ import FabricCanvas, {
   PreviewSpec,
   previewW,
   previewH,
+  HANDLE_PAD,
 } from './FabricCanvas'
 import TextToolbar                      from './TextToolbar'
 import ImageToolbar                     from './ImageToolbar'
@@ -729,7 +730,7 @@ const handleProofAll = async () => {
     )
   }
 
-  const boxWidth = previewW() * zoom
+  const boxWidth = previewW() * zoom + HANDLE_PAD * zoom * 2
   const box = `flex-shrink-0`
 
   /* ---------------- UI ------------------------------------------ */

@@ -18,6 +18,9 @@ import { CropTool } from '@/lib/CropTool'
 import { enableSnapGuides } from '@/lib/useSnapGuides'
 import ContextMenu from './ContextMenu'
 
+// Extra padding around the canvas so selection handles aren't clipped
+export const HANDLE_PAD = 24
+
 /* ---------- print spec ----------------------------------------- */
 export interface PrintSpec {
   trimWidthIn: number
@@ -602,7 +605,7 @@ useEffect(() => {
   /* --- keep Fabric’s wrapper the same size as the visible preview --- */
   const container = canvasRef.current!.parentElement as HTMLElement | null;
   if (container) {
-    const pad = 4 * zoom;
+    const pad = HANDLE_PAD * zoom;
     container.style.width = `${PREVIEW_W * zoom}px`;
     container.style.height = `${PREVIEW_H * zoom}px`;
     container.style.maxWidth = `${PREVIEW_W * zoom}px`;
@@ -1077,7 +1080,7 @@ window.addEventListener('keydown', onKey)
 
     const container = canvas.parentElement as HTMLElement | null
     if (container) {
-      const pad = 4 * zoom
+      const pad = HANDLE_PAD * zoom
       container.style.width = `${PREVIEW_W * zoom}px`
       container.style.height = `${PREVIEW_H * zoom}px`
       container.style.maxWidth = `${PREVIEW_W * zoom}px`
