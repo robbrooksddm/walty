@@ -473,6 +473,9 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const hydrating    = useRef(false)
   const isEditing    = useRef(false)
 
+  const hoverDomRef  = useRef<HTMLDivElement | null>(null)
+  const selDomRef    = useRef<HTMLDivElement | null>(null)
+
   const cropToolRef = useRef<CropTool | null>(null)
   const croppingRef = useRef(false)
 
@@ -589,6 +592,59 @@ useEffect(() => {
   const fc = new fabric.Canvas(canvasRef.current!) as fabric.Canvas & { upperCanvasEl: HTMLCanvasElement };
   fc.backgroundColor = '#fff';
   fc.preserveObjectStacking = true;
+
+  /* create DOM overlays for hover & selection */
+  const hoverEl = document.createElement('div');
+  hoverEl.className = 'sel-overlay';
+  hoverEl.style.display = 'none';
+  document.body.appendChild(hoverEl);
+  hoverDomRef.current = hoverEl;
+
+  const selEl = document.createElement('div');
+  selEl.className = 'sel-overlay';
+  selEl.style.display = 'none';
+  document.body.appendChild(selEl);
+  selDomRef.current = selEl;
+
+  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const handleMap: Record<string, HTMLDivElement> = {};
+  corners.forEach(c => {
+    const h = document.createElement('div');
+    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
+    h.dataset.corner = c;
+    selEl.appendChild(h);
+    handleMap[c] = h;
+  });
+  (selEl as any)._handles = handleMap;
+
+  const forward = (ev: PointerEvent) => ({
+    pointerId: ev.pointerId,
+    clientX: ev.clientX,
+    clientY: ev.clientY,
+    button: ev.button,
+    buttons: ev.buttons,
+    ctrlKey: ev.ctrlKey,
+    shiftKey: ev.shiftKey,
+    altKey: ev.altKey,
+    metaKey: ev.metaKey,
+    pointerType: ev.pointerType,
+  });
+
+  const bridge = (e: PointerEvent) => {
+    const down = new PointerEvent('pointerdown', forward(e));
+    fc.upperCanvasEl.dispatchEvent(down);
+    const move = (ev: PointerEvent) =>
+      fc.upperCanvasEl.dispatchEvent(new PointerEvent('pointermove', forward(ev)));
+    const up = (ev: PointerEvent) => {
+      fc.upperCanvasEl.dispatchEvent(new PointerEvent('pointerup', forward(ev)));
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+    e.preventDefault();
+  };
+  selEl.addEventListener('pointerdown', bridge);
 
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
@@ -822,44 +878,76 @@ const hoverHL = new fabric.Rect({
 fc.add(hoverHL)
 hoverRef.current = hoverHL
 
-/* ── 3 ▸ Selection lifecycle (no extra overlay) ─────────── */
+/* ── 3 ▸ Selection lifecycle (DOM overlay) ─────────── */
 let scrollHandler: (() => void) | null = null
 
+const syncSel = () => {
+  const obj = fc.getActiveObject() as fabric.Object | undefined
+  if (!obj || !selDomRef.current || !canvasRef.current) return
+  const box = obj.getBoundingRect(true, true)
+  const rect = canvasRef.current.getBoundingClientRect()
+  const left   = rect.left + box.left * SCALE
+  const top    = rect.top  + box.top  * SCALE
+  const width  = box.width  * SCALE
+  const height = box.height * SCALE
+  const overlay = selDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement> }
+  overlay.style.left   = `${left}px`
+  overlay.style.top    = `${top}px`
+  overlay.style.width  = `${width}px`
+  overlay.style.height = `${height}px`
+  if (overlay._handles) {
+    const h = overlay._handles
+    const midX = width / 2
+    const midY = height / 2
+    h.tl.style.left = '0px';      h.tl.style.top = '0px'
+    h.tr.style.left = `${width}px`; h.tr.style.top = '0px'
+    h.br.style.left = `${width}px`; h.br.style.top = `${height}px`
+    h.bl.style.left = '0px';      h.bl.style.top = `${height}px`
+    h.ml.style.left = '0px';      h.ml.style.top = `${midY}px`
+    h.mr.style.left = `${width}px`; h.mr.style.top = `${midY}px`
+    h.mt.style.left = `${midX}px`; h.mt.style.top = '0px'
+    h.mb.style.left = `${midX}px`; h.mb.style.top = `${height}px`
+  }
+}
+
 fc.on('selection:created', () => {
-  hoverHL.visible = false            // hide leftover hover rectangle
+  hoverHL.visible = false
   fc.requestRenderAll()
-  scrollHandler = () => fc.requestRenderAll()
+  selDomRef.current && (selDomRef.current.style.display = 'block')
+  syncSel()
+  scrollHandler = () => syncSel()
   window.addEventListener('scroll', scrollHandler, { passive:true })
+  window.addEventListener('resize', scrollHandler)
 })
+.on('selection:updated', syncSel)
 .on('selection:cleared', () => {
-  if (scrollHandler) { window.removeEventListener('scroll', scrollHandler); scrollHandler = null }
+  if (scrollHandler) { window.removeEventListener('scroll', scrollHandler); window.removeEventListener('resize', scrollHandler); scrollHandler = null }
+  selDomRef.current && (selDomRef.current.style.display = 'none')
 })
 
 /* also hide hover during any transform of the active object */
-fc.on('object:moving',   () => { hoverHL.visible = false })
-  .on('object:scaling',  () => { hoverHL.visible = false })
-  .on('object:rotating', () => { hoverHL.visible = false })
+fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
+  .on('object:scaling',  () => { hoverHL.visible = false; syncSel() })
+  .on('object:rotating', () => { hoverHL.visible = false; syncSel() })
 
 /* ── 4 ▸ Hover outline (only when NOT the active object) ─── */
 fc.on('mouse:over', e => {
   const t = e.target as fabric.Object | undefined
   if (!t || (t as any)._guide || t === hoverHL) return
   if (fc.getActiveObject() === t) return           // skip active selection
-
   const box = t.getBoundingRect(true, true)
-  hoverHL.set({
-    width : box.width  + PAD * 2,
-    height: box.height + PAD * 2,
-    left  : box.left  - PAD,
-    top   : box.top   - PAD,
-    visible: true,
-  })
-  hoverHL.setCoords()
-  hoverHL.bringToFront()
-  fc.requestRenderAll()
+  const rect = canvasRef.current!.getBoundingClientRect()
+  hoverDomRef.current && (() => {
+    hoverDomRef.current.style.left = `${rect.left + (box.left - PAD) * SCALE}px`
+    hoverDomRef.current.style.top = `${rect.top + (box.top - PAD) * SCALE}px`
+    hoverDomRef.current.style.width = `${(box.width + PAD * 2) * SCALE}px`
+    hoverDomRef.current.style.height = `${(box.height + PAD * 2) * SCALE}px`
+    hoverDomRef.current.style.display = 'block'
+  })()
 })
 .on('mouse:out', () => {
   hoverHL.visible = false
+  hoverDomRef.current && (hoverDomRef.current.style.display = 'none')
   fc.requestRenderAll()
 })
 
@@ -1056,6 +1144,12 @@ window.addEventListener('keydown', onKey)
       onReady(null)
       cropToolRef.current?.abort()
       fc.dispose()
+      hoverDomRef.current?.remove()
+      selDomRef.current?.remove()
+      if (scrollHandler) {
+        window.removeEventListener('scroll', scrollHandler)
+        window.removeEventListener('resize', scrollHandler)
+      }
     }
 // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [])

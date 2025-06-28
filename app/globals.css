@@ -89,3 +89,34 @@ html {
   height:36px;
   margin-bottom:4px;
 }
+
+/* === DOM selection overlay ==================================== */
+@layer utilities {
+  .sel-overlay {
+    @apply absolute pointer-events-none box-border z-40;
+    border:1px dashed #2EC4B6; /* SEL_COLOR */
+  }
+  .sel-overlay .handle {
+    position:absolute;
+    width:8px;
+    height:8px;
+    background:#fff;
+    border:1px solid #2EC4B6;
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    pointer-events:auto;
+  }
+  .sel-overlay .handle.side {
+    width:4px;
+    height:12px;
+    border-radius:2px;
+  }
+  .sel-overlay .handle.tl,
+  .sel-overlay .handle.br { cursor:nwse-resize; }
+  .sel-overlay .handle.tr,
+  .sel-overlay .handle.bl { cursor:nesw-resize; }
+  .sel-overlay .handle.ml,
+  .sel-overlay .handle.mr { cursor:ew-resize; }
+  .sel-overlay .handle.mt,
+  .sel-overlay .handle.mb { cursor:ns-resize; }
+}
