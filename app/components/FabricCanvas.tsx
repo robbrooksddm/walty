@@ -631,7 +631,23 @@ useEffect(() => {
   });
 
   const bridge = (e: PointerEvent) => {
-    const down = new PointerEvent('pointerdown', forward(e));
+    let x = e.clientX;
+    let y = e.clientY;
+    const handle = (e.target as HTMLElement)?.dataset?.corner as string | undefined;
+    const obj = fc.getActiveObject();
+    if (handle && obj && canvasRef.current) {
+      const box = obj.getBoundingRect(true, true);
+      const rect = canvasRef.current.getBoundingClientRect();
+      const left   = rect.left + box.left * SCALE;
+      const top    = rect.top  + box.top  * SCALE;
+      const right  = left + box.width * SCALE;
+      const bottom = top  + box.height * SCALE;
+      if (handle.includes('l')) x = left;
+      if (handle.includes('r')) x = right;
+      if (handle.includes('t')) y = top;
+      if (handle.includes('b')) y = bottom;
+    }
+    const down = new PointerEvent('pointerdown', { ...forward(e), clientX: x, clientY: y });
     fc.upperCanvasEl.dispatchEvent(down);
     const move = (ev: PointerEvent) =>
       fc.upperCanvasEl.dispatchEvent(new PointerEvent('pointermove', forward(ev)));
