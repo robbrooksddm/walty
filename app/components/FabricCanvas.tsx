@@ -612,6 +612,7 @@ useEffect(() => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
     h.dataset.corner = c;
+    h.addEventListener('pointerdown', bridge); // ensure handles are always selectable
     selEl.appendChild(h);
     handleMap[c] = h;
   });
