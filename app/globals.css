@@ -70,6 +70,11 @@ html {
 /* Fabric preview wrapper — clips the ghost */
 .canvas-wrap { @apply relative overflow-hidden; }
 
+/* allow Fabric selection boxes outside the canvas bounds */
+.canvas-container {
+  overflow: visible;
+}
+
 /* Center icon + helper text */
 .ai-ghost__center {
   display:flex;
