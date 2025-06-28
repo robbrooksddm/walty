@@ -600,18 +600,23 @@ useEffect(() => {
   };
   fc.upperCanvasEl.addEventListener('contextmenu', ctxMenu);
   /* --- keep Fabric’s wrapper the same size as the visible preview --- */
+  const pad = 4 * zoom;
   const container = canvasRef.current!.parentElement as HTMLElement | null;
   if (container) {
-    container.style.width  = `${PREVIEW_W * zoom}px`;
-    container.style.height = `${PREVIEW_H * zoom}px`;
-    container.style.maxWidth  = `${PREVIEW_W * zoom}px`;
-    container.style.maxHeight = `${PREVIEW_H * zoom}px`;
+    const w = PREVIEW_W * zoom + pad * 2;
+    const h = PREVIEW_H * zoom + pad * 2;
+    container.style.width = `${w}px`;
+    container.style.height = `${h}px`;
+    container.style.maxWidth = `${w}px`;
+    container.style.maxHeight = `${h}px`;
+    container.style.padding = `${pad}px`;
+    container.style.overflow = 'visible';
   }
-  fc.setWidth(PREVIEW_W * zoom)
-  fc.setHeight(PREVIEW_H * zoom)
+  fc.setWidth(PREVIEW_W * zoom + pad * 2)
+  fc.setHeight(PREVIEW_H * zoom + pad * 2)
   addBackdrop(fc);
   // keep the preview scaled to the configured width
-  fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0]);
+  fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, pad, pad]);
   enableSnapGuides(fc, PAGE_W, PAGE_H);
 
   /* keep event coordinates aligned with any scroll/resize */
@@ -1072,20 +1077,24 @@ window.addEventListener('keydown', onKey)
     const canvas = canvasRef.current
     if (!fc || !canvas) return
 
+    const pad = 4 * zoom
     const container = canvas.parentElement as HTMLElement | null
     if (container) {
-      container.style.width = `${PREVIEW_W * zoom}px`
-      container.style.height = `${PREVIEW_H * zoom}px`
-      container.style.maxWidth = `${PREVIEW_W * zoom}px`
-      container.style.maxHeight = `${PREVIEW_H * zoom}px`
+      const w = PREVIEW_W * zoom + pad * 2
+      const h = PREVIEW_H * zoom + pad * 2
+      container.style.width = `${w}px`
+      container.style.height = `${h}px`
+      container.style.maxWidth = `${w}px`
+      container.style.maxHeight = `${h}px`
+      container.style.padding = `${pad}px`
+      container.style.overflow = 'visible'
     }
+    fc.setWidth(PREVIEW_W * zoom + pad * 2)
+    fc.setHeight(PREVIEW_H * zoom + pad * 2)
+    canvas.style.width = `${PREVIEW_W * zoom + pad * 2}px`
+    canvas.style.height = `${PREVIEW_H * zoom + pad * 2}px`
 
-    fc.setWidth(PREVIEW_W * zoom)
-    fc.setHeight(PREVIEW_H * zoom)
-    canvas.style.width = `${PREVIEW_W * zoom}px`
-    canvas.style.height = `${PREVIEW_H * zoom}px`
-
-    fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
+    fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, pad, pad])
     if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
     fc.requestRenderAll()
   }, [zoom])
