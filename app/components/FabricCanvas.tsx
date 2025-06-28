@@ -644,7 +644,8 @@ useEffect(() => {
     document.addEventListener('pointerup', up);
     e.preventDefault();
   };
-  selEl.addEventListener('pointerdown', bridge);
+  // forward pointer events from each handle so they remain interactive
+  Object.values(handleMap).forEach(h => h.addEventListener('pointerdown', bridge));
 
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
