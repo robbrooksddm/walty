@@ -606,6 +606,46 @@ useEffect(() => {
   document.body.appendChild(selEl);
   selDomRef.current = selEl;
 
+  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const handleMap: Record<string, HTMLDivElement> = {};
+  corners.forEach(c => {
+    const h = document.createElement('div');
+    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
+    h.dataset.corner = c;
+    selEl.appendChild(h);
+    handleMap[c] = h;
+  });
+  (selEl as any)._handles = handleMap;
+
+  const forward = (ev: PointerEvent) => ({
+    pointerId: ev.pointerId,
+    clientX: ev.clientX,
+    clientY: ev.clientY,
+    button: ev.button,
+    buttons: ev.buttons,
+    ctrlKey: ev.ctrlKey,
+    shiftKey: ev.shiftKey,
+    altKey: ev.altKey,
+    metaKey: ev.metaKey,
+    pointerType: ev.pointerType,
+  });
+
+  const bridge = (e: PointerEvent) => {
+    const down = new PointerEvent('pointerdown', forward(e));
+    fc.upperCanvasEl.dispatchEvent(down);
+    const move = (ev: PointerEvent) =>
+      fc.upperCanvasEl.dispatchEvent(new PointerEvent('pointermove', forward(ev)));
+    const up = (ev: PointerEvent) => {
+      fc.upperCanvasEl.dispatchEvent(new PointerEvent('pointerup', forward(ev)));
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+    e.preventDefault();
+  };
+  selEl.addEventListener('pointerdown', bridge);
+
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -846,10 +886,28 @@ const syncSel = () => {
   if (!obj || !selDomRef.current || !canvasRef.current) return
   const box = obj.getBoundingRect(true, true)
   const rect = canvasRef.current.getBoundingClientRect()
-  selDomRef.current.style.left = `${rect.left + box.left * SCALE}px`
-  selDomRef.current.style.top = `${rect.top + box.top * SCALE}px`
-  selDomRef.current.style.width = `${box.width * SCALE}px`
-  selDomRef.current.style.height = `${box.height * SCALE}px`
+  const left   = rect.left + box.left * SCALE
+  const top    = rect.top  + box.top  * SCALE
+  const width  = box.width  * SCALE
+  const height = box.height * SCALE
+  const overlay = selDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement> }
+  overlay.style.left   = `${left}px`
+  overlay.style.top    = `${top}px`
+  overlay.style.width  = `${width}px`
+  overlay.style.height = `${height}px`
+  if (overlay._handles) {
+    const h = overlay._handles
+    const midX = width / 2
+    const midY = height / 2
+    h.tl.style.left = '0px';      h.tl.style.top = '0px'
+    h.tr.style.left = `${width}px`; h.tr.style.top = '0px'
+    h.br.style.left = `${width}px`; h.br.style.top = `${height}px`
+    h.bl.style.left = '0px';      h.bl.style.top = `${height}px`
+    h.ml.style.left = '0px';      h.ml.style.top = `${midY}px`
+    h.mr.style.left = `${width}px`; h.mr.style.top = `${midY}px`
+    h.mt.style.left = `${midX}px`; h.mt.style.top = '0px'
+    h.mb.style.left = `${midX}px`; h.mb.style.top = `${height}px`
+  }
 }
 
 fc.on('selection:created', () => {
