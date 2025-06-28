@@ -49,6 +49,21 @@ const EMPTY: TemplatePage[] = [
   { name: 'back'   , layers: [] },
 ]
 
+function sliderToZoom(value: number) {
+  if (value < 50) {
+    return (10 + (value / 50) * 89) / 100
+  }
+  return (100 + ((value - 50) / 50) * 400) / 100
+}
+
+function zoomToSlider(zoom: number) {
+  const percent = zoom * 100
+  if (percent < 100) {
+    return ((percent - 10) / 89) * 50
+  }
+  return 50 + ((percent - 100) / 400) * 50
+}
+
 /* ---------- tiny coach-mark component ------------------------------ */
 function CoachMark({ anchor, onClose }: { anchor: DOMRect | null; onClose: () => void }) {
   if (!anchor) return null
@@ -677,7 +692,7 @@ const handleProofAll = async () => {
     const el = containerRef.current
     if (!el) return
     const wheel = (e: WheelEvent) => {
-      if (e.ctrlKey || e.metaKey) {
+      if (e.ctrlKey || e.metaKey || e.altKey) {
         const fc = activeFc
         if (fc) {
           const rect = fc.upperCanvasEl.getBoundingClientRect()
@@ -899,11 +914,11 @@ const handleProofAll = async () => {
         <span className="text-xs">{Math.round(zoom * 100)}%</span>
         <input
           type="range"
-          min="10"
-          max="500"
+          min="0"
+          max="100"
           step="1"
-          value={targetZoom.current * 100}
-          onChange={e => setZoomSmooth(Number(e.currentTarget.value) / 100)}
+          value={zoomToSlider(zoom)}
+          onChange={e => setZoomSmooth(sliderToZoom(Number(e.currentTarget.value)))}
           className="h-2 w-32"
         />
       </div>
