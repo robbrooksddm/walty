@@ -603,8 +603,39 @@ const handleProofAll = async () => {
   /* 7 ─ coach-mark ----------------------------------------------- */
   const [anchor, setAnchor] = useState<DOMRect | null>(null)
   const [zoom, setZoom] = useState(1)
-  const handleZoomIn  = () => setZoom(z => Math.min(z + 0.25, 3))
-  const handleZoomOut = () => setZoom(z => Math.max(z - 0.25, 0.5))
+  const handleZoomIn  = () => setZoom(z => Math.min(z + 0.25, 5))
+  const handleZoomOut = () => setZoom(z => Math.max(z - 0.25, 0.2))
+
+  // allow Cmd/Ctrl + scroll for smooth zooming
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      if (e.metaKey || e.ctrlKey) {
+        e.preventDefault()
+        setZoom(z => {
+          const next = z - e.deltaY * 0.002
+          return Math.min(Math.max(next, 0.2), 5)
+        })
+      }
+    }
+    window.addEventListener('wheel', onWheel, { passive: false })
+    return () => window.removeEventListener('wheel', onWheel)
+  }, [])
+
+  // keyboard +/- like Canva
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return
+      if (e.key === '=' || e.key === '+') {
+        e.preventDefault()
+        handleZoomIn()
+      } else if (e.key === '-' || e.key === '_') {
+        e.preventDefault()
+        handleZoomOut()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const ran = useRef(false)
   useEffect(() => {
     if (ran.current || typeof window === 'undefined') return
@@ -812,6 +843,22 @@ const handleProofAll = async () => {
         products={products}
         generateProofUrls={generateProofURLs}
       />
+
+      {/* zoom slider bottom-right */}
+      {!isCropMode && (
+        <div className="fixed bottom-4 right-4 z-40 flex items-center gap-2 bg-white/80 px-3 py-2 rounded shadow">
+          <input
+            type="range"
+            min={0.2}
+            max={5}
+            step={0.01}
+            value={zoom}
+            onChange={e => setZoom(e.currentTarget.valueAsNumber)}
+            className="accent-[--walty-orange]"
+          />
+          <span className="w-10 text-right text-xs">{Math.round(zoom * 100)}%</span>
+        </div>
+      )}
     </div>
   )
 }

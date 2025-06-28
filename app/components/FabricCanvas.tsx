@@ -1078,12 +1078,14 @@ window.addEventListener('keydown', onKey)
       container.style.height = `${PREVIEW_H * zoom}px`
       container.style.maxWidth = `${PREVIEW_W * zoom}px`
       container.style.maxHeight = `${PREVIEW_H * zoom}px`
+      container.style.transition = 'width 0.15s ease-out, height 0.15s ease-out'
     }
 
     fc.setWidth(PREVIEW_W * zoom)
     fc.setHeight(PREVIEW_H * zoom)
     canvas.style.width = `${PREVIEW_W * zoom}px`
     canvas.style.height = `${PREVIEW_H * zoom}px`
+    canvas.style.transition = 'width 0.15s ease-out, height 0.15s ease-out'
 
     fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
     if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
