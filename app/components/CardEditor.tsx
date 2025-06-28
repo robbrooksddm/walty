@@ -601,10 +601,57 @@ const handleProofAll = async () => {
 }
 
   /* 7 ─ coach-mark ----------------------------------------------- */
+  const containerRef = useRef<HTMLDivElement | null>(null)
   const [anchor, setAnchor] = useState<DOMRect | null>(null)
   const [zoom, setZoom] = useState(1)
-  const handleZoomIn  = () => setZoom(z => Math.min(z + 0.25, 3))
-  const handleZoomOut = () => setZoom(z => Math.max(z - 0.25, 0.5))
+  const zoomRef = useRef(1)
+  const targetZoom = useRef(1)
+  const animRef = useRef<number>()
+  const zoomPointRef = useRef<{ x: number; y: number } | null>(null)
+
+  const animateZoom = () => {
+    const current = zoomRef.current
+    const target = targetZoom.current
+    if (Math.abs(current - target) < 0.001) {
+      zoomRef.current = target
+      setZoom(target)
+      canvasMap.forEach(fc => fc?.requestRenderAll())
+      animRef.current = undefined
+      return
+    }
+    const next = current + (target - current) * 0.15
+    zoomRef.current = next
+    const origin = zoomPointRef.current
+    canvasMap.forEach(fc => {
+      if (!fc) return
+      const base = fc.getZoom() / current
+      const point = origin
+        ? new fabric.Point(origin.x, origin.y)
+        : new fabric.Point(fc.getWidth() / 2, fc.getHeight() / 2)
+      fc.zoomToPoint(point, base * next)
+      fc.requestRenderAll()
+    })
+    setZoom(next)
+    animRef.current = requestAnimationFrame(animateZoom)
+  }
+
+  const setZoomSmooth = (val: number, origin: { x: number; y: number } | null) => {
+    zoomPointRef.current = origin
+    targetZoom.current = Math.min(Math.max(val, 0.1), 5)
+    if (!animRef.current) animRef.current = requestAnimationFrame(animateZoom)
+  }
+
+  const handleZoomIn = () => {
+    const fc = activeFc
+    const origin = fc ? { x: fc.getWidth() / 2, y: fc.getHeight() / 2 } : null
+    setZoomSmooth(targetZoom.current + 0.25, origin)
+  }
+
+  const handleZoomOut = () => {
+    const fc = activeFc
+    const origin = fc ? { x: fc.getWidth() / 2, y: fc.getHeight() / 2 } : null
+    setZoomSmooth(targetZoom.current - 0.25, origin)
+  }
   const ran = useRef(false)
   useEffect(() => {
     if (ran.current || typeof window === 'undefined') return
@@ -626,6 +673,41 @@ const handleProofAll = async () => {
     ran.current = true
   }, [])
 
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const wheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        const fc = activeFc
+        if (fc) {
+          const rect = fc.upperCanvasEl.getBoundingClientRect()
+          zoomPointRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+        }
+        const delta = e.deltaMode === 1 ? e.deltaY * 20 : e.deltaY
+        setZoomSmooth(targetZoom.current * Math.pow(0.999, delta), zoomPointRef.current)
+        e.preventDefault()
+      }
+    }
+    const key = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === '+' || e.key === '=') {
+          handleZoomIn()
+          e.preventDefault()
+        }
+        if (e.key === '-') {
+          handleZoomOut()
+          e.preventDefault()
+        }
+      }
+    }
+    el.addEventListener('wheel', wheel, { passive: false })
+    window.addEventListener('keydown', key)
+    return () => {
+      el.removeEventListener('wheel', wheel)
+      window.removeEventListener('keydown', key)
+    }
+  }, [])
+
   /* 8 ─ loader guard --------------------------------------------- */
   if (pages.length !== 4) {
     return (
@@ -641,6 +723,7 @@ const handleProofAll = async () => {
   /* ---------------- UI ------------------------------------------ */
   return (
     <div
+      ref={containerRef}
       className="flex flex-col h-screen box-border"
       style={{ paddingTop: "calc(var(--walty-header-h) + var(--walty-toolbar-h))" }}
     >
@@ -812,6 +895,18 @@ const handleProofAll = async () => {
         products={products}
         generateProofUrls={generateProofURLs}
       />
+      <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 bg-white shadow px-3 py-2 rounded">
+        <span className="text-xs">{Math.round(zoom * 100)}%</span>
+        <input
+          type="range"
+          min="10"
+          max="500"
+          step="1"
+          value={targetZoom.current * 100}
+          onChange={e => setZoomSmooth(Number(e.currentTarget.value) / 100)}
+          className="h-2 w-32"
+        />
+      </div>
     </div>
   )
 }
