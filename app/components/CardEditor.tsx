@@ -702,11 +702,11 @@ const handleProofAll = async () => {
     }
     const key = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey) {
-        if (e.key === '+' || e.key === '=') {
+        const c = e.code
+        if (c === 'Equal' || c === 'NumpadAdd') {
           handleZoomIn()
           e.preventDefault()
-        }
-        if (e.key === '-') {
+        } else if (c === 'Minus' || c === 'NumpadSubtract') {
           handleZoomOut()
           e.preventDefault()
         }
