@@ -19,6 +19,7 @@ import FabricCanvas, {
   PreviewSpec,
   previewW,
   previewH,
+  previewPad,
 } from './FabricCanvas'
 import TextToolbar                      from './TextToolbar'
 import ImageToolbar                     from './ImageToolbar'
@@ -636,9 +637,10 @@ const handleProofAll = async () => {
     canvasMap.forEach(fc => {
       if (!fc) return
       const base = fc.getZoom() / current
+      const pad = previewPad() * zoomRef.current
       const point = origin
         ? new fabric.Point(origin.x, origin.y)
-        : new fabric.Point(fc.getWidth() / 2, fc.getHeight() / 2)
+        : new fabric.Point(pad + previewW() * zoomRef.current / 2, pad + previewH() * zoomRef.current / 2)
       fc.zoomToPoint(point, base * next)
       fc.requestRenderAll()
     })
@@ -655,13 +657,19 @@ const handleProofAll = async () => {
 
   const handleZoomIn = useCallback(() => {
     const fc = activeFc
-    const origin = fc ? { x: fc.getWidth() / 2, y: fc.getHeight() / 2 } : null
+    const origin = fc
+      ? { x: previewPad() * zoomRef.current + previewW() * zoomRef.current / 2,
+          y: previewPad() * zoomRef.current + previewH() * zoomRef.current / 2 }
+      : null
     setZoomSmooth(targetZoom.current + 0.25, origin)
   }, [activeFc, setZoomSmooth])
 
   const handleZoomOut = useCallback(() => {
     const fc = activeFc
-    const origin = fc ? { x: fc.getWidth() / 2, y: fc.getHeight() / 2 } : null
+    const origin = fc
+      ? { x: previewPad() * zoomRef.current + previewW() * zoomRef.current / 2,
+          y: previewPad() * zoomRef.current + previewH() * zoomRef.current / 2 }
+      : null
     setZoomSmooth(targetZoom.current - 0.25, origin)
   }, [activeFc, setZoomSmooth])
   const ran = useRef(false)
@@ -758,7 +766,7 @@ const handleProofAll = async () => {
         />
       )}
       
-      <div className="flex flex-1 relative bg-[--walty-cream] lg:max-w-6xl mx-auto">
+      <div className="flex flex-1 relative bg-[--walty-cream]">
         {/* global overlays */}
         <CoachMark
           anchor={anchor}
@@ -785,7 +793,7 @@ const handleProofAll = async () => {
         {!isCropMode && <LayerPanel />}
 
         {/* main */}
-        <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[868px]">
+        <div className="flex flex-col flex-1 min-h-0 mx-auto w-full">
           {!isCropMode && (activeType === 'text' ? (
             <TextToolbar
               canvas={activeFc}
@@ -811,9 +819,17 @@ const handleProofAll = async () => {
           ))}
 
                     {/* canvases */}
-          <div className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6">
+          <div
+            className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6"
+            onMouseDown={e => {
+              if (e.target === e.currentTarget && activeFc) {
+                activeFc.discardActiveObject();
+                activeFc.requestRenderAll();
+              }
+            }}
+          >
             {/* front */}
-            <div className={section === 'front' ? box : 'hidden'} style={{ width: boxWidth }}>
+            <div className={`${section === 'front' ? box : 'hidden'} canvas-wrap`} style={{ width: boxWidth }}>
               <FabricCanvas
                 pageIdx={0}
                 page={pages[0]}
@@ -826,7 +842,7 @@ const handleProofAll = async () => {
             </div>
             {/* inside */}
             <div className={section === 'inside' ? 'flex gap-6' : 'hidden'}>
-              <div className={box} style={{ width: boxWidth }}>
+              <div className={`${box} canvas-wrap`} style={{ width: boxWidth }}>
                 <FabricCanvas
                   pageIdx={1}
                   page={pages[1]}
@@ -837,7 +853,7 @@ const handleProofAll = async () => {
                   mode={mode}
                 />
               </div>
-              <div className={box} style={{ width: boxWidth }}>
+              <div className={`${box} canvas-wrap`} style={{ width: boxWidth }}>
                 <FabricCanvas
                   pageIdx={2}
                   page={pages[2]}
@@ -850,7 +866,7 @@ const handleProofAll = async () => {
               </div>
             </div>
             {/* back */}
-            <div className={section === 'back' ? box : 'hidden'} style={{ width: boxWidth }}>
+            <div className={`${section === 'back' ? box : 'hidden'} canvas-wrap`} style={{ width: boxWidth }}>
               <FabricCanvas
                 pageIdx={3}
                 page={pages[3]}
@@ -918,7 +934,11 @@ const handleProofAll = async () => {
           onChange={e => {
             const val = parseFloat(e.currentTarget.value)
             setSliderPos(val)
-            const origin = activeFc ? { x: activeFc.getWidth() / 2, y: activeFc.getHeight() / 2 } : null
+            const pad = previewPad() * zoomRef.current
+            const origin = activeFc
+              ? { x: pad + previewW() * zoomRef.current / 2,
+                  y: pad + previewH() * zoomRef.current / 2 }
+              : null
             setZoomSmooth(sliderToZoom(val), origin)
           }}
           className="h-2 w-32"
