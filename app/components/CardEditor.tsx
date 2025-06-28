@@ -27,6 +27,7 @@ import SelfieDrawer                     from './SelfieDrawer'
 import CropDrawer                      from './CropDrawer'
 import PreviewModal                    from './PreviewModal'
 import AddToBasketDialog               from './AddToBasketDialog'
+import ZoomSlider                      from './ZoomSlider'
 import { CropTool }                     from '@/lib/CropTool'
 import WaltyEditorHeader                from './WaltyEditorHeader'
 import type { TemplatePage }            from './FabricCanvas'
@@ -602,9 +603,10 @@ const handleProofAll = async () => {
 
   /* 7 ─ coach-mark ----------------------------------------------- */
   const [anchor, setAnchor] = useState<DOMRect | null>(null)
+  const clampZoom = (v: number) => Math.min(5, Math.max(0.5, v))
   const [zoom, setZoom] = useState(1)
-  const handleZoomIn  = () => setZoom(z => Math.min(z + 0.25, 3))
-  const handleZoomOut = () => setZoom(z => Math.max(z - 0.25, 0.5))
+  const handleZoomIn  = () => setZoom(z => clampZoom(z + 0.1))
+  const handleZoomOut = () => setZoom(z => clampZoom(z - 0.1))
   const ran = useRef(false)
   useEffect(() => {
     if (ran.current || typeof window === 'undefined') return
@@ -636,7 +638,7 @@ const handleProofAll = async () => {
   }
 
   const boxWidth = previewW() * zoom
-  const box = `flex-shrink-0`
+  const box = `flex-shrink-0 transition-all`
 
   /* ---------------- UI ------------------------------------------ */
   return (
@@ -812,6 +814,7 @@ const handleProofAll = async () => {
         products={products}
         generateProofUrls={generateProofURLs}
       />
+      <ZoomSlider value={zoom} onChange={z => setZoom(z)} />
     </div>
   )
 }

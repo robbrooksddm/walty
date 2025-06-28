@@ -602,6 +602,7 @@ useEffect(() => {
   /* --- keep Fabric’s wrapper the same size as the visible preview --- */
   const container = canvasRef.current!.parentElement as HTMLElement | null;
   if (container) {
+    container.style.transition = 'width .15s ease, height .15s ease';
     container.style.width  = `${PREVIEW_W * zoom}px`;
     container.style.height = `${PREVIEW_H * zoom}px`;
     container.style.maxWidth  = `${PREVIEW_W * zoom}px`;
@@ -609,6 +610,7 @@ useEffect(() => {
   }
   fc.setWidth(PREVIEW_W * zoom)
   fc.setHeight(PREVIEW_H * zoom)
+  canvasRef.current!.style.transition = 'width .15s ease, height .15s ease'
   addBackdrop(fc);
   // keep the preview scaled to the configured width
   fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0]);
@@ -1074,6 +1076,7 @@ window.addEventListener('keydown', onKey)
 
     const container = canvas.parentElement as HTMLElement | null
     if (container) {
+      container.style.transition = 'width .15s ease, height .15s ease'
       container.style.width = `${PREVIEW_W * zoom}px`
       container.style.height = `${PREVIEW_H * zoom}px`
       container.style.maxWidth = `${PREVIEW_W * zoom}px`
@@ -1082,12 +1085,14 @@ window.addEventListener('keydown', onKey)
 
     fc.setWidth(PREVIEW_W * zoom)
     fc.setHeight(PREVIEW_H * zoom)
+    canvas.style.transition = 'width .15s ease, height .15s ease'
     canvas.style.width = `${PREVIEW_W * zoom}px`
     canvas.style.height = `${PREVIEW_H * zoom}px`
 
     fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
     if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
     fc.requestRenderAll()
+    fc.calcOffset()
   }, [zoom])
 
   /* ---------- crop mode toggle ------------------------------ */
