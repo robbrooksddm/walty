@@ -19,6 +19,8 @@ import FabricCanvas, {
   PreviewSpec,
   previewW,
   previewH,
+  HANDLE_PAD,
+  discardSelection,
 } from './FabricCanvas'
 import TextToolbar                      from './TextToolbar'
 import ImageToolbar                     from './ImageToolbar'
@@ -188,7 +190,12 @@ export default function CardEditor({
         fc.renderAll()
         requestAnimationFrame(() => {
           try {
-            const canvasEl = fc.toCanvasElement(THUMB_MULT)
+            const canvasEl = fc.toCanvasElement(THUMB_MULT, {
+              left: HANDLE_PAD,
+              top: HANDLE_PAD,
+              width: pageW(),
+              height: pageH(),
+            })
             canvasEl.toBlob(
               blob => {
                 if (!blob) return
@@ -310,6 +317,10 @@ export default function CardEditor({
             format: 'jpeg',
             quality: 0.8,
             multiplier: EXPORT_MULT(),
+            left: HANDLE_PAD,
+            top: HANDLE_PAD,
+            width: pageW(),
+            height: pageH(),
           })
           const res = await fetch(dataUrl)
           const blob = await res.blob()
@@ -485,6 +496,10 @@ const handlePreview = () => {
       format: 'png',
       quality: 1,
       multiplier: EXPORT_MULT(),
+      left: HANDLE_PAD,
+      top: HANDLE_PAD,
+      width: pageW(),
+      height: pageH(),
     })
   })
   setPreviewImgs(imgs)
@@ -510,7 +525,15 @@ const collectProofData = (showGuides = false) => {
     guides.forEach(g => g.set('visible', showGuides))
     fc.renderAll()
     pageImages.push(
-      fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT() })
+      fc.toDataURL({
+        format: 'png',
+        quality: 1,
+        multiplier: EXPORT_MULT(),
+        left: HANDLE_PAD,
+        top: HANDLE_PAD,
+        width: pageW(),
+        height: pageH(),
+      })
     )
     guides.forEach(g => g.set('visible', true))
   })
@@ -729,7 +752,7 @@ const handleProofAll = async () => {
     )
   }
 
-  const boxWidth = previewW() * zoom
+  const boxWidth = previewW() * zoom + HANDLE_PAD * 2
   const box = `flex-shrink-0`
 
   /* ---------------- UI ------------------------------------------ */
@@ -738,6 +761,11 @@ const handleProofAll = async () => {
       ref={containerRef}
       className="flex flex-col h-screen box-border"
       style={{ paddingTop: "calc(var(--walty-header-h) + var(--walty-toolbar-h))" }}
+      onMouseDown={e => {
+        if (!(e.target as HTMLElement).closest('canvas')) {
+          activeFc && discardSelection(activeFc)
+        }
+      }}
     >
       <WaltyEditorHeader                     /* ② mount new component */
         onPreview={handlePreview}
@@ -758,7 +786,7 @@ const handleProofAll = async () => {
         />
       )}
       
-      <div className="flex flex-1 relative bg-[--walty-cream] lg:max-w-6xl mx-auto">
+      <div className="flex flex-1 relative bg-[--walty-cream]">
         {/* global overlays */}
         <CoachMark
           anchor={anchor}
@@ -785,7 +813,7 @@ const handleProofAll = async () => {
         {!isCropMode && <LayerPanel />}
 
         {/* main */}
-        <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[868px]">
+        <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-none">
           {!isCropMode && (activeType === 'text' ? (
             <TextToolbar
               canvas={activeFc}
