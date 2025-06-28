@@ -473,6 +473,9 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const hydrating    = useRef(false)
   const isEditing    = useRef(false)
 
+  const hoverDomRef  = useRef<HTMLDivElement | null>(null)
+  const selDomRef    = useRef<HTMLDivElement | null>(null)
+
   const cropToolRef = useRef<CropTool | null>(null)
   const croppingRef = useRef(false)
 
@@ -589,6 +592,19 @@ useEffect(() => {
   const fc = new fabric.Canvas(canvasRef.current!) as fabric.Canvas & { upperCanvasEl: HTMLCanvasElement };
   fc.backgroundColor = '#fff';
   fc.preserveObjectStacking = true;
+
+  /* create DOM overlays for hover & selection */
+  const hoverEl = document.createElement('div');
+  hoverEl.className = 'sel-overlay';
+  hoverEl.style.display = 'none';
+  document.body.appendChild(hoverEl);
+  hoverDomRef.current = hoverEl;
+
+  const selEl = document.createElement('div');
+  selEl.className = 'sel-overlay';
+  selEl.style.display = 'none';
+  document.body.appendChild(selEl);
+  selDomRef.current = selEl;
 
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
@@ -822,44 +838,58 @@ const hoverHL = new fabric.Rect({
 fc.add(hoverHL)
 hoverRef.current = hoverHL
 
-/* ── 3 ▸ Selection lifecycle (no extra overlay) ─────────── */
+/* ── 3 ▸ Selection lifecycle (DOM overlay) ─────────── */
 let scrollHandler: (() => void) | null = null
 
+const syncSel = () => {
+  const obj = fc.getActiveObject() as fabric.Object | undefined
+  if (!obj || !selDomRef.current || !canvasRef.current) return
+  const box = obj.getBoundingRect(true, true)
+  const rect = canvasRef.current.getBoundingClientRect()
+  selDomRef.current.style.left = `${rect.left + box.left * SCALE}px`
+  selDomRef.current.style.top = `${rect.top + box.top * SCALE}px`
+  selDomRef.current.style.width = `${box.width * SCALE}px`
+  selDomRef.current.style.height = `${box.height * SCALE}px`
+}
+
 fc.on('selection:created', () => {
-  hoverHL.visible = false            // hide leftover hover rectangle
+  hoverHL.visible = false
   fc.requestRenderAll()
-  scrollHandler = () => fc.requestRenderAll()
+  selDomRef.current && (selDomRef.current.style.display = 'block')
+  syncSel()
+  scrollHandler = () => syncSel()
   window.addEventListener('scroll', scrollHandler, { passive:true })
+  window.addEventListener('resize', scrollHandler)
 })
+.on('selection:updated', syncSel)
 .on('selection:cleared', () => {
-  if (scrollHandler) { window.removeEventListener('scroll', scrollHandler); scrollHandler = null }
+  if (scrollHandler) { window.removeEventListener('scroll', scrollHandler); window.removeEventListener('resize', scrollHandler); scrollHandler = null }
+  selDomRef.current && (selDomRef.current.style.display = 'none')
 })
 
 /* also hide hover during any transform of the active object */
-fc.on('object:moving',   () => { hoverHL.visible = false })
-  .on('object:scaling',  () => { hoverHL.visible = false })
-  .on('object:rotating', () => { hoverHL.visible = false })
+fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
+  .on('object:scaling',  () => { hoverHL.visible = false; syncSel() })
+  .on('object:rotating', () => { hoverHL.visible = false; syncSel() })
 
 /* ── 4 ▸ Hover outline (only when NOT the active object) ─── */
 fc.on('mouse:over', e => {
   const t = e.target as fabric.Object | undefined
   if (!t || (t as any)._guide || t === hoverHL) return
   if (fc.getActiveObject() === t) return           // skip active selection
-
   const box = t.getBoundingRect(true, true)
-  hoverHL.set({
-    width : box.width  + PAD * 2,
-    height: box.height + PAD * 2,
-    left  : box.left  - PAD,
-    top   : box.top   - PAD,
-    visible: true,
-  })
-  hoverHL.setCoords()
-  hoverHL.bringToFront()
-  fc.requestRenderAll()
+  const rect = canvasRef.current!.getBoundingClientRect()
+  hoverDomRef.current && (() => {
+    hoverDomRef.current.style.left = `${rect.left + (box.left - PAD) * SCALE}px`
+    hoverDomRef.current.style.top = `${rect.top + (box.top - PAD) * SCALE}px`
+    hoverDomRef.current.style.width = `${(box.width + PAD * 2) * SCALE}px`
+    hoverDomRef.current.style.height = `${(box.height + PAD * 2) * SCALE}px`
+    hoverDomRef.current.style.display = 'block'
+  })()
 })
 .on('mouse:out', () => {
   hoverHL.visible = false
+  hoverDomRef.current && (hoverDomRef.current.style.display = 'none')
   fc.requestRenderAll()
 })
 
@@ -1056,6 +1086,12 @@ window.addEventListener('keydown', onKey)
       onReady(null)
       cropToolRef.current?.abort()
       fc.dispose()
+      hoverDomRef.current?.remove()
+      selDomRef.current?.remove()
+      if (scrollHandler) {
+        window.removeEventListener('scroll', scrollHandler)
+        window.removeEventListener('resize', scrollHandler)
+      }
     }
 // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [])
