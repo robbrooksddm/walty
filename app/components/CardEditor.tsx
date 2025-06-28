@@ -603,8 +603,9 @@ const handleProofAll = async () => {
   /* 7 ─ coach-mark ----------------------------------------------- */
   const [anchor, setAnchor] = useState<DOMRect | null>(null)
   const [zoom, setZoom] = useState(1)
-  const handleZoomIn  = () => setZoom(z => Math.min(z + 0.25, 3))
-  const handleZoomOut = () => setZoom(z => Math.max(z - 0.25, 0.5))
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const handleZoomIn  = () => setZoom(z => Math.min(z + 0.25, 5))
+  const handleZoomOut = () => setZoom(z => Math.max(z - 0.25, 0.25))
   const ran = useRef(false)
   useEffect(() => {
     if (ran.current || typeof window === 'undefined') return
@@ -624,6 +625,38 @@ const handleProofAll = async () => {
     }
     tick()
     ran.current = true
+  }, [])
+
+  /* zoom via wheel + keyboard */
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+        setZoom(z => {
+          const next = z - e.deltaY * 0.001
+          return Math.max(0.25, Math.min(5, next))
+        })
+      }
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === '=' || e.key === '+') {
+          e.preventDefault()
+          setZoom(z => Math.min(5, z + 0.1))
+        } else if (e.key === '-' || e.key === '_') {
+          e.preventDefault()
+          setZoom(z => Math.max(0.25, z - 0.1))
+        }
+      }
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    window.addEventListener('keydown', onKey)
+    return () => {
+      el.removeEventListener('wheel', onWheel)
+      window.removeEventListener('keydown', onKey)
+    }
   }, [])
 
   /* 8 ─ loader guard --------------------------------------------- */
@@ -716,7 +749,10 @@ const handleProofAll = async () => {
           ))}
 
                     {/* canvases */}
-          <div className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6">
+          <div
+            ref={scrollRef}
+            className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6"
+          >
             {/* front */}
             <div className={section === 'front' ? box : 'hidden'} style={{ width: boxWidth }}>
               <FabricCanvas
@@ -812,6 +848,18 @@ const handleProofAll = async () => {
         products={products}
         generateProofUrls={generateProofURLs}
       />
+      <div className="fixed bottom-4 right-4 z-40 flex items-center gap-2 bg-white/80 shadow rounded-md px-2 py-1">
+        <input
+          type="range"
+          min={25}
+          max={500}
+          step={1}
+          value={Math.round(zoom * 100)}
+          onChange={e => setZoom(e.target.valueAsNumber / 100)}
+          className="w-32 accent-[--walty-orange]"
+        />
+        <span className="w-12 text-center text-xs">{Math.round(zoom * 100)}%</span>
+      </div>
     </div>
   )
 }
