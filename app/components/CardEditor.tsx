@@ -601,10 +601,38 @@ const handleProofAll = async () => {
 }
 
   /* 7 ─ coach-mark ----------------------------------------------- */
+  const containerRef = useRef<HTMLDivElement | null>(null)
   const [anchor, setAnchor] = useState<DOMRect | null>(null)
   const [zoom, setZoom] = useState(1)
-  const handleZoomIn  = () => setZoom(z => Math.min(z + 0.25, 3))
-  const handleZoomOut = () => setZoom(z => Math.max(z - 0.25, 0.5))
+  const [zoomPoint, setZoomPoint] = useState({ x: previewW() / 2, y: previewH() / 2 })
+  const zoomRef = useRef(1)
+  const targetZoom = useRef(1)
+  const animRef = useRef<number>()
+
+  const animateZoom = () => {
+    const current = zoomRef.current
+    const target = targetZoom.current
+    if (Math.abs(current - target) < 0.001) {
+      zoomRef.current = target
+      setZoom(target)
+      animRef.current = undefined
+      return
+    }
+    const next = current + (target - current) * 0.2
+    zoomRef.current = next
+    setZoom(next)
+    animRef.current = requestAnimationFrame(animateZoom)
+  }
+
+  const setZoomSmooth = (val: number, point?: { x: number; y: number }) => {
+    targetZoom.current = Math.min(Math.max(val, 0.1), 5)
+    if (point) setZoomPoint(point)
+    if (!animRef.current) animRef.current = requestAnimationFrame(animateZoom)
+  }
+
+  const ZOOM_STEP = 1.06
+  const handleZoomIn  = () => setZoomSmooth(targetZoom.current * ZOOM_STEP)
+  const handleZoomOut = () => setZoomSmooth(targetZoom.current / ZOOM_STEP)
   const ran = useRef(false)
   useEffect(() => {
     if (ran.current || typeof window === 'undefined') return
@@ -626,6 +654,43 @@ const handleProofAll = async () => {
     ran.current = true
   }, [])
 
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    let delta = 0
+    let frame: number | undefined
+    const wheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        const rect = el.getBoundingClientRect()
+        const pt = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+        delta += e.deltaY
+        if (!frame) {
+          frame = requestAnimationFrame(() => {
+            const factor = Math.pow(0.999, delta)
+            setZoomSmooth(targetZoom.current * factor, pt)
+            delta = 0
+            frame = undefined
+          })
+        }
+        e.preventDefault()
+      }
+    }
+    const key = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        const rect = el.getBoundingClientRect()
+        const pt = { x: rect.width / 2, y: rect.height / 2 }
+        if (e.key === '+' || e.key === '=') { setZoomSmooth(targetZoom.current * ZOOM_STEP, pt); e.preventDefault() }
+        if (e.key === '-') { setZoomSmooth(targetZoom.current / ZOOM_STEP, pt); e.preventDefault() }
+      }
+    }
+    el.addEventListener('wheel', wheel, { passive: false })
+    window.addEventListener('keydown', key)
+    return () => {
+      el.removeEventListener('wheel', wheel)
+      window.removeEventListener('keydown', key)
+    }
+  }, [])
+
   /* 8 ─ loader guard --------------------------------------------- */
   if (pages.length !== 4) {
     return (
@@ -641,6 +706,7 @@ const handleProofAll = async () => {
   /* ---------------- UI ------------------------------------------ */
   return (
     <div
+      ref={containerRef}
       className="flex flex-col h-screen box-border"
       style={{ paddingTop: "calc(var(--walty-header-h) + var(--walty-toolbar-h))" }}
     >
@@ -726,6 +792,7 @@ const handleProofAll = async () => {
                 isCropping={cropping[0]}
                 onCroppingChange={state => handleCroppingChange(0, state)}
                 zoom={zoom}
+                zoomPoint={zoomPoint}
                 mode={mode}
               />
             </div>
@@ -739,6 +806,7 @@ const handleProofAll = async () => {
                   isCropping={cropping[1]}
                   onCroppingChange={state => handleCroppingChange(1, state)}
                   zoom={zoom}
+                  zoomPoint={zoomPoint}
                   mode={mode}
                 />
               </div>
@@ -750,6 +818,7 @@ const handleProofAll = async () => {
                   isCropping={cropping[2]}
                   onCroppingChange={state => handleCroppingChange(2, state)}
                   zoom={zoom}
+                  zoomPoint={zoomPoint}
                   mode={mode}
                 />
               </div>
@@ -763,6 +832,7 @@ const handleProofAll = async () => {
                 isCropping={cropping[3]}
                 onCroppingChange={state => handleCroppingChange(3, state)}
                 zoom={zoom}
+                zoomPoint={zoomPoint}
                 mode={mode}
               />
             </div>
@@ -812,6 +882,23 @@ const handleProofAll = async () => {
         products={products}
         generateProofUrls={generateProofURLs}
       />
+      <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 bg-white shadow px-3 py-2 rounded">
+        <span className="text-xs">{Math.round(zoom * 100)}%</span>
+        <input
+          type="range"
+          min="10"
+          max="500"
+          step="1"
+          value={targetZoom.current * 100}
+          onChange={e =>
+            setZoomSmooth(Number(e.currentTarget.value) / 100, {
+              x: previewW() / 2,
+              y: previewH() / 2,
+            })
+          }
+          className="h-2 w-32"
+        />
+      </div>
     </div>
   )
 }
