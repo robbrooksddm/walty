@@ -89,3 +89,33 @@ html {
   height:36px;
   margin-bottom:4px;
 }
+
+/* === Canvas selection/hover overlays ========================= */
+@layer utilities {
+  .canvas-outline {
+    @apply absolute pointer-events-none box-border;
+    border:1px dashed #2EC4B6;
+    position:absolute;
+    box-sizing:border-box;
+  }
+  .canvas-outline--selection .handle {
+    position:absolute;
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#fff;
+    border:1px solid #2EC4B6;
+    box-shadow:0 0 2px rgba(0,0,0,0.15);
+  }
+  .canvas-outline--selection .handle.tl{left:-4px;top:-4px}
+  .canvas-outline--selection .handle.tr{right:-4px;top:-4px}
+  .canvas-outline--selection .handle.bl{left:-4px;bottom:-4px}
+  .canvas-outline--selection .handle.br{right:-4px;bottom:-4px}
+  .canvas-outline--selection .handle.ml{left:-4px;top:50%;transform:translateY(-50%)}
+  .canvas-outline--selection .handle.mr{right:-4px;top:50%;transform:translateY(-50%)}
+  .canvas-outline--selection .handle.mt{top:-4px;left:50%;transform:translateX(-50%)}
+  .canvas-outline--selection .handle.mb{bottom:-4px;left:50%;transform:translateX(-50%)}
+  .canvas-outline--selection .handle.mtr{
+    top:-20px;left:50%;transform:translateX(-50%);
+  }
+}

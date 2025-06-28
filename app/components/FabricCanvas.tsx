@@ -470,6 +470,8 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const maskRectsRef = useRef<fabric.Rect[]>([]);
   const hoverRef     = useRef<fabric.Rect | null>(null)
+  const hoverDomRef  = useRef<HTMLDivElement | null>(null)
+  const selectDomRef = useRef<HTMLDivElement | null>(null)
   const hydrating    = useRef(false)
   const isEditing    = useRef(false)
 
@@ -583,6 +585,24 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
 /* ---------- mount once --------------------------------------- */
 useEffect(() => {
   if (!canvasRef.current) return
+
+  // create DOM overlays for hover and selection
+  const hoverEl = document.createElement('div')
+  hoverEl.className = 'canvas-outline'
+  hoverEl.style.display = 'none'
+  document.body.appendChild(hoverEl)
+  hoverDomRef.current = hoverEl
+
+  const selEl = document.createElement('div')
+  selEl.className = 'canvas-outline canvas-outline--selection'
+  ;['tl','tr','bl','br','ml','mr','mt','mb','mtr'].forEach(pos => {
+    const h = document.createElement('div')
+    h.className = `handle ${pos}`
+    selEl.appendChild(h)
+  })
+  selEl.style.display = 'none'
+  document.body.appendChild(selEl)
+  selectDomRef.current = selEl
 
   // Create Fabric using the <canvas> element’s own dimensions
   // – we’ll work in full‑size page units and simply scale the viewport.
@@ -809,59 +829,62 @@ useEffect(() => {
 
  
 
-/* ── 2 ▸ Hover overlay only ─────────────────────────────── */
-const hoverHL = new fabric.Rect({
-  originX:'left', originY:'top', strokeUniform:true,
-  fill:'transparent',
-  stroke:SEL_COLOR,
-  strokeWidth:1 / SCALE,
-  strokeDashArray:[],
-  selectable:false, evented:false, visible:false,
-  excludeFromExport:true,
-})
-fc.add(hoverHL)
-hoverRef.current = hoverHL
+/* ── 2 ▸ Hover overlay (DOM) ─────────────────────────────── */
+hoverRef.current = null
 
-/* ── 3 ▸ Selection lifecycle (no extra overlay) ─────────── */
+/* ── 3 ▸ Selection lifecycle (DOM overlay) ─────────── */
 let scrollHandler: (() => void) | null = null
+const updateSelection = () => {
+  const fc = fcRef.current
+  const el = selectDomRef.current
+  const act = fc?.getActiveObject() as fabric.Object | undefined
+  if (!fc || !act || !el) return
+  syncOutline(act, el, fc.upperCanvasEl, SCALE)
+  el.style.display = 'block'
+}
+
+const updateHover = (t: fabric.Object) => {
+  const fc = fcRef.current
+  const el = hoverDomRef.current
+  if (!fc || !el) return
+  syncOutline(t, el, fc.upperCanvasEl, SCALE)
+  el.style.display = 'block'
+}
+
+let hoverObj: fabric.Object | null = null
 
 fc.on('selection:created', () => {
-  hoverHL.visible = false            // hide leftover hover rectangle
-  fc.requestRenderAll()
-  scrollHandler = () => fc.requestRenderAll()
+  hoverDomRef.current && (hoverDomRef.current.style.display = 'none')
+  updateSelection()
+  scrollHandler = () => updateSelection()
   window.addEventListener('scroll', scrollHandler, { passive:true })
 })
+.on('selection:updated', updateSelection)
 .on('selection:cleared', () => {
   if (scrollHandler) { window.removeEventListener('scroll', scrollHandler); scrollHandler = null }
+  selectDomRef.current && (selectDomRef.current.style.display = 'none')
 })
 
-/* also hide hover during any transform of the active object */
-fc.on('object:moving',   () => { hoverHL.visible = false })
-  .on('object:scaling',  () => { hoverHL.visible = false })
-  .on('object:rotating', () => { hoverHL.visible = false })
+/* also sync during transforms */
+fc.on('object:moving',   updateSelection)
+  .on('object:scaling',  updateSelection)
+  .on('object:rotating', updateSelection)
 
 /* ── 4 ▸ Hover outline (only when NOT the active object) ─── */
 fc.on('mouse:over', e => {
   const t = e.target as fabric.Object | undefined
-  if (!t || (t as any)._guide || t === hoverHL) return
+  if (!t || (t as any)._guide) return
   if (fc.getActiveObject() === t) return           // skip active selection
-
-  const box = t.getBoundingRect(true, true)
-  hoverHL.set({
-    width : box.width  + PAD * 2,
-    height: box.height + PAD * 2,
-    left  : box.left  - PAD,
-    top   : box.top   - PAD,
-    visible: true,
-  })
-  hoverHL.setCoords()
-  hoverHL.bringToFront()
-  fc.requestRenderAll()
+  hoverObj = t
+  updateHover(t)
 })
 .on('mouse:out', () => {
-  hoverHL.visible = false
-  fc.requestRenderAll()
+  hoverObj = null
+  hoverDomRef.current && (hoverDomRef.current.style.display = 'none')
 })
+const hoverScroll = () => { if (hoverObj) updateHover(hoverObj) }
+window.addEventListener('scroll', hoverScroll, { passive: true })
+window.addEventListener('resize', hoverScroll)
 
 addGuides(fc, mode)                           // add guides based on mode
   /* ── 4.5 ▸ Fabric ➜ Zustand sync ──────────────────────────── */
@@ -1053,6 +1076,10 @@ window.addEventListener('keydown', onKey)
       fc.off('before:transform', startCrop);
       fc.off('object:scaling', duringCrop);
       fc.off('object:scaled', endCrop);
+      hoverDomRef.current?.remove()
+      selectDomRef.current?.remove()
+      window.removeEventListener('scroll', hoverScroll)
+      window.removeEventListener('resize', hoverScroll)
       onReady(null)
       cropToolRef.current?.abort()
       fc.dispose()
