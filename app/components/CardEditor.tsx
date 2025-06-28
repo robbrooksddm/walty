@@ -821,7 +821,10 @@ const handleProofAll = async () => {
             }}
           >
             {/* front */}
-            <div className={section === 'front' ? box : 'hidden'} style={{ width: boxWidth }}>
+            <div
+              className={`${section === 'front' ? box : 'hidden'} canvas-wrap`}
+              style={{ width: boxWidth }}
+            >
               <FabricCanvas
                 pageIdx={0}
                 page={pages[0]}
@@ -834,7 +837,7 @@ const handleProofAll = async () => {
             </div>
             {/* inside */}
             <div className={section === 'inside' ? 'flex gap-6' : 'hidden'}>
-              <div className={box} style={{ width: boxWidth }}>
+              <div className={`${box} canvas-wrap`} style={{ width: boxWidth }}>
                 <FabricCanvas
                   pageIdx={1}
                   page={pages[1]}
@@ -845,7 +848,7 @@ const handleProofAll = async () => {
                   mode={mode}
                 />
               </div>
-              <div className={box} style={{ width: boxWidth }}>
+              <div className={`${box} canvas-wrap`} style={{ width: boxWidth }}>
                 <FabricCanvas
                   pageIdx={2}
                   page={pages[2]}
@@ -858,7 +861,10 @@ const handleProofAll = async () => {
               </div>
             </div>
             {/* back */}
-            <div className={section === 'back' ? box : 'hidden'} style={{ width: boxWidth }}>
+            <div
+              className={`${section === 'back' ? box : 'hidden'} canvas-wrap`}
+              style={{ width: boxWidth }}
+            >
               <FabricCanvas
                 pageIdx={3}
                 page={pages[3]}
