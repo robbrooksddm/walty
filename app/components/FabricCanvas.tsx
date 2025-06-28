@@ -128,7 +128,7 @@ export const EXPORT_MULT = () => {
   return (1 / SCALE) / dpr
 }
 
-// 4 CSS-px padding used by the hover outline
+// Extra padding around the canvas so selection handles aren't clipped
 const dash = (gap: number) => [gap / SCALE, (gap - 2) / SCALE];
 
 /* ---------- shared clipboard helpers ------------------------------ */
@@ -600,15 +600,16 @@ useEffect(() => {
   };
   fc.upperCanvasEl.addEventListener('contextmenu', ctxMenu);
   /* --- keep Fabric’s wrapper the same size as the visible preview --- */
-  const container = canvasRef.current!.parentElement as HTMLElement | null;
+  const container = canvasRef.current!.parentElement as HTMLElement | null
   if (container) {
-    const pad = 4 * zoom;
-    container.style.width = `${PREVIEW_W * zoom}px`;
-    container.style.height = `${PREVIEW_H * zoom}px`;
-    container.style.maxWidth = `${PREVIEW_W * zoom}px`;
-    container.style.maxHeight = `${PREVIEW_H * zoom}px`;
-    container.style.padding = `${pad}px`;
-    container.style.overflow = 'visible';
+    const padX = Math.max(4, (window.innerWidth - PREVIEW_W * zoom) / 2)
+    const padY = Math.max(4, (window.innerHeight - PREVIEW_H * zoom) / 2)
+    container.style.width = `${PREVIEW_W * zoom}px`
+    container.style.height = `${PREVIEW_H * zoom}px`
+    container.style.maxWidth = `${PREVIEW_W * zoom}px`
+    container.style.maxHeight = `${PREVIEW_H * zoom}px`
+    container.style.padding = `${padY}px ${padX}px`
+    container.style.overflow = 'visible'
   }
   fc.setWidth(PREVIEW_W * zoom)
   fc.setHeight(PREVIEW_H * zoom)
@@ -1077,12 +1078,13 @@ window.addEventListener('keydown', onKey)
 
     const container = canvas.parentElement as HTMLElement | null
     if (container) {
-      const pad = 4 * zoom
+      const padX = Math.max(4, (window.innerWidth - PREVIEW_W * zoom) / 2)
+      const padY = Math.max(4, (window.innerHeight - PREVIEW_H * zoom) / 2)
       container.style.width = `${PREVIEW_W * zoom}px`
       container.style.height = `${PREVIEW_H * zoom}px`
       container.style.maxWidth = `${PREVIEW_W * zoom}px`
       container.style.maxHeight = `${PREVIEW_H * zoom}px`
-      container.style.padding = `${pad}px`
+      container.style.padding = `${padY}px ${padX}px`
       container.style.overflow = 'visible'
     }
 
