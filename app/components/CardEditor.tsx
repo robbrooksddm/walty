@@ -737,7 +737,9 @@ const handleProofAll = async () => {
     <div
       ref={containerRef}
       className="flex flex-col h-screen box-border"
-      style={{ paddingTop: "calc(var(--walty-header-h) + var(--walty-toolbar-h))" }}
+      style={{
+        paddingTop: "calc(var(--walty-header-h) + var(--walty-toolbar-h))",
+      }}
     >
       <WaltyEditorHeader                     /* ② mount new component */
         onPreview={handlePreview}
@@ -811,7 +813,10 @@ const handleProofAll = async () => {
           ))}
 
                     {/* canvases */}
-          <div className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6">
+          <div
+            className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6"
+            style={{ scrollbarGutter: 'stable' }}
+          >
             {/* front */}
             <div className={section === 'front' ? box : 'hidden'} style={{ width: boxWidth }}>
               <FabricCanvas
