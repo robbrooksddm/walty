@@ -617,18 +617,72 @@ useEffect(() => {
   });
   (selEl as any)._handles = handleMap;
 
-  const forward = (ev: PointerEvent) => ({
-    pointerId: ev.pointerId,
-    clientX: ev.clientX,
-    clientY: ev.clientY,
-    button: ev.button,
-    buttons: ev.buttons,
-    ctrlKey: ev.ctrlKey,
-    shiftKey: ev.shiftKey,
-    altKey: ev.altKey,
-    metaKey: ev.metaKey,
-    pointerType: ev.pointerType,
-  });
+  const forward = (ev: PointerEvent) => {
+    let clientX = ev.clientX
+    let clientY = ev.clientY
+    const active = fc.getActiveObject()
+    const corner = (ev.target as HTMLElement | null)?.dataset?.corner as
+      | string
+      | undefined
+
+    if (active && corner && canvasRef.current) {
+      const box = active.getBoundingRect(true, true)
+      const rect = canvasRef.current.getBoundingClientRect()
+      const left = rect.left + box.left * SCALE
+      const top = rect.top + box.top * SCALE
+      const w = box.width * SCALE
+      const h = box.height * SCALE
+      const midX = left + w / 2
+      const midY = top + h / 2
+      switch (corner) {
+        case 'tl':
+          clientX = left
+          clientY = top
+          break
+        case 'tr':
+          clientX = left + w
+          clientY = top
+          break
+        case 'br':
+          clientX = left + w
+          clientY = top + h
+          break
+        case 'bl':
+          clientX = left
+          clientY = top + h
+          break
+        case 'ml':
+          clientX = left
+          clientY = midY
+          break
+        case 'mr':
+          clientX = left + w
+          clientY = midY
+          break
+        case 'mt':
+          clientX = midX
+          clientY = top
+          break
+        case 'mb':
+          clientX = midX
+          clientY = top + h
+          break
+      }
+    }
+
+    return {
+      pointerId: ev.pointerId,
+      clientX,
+      clientY,
+      button: ev.button,
+      buttons: ev.buttons,
+      ctrlKey: ev.ctrlKey,
+      shiftKey: ev.shiftKey,
+      altKey: ev.altKey,
+      metaKey: ev.metaKey,
+      pointerType: ev.pointerType,
+    }
+  }
 
   const bridge = (e: PointerEvent) => {
     const down = new PointerEvent('pointerdown', forward(e));
