@@ -465,10 +465,11 @@ interface Props {
   isCropping?: boolean
   onCroppingChange?: (state: boolean) => void
   zoom?: number
+  zoomAnchor?: { x: number; y: number }
   mode?: Mode
 }
 
-export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, zoom = 1, mode = 'customer' }: Props) {
+export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, zoom = 1, zoomAnchor, mode = 'customer' }: Props) {
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const maskRectsRef = useRef<fabric.Rect[]>([]);
@@ -1085,10 +1086,12 @@ window.addEventListener('keydown', onKey)
     canvas.style.width = `${PREVIEW_W * zoom}px`
     canvas.style.height = `${PREVIEW_H * zoom}px`
 
-    fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
+    const anchor =
+      zoomAnchor || { x: fc.getWidth() / 2, y: fc.getHeight() / 2 }
+    fc.zoomToPoint(new fabric.Point(anchor.x, anchor.y), SCALE * zoom)
     if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
     fc.requestRenderAll()
-  }, [zoom])
+  }, [zoom, zoomAnchor])
 
   /* ---------- crop mode toggle ------------------------------ */
   useEffect(() => {
