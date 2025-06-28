@@ -637,6 +637,7 @@ useEffect(() => {
 
       const forward = (type: string) => (e: PointerEvent) => {
         if (!canvasRef.current) return
+        const target = canvasRef.current
         const ev = new PointerEvent(type, {
           bubbles: true,
           clientX: e.clientX,
@@ -648,7 +649,14 @@ useEffect(() => {
           pressure: e.pressure,
           buttons: e.buttons
         })
-        canvasRef.current.dispatchEvent(ev)
+        target.dispatchEvent(ev)
+        if (type === 'pointerdown') {
+          try { target.setPointerCapture(e.pointerId) } catch {}
+        }
+        if (type === 'pointerup' || type === 'pointercancel') {
+          try { target.releasePointerCapture(e.pointerId) } catch {}
+        }
+        e.preventDefault()
       }
       selGhost.addEventListener('pointerdown', forward('pointerdown'))
       selGhost.addEventListener('pointermove', forward('pointermove'))
