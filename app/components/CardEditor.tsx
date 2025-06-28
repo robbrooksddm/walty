@@ -602,6 +602,9 @@ const handleProofAll = async () => {
 
   /* 7 ─ coach-mark ----------------------------------------------- */
   const [anchor, setAnchor] = useState<DOMRect | null>(null)
+  const [zoom, setZoom] = useState(1)
+  const handleZoomIn  = () => setZoom(z => Math.min(z + 0.25, 3))
+  const handleZoomOut = () => setZoom(z => Math.max(z - 0.25, 0.5))
   const ran = useRef(false)
   useEffect(() => {
     if (ran.current || typeof window === 'undefined') return
@@ -632,7 +635,7 @@ const handleProofAll = async () => {
     )
   }
 
-  const boxWidth = previewW()
+  const boxWidth = previewW() * zoom
   const box = `flex-shrink-0`
 
   /* ---------------- UI ------------------------------------------ */
@@ -653,6 +656,8 @@ const handleProofAll = async () => {
           onRedo={redo}
           onSave={handleSave}
           onProof={mode === 'staff' ? handleProofAll : undefined}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
           saving={saving}
           mode={mode}
         />
@@ -720,6 +725,7 @@ const handleProofAll = async () => {
                 onReady={fc => onReady(0, fc)}
                 isCropping={cropping[0]}
                 onCroppingChange={state => handleCroppingChange(0, state)}
+                zoom={zoom}
                 mode={mode}
               />
             </div>
@@ -732,6 +738,7 @@ const handleProofAll = async () => {
                   onReady={fc => onReady(1, fc)}
                   isCropping={cropping[1]}
                   onCroppingChange={state => handleCroppingChange(1, state)}
+                  zoom={zoom}
                   mode={mode}
                 />
               </div>
@@ -742,6 +749,7 @@ const handleProofAll = async () => {
                   onReady={fc => onReady(2, fc)}
                   isCropping={cropping[2]}
                   onCroppingChange={state => handleCroppingChange(2, state)}
+                  zoom={zoom}
                   mode={mode}
                 />
               </div>
@@ -754,6 +762,7 @@ const handleProofAll = async () => {
                 onReady={fc => onReady(3, fc)}
                 isCropping={cropping[3]}
                 onCroppingChange={state => handleCroppingChange(3, state)}
+                zoom={zoom}
                 mode={mode}
               />
             </div>
