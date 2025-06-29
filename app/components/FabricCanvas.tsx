@@ -268,7 +268,9 @@ const syncGhost = (
   ghost : HTMLDivElement,
   canvas: HTMLCanvasElement,
 ) => {
-  const canvasRect = canvas.getBoundingClientRect()
+  const canvasRect =
+    canvas.parentElement?.getBoundingClientRect() ??
+    canvas.getBoundingClientRect()
   const { left, top, width, height } = img.getBoundingRect()
 
   ghost.style.left   = `${canvasRect.left + left   * SCALE}px`

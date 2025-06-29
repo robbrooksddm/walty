@@ -10,19 +10,21 @@
     * @param canvas  The <canvas> element for this page
     * @param scale   Canvas → preview scale (SCALE from FabricCanvas)
     */
-   export function syncGhost(
-     img    : fabric.Image,
-     ghost  : HTMLDivElement,
-     canvas : HTMLCanvasElement,
-     scale  : number,
-   ) {
-     // 1 - read positions
-     const { left, top, width, height } = img.getBoundingRect();
-     const canvasRect = canvas.getBoundingClientRect();
+export function syncGhost(
+  img    : fabric.Image,
+  ghost  : HTMLDivElement,
+  canvas : HTMLCanvasElement,
+  scale  : number,
+) {
+  // 1 - read positions
+  const { left, top, width, height } = img.getBoundingRect();
+  const wrapperRect =
+    canvas.parentElement?.getBoundingClientRect() ??
+    canvas.getBoundingClientRect();
 
-     // 2 - apply to the overlay div  (canvas-space ➜ screen-space)
-     ghost.style.left   = `${canvasRect.left + left   * scale}px`;
-     ghost.style.top    = `${canvasRect.top  + top    * scale}px`;
-     ghost.style.width  = `${width  * scale}px`;
-     ghost.style.height = `${height * scale}px`;
-   }
+  // 2 - apply to the overlay div  (canvas-space ➜ screen-space)
+  ghost.style.left   = `${wrapperRect.left + left   * scale}px`;
+  ghost.style.top    = `${wrapperRect.top  + top    * scale}px`;
+  ghost.style.width  = `${width  * scale}px`;
+  ghost.style.height = `${height * scale}px`;
+}
