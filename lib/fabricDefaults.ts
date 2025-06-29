@@ -15,8 +15,9 @@ export const HANDLE_BLUR   = 1 / SCALE;
 (fabric.Object.prototype as any).borderDashArray   = [];
 (fabric.Object.prototype as any).cornerStrokeColor = '#fff';
 (fabric.Object.prototype as any).cornerColor       = '#fff';
-(fabric.Object.prototype as any).transparentCorners= false;
+(fabric.Object.prototype as any).transparentCorners= true;
 (fabric.Object.prototype as any).cornerStyle       = 'circle';
+(fabric.Object.prototype as any).hasBorders        = false;
 
 /* ───────────────── helpers ──────────────────────────────── */
 
