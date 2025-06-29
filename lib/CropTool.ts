@@ -25,7 +25,8 @@ export class CropTool {
   /** canvas size before cropping */
   private baseW = 0;
   private baseH = 0;
-  private wrapStyles: { w:string; h:string; mw:string; mh:string } | null = null;
+  private wrapStyles: { w:string; h:string; mw:string; mh:string; left:string; top:string } | null = null;
+  private containerStyles: { w:string; h:string; mw:string; mh:string } | null = null;
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
 
@@ -121,18 +122,35 @@ export class CropTool {
     this.baseW = this.fc.getWidth()
     this.baseH = this.fc.getHeight()
     const wrapper = (this.fc as any).wrapperEl as HTMLElement | undefined
+    const container = wrapper?.parentElement as HTMLElement | undefined
     if (wrapper) {
       this.wrapStyles = {
         w : wrapper.style.width,
         h : wrapper.style.height,
         mw: wrapper.style.maxWidth,
         mh: wrapper.style.maxHeight,
+        left: wrapper.style.left,
+        top : wrapper.style.top,
+      }
+    }
+    if (container) {
+      this.containerStyles = {
+        w : container.style.width,
+        h : container.style.height,
+        mw: container.style.maxWidth,
+        mh: container.style.maxHeight,
       }
     }
     const br = img.getBoundingRect(true, true)
-    const needW = Math.max(this.baseW, (br.left + br.width) * this.SCALE)
-    const needH = Math.max(this.baseH, (br.top + br.height) * this.SCALE)
-    if (needW > this.baseW || needH > this.baseH) {
+    const minX = Math.min(0, br.left)
+    const minY = Math.min(0, br.top)
+    const maxX = Math.max(this.baseW / this.SCALE, br.left + br.width)
+    const maxY = Math.max(this.baseH / this.SCALE, br.top + br.height)
+
+    const needW = (maxX - minX) * this.SCALE
+    const needH = (maxY - minY) * this.SCALE
+
+    if (needW > this.baseW || needH > this.baseH || minX < 0 || minY < 0) {
       this.fc.setWidth(needW)
       this.fc.setHeight(needH)
       if (wrapper) {
@@ -140,6 +158,14 @@ export class CropTool {
         wrapper.style.height = `${needH}px`
         wrapper.style.maxWidth = `${needW}px`
         wrapper.style.maxHeight = `${needH}px`
+        wrapper.style.left = `${-minX * this.SCALE}px`
+        wrapper.style.top  = `${-minY * this.SCALE}px`
+      }
+      if (container) {
+        container.style.width = `${needW}px`
+        container.style.height = `${needH}px`
+        container.style.maxWidth = `${needW}px`
+        container.style.maxHeight = `${needH}px`
       }
     }
     this.cleanup.push(() => {
@@ -720,15 +746,25 @@ export class CropTool {
       this.fc.setWidth(this.baseW)
       this.fc.setHeight(this.baseH)
       const wrap = (this.fc as any).wrapperEl as HTMLElement | undefined
+      const container = wrap?.parentElement as HTMLElement | undefined
       if (wrap && this.wrapStyles) {
         wrap.style.width = this.wrapStyles.w
         wrap.style.height = this.wrapStyles.h
         wrap.style.maxWidth = this.wrapStyles.mw
         wrap.style.maxHeight = this.wrapStyles.mh
+        wrap.style.left = this.wrapStyles.left
+        wrap.style.top  = this.wrapStyles.top
+      }
+      if (container && this.containerStyles) {
+        container.style.width = this.containerStyles.w
+        container.style.height = this.containerStyles.h
+        container.style.maxWidth = this.containerStyles.mw
+        container.style.maxHeight = this.containerStyles.mh
       }
       this.baseW = 0
       this.baseH = 0
       this.wrapStyles = null
+      this.containerStyles = null
     }
     // ensure any leftover overlay is cleared
     const ctx = (this.fc as any).contextTop
