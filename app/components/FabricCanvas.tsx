@@ -617,18 +617,35 @@ useEffect(() => {
   });
   (selEl as any)._handles = handleMap;
 
-  const forward = (ev: PointerEvent) => ({
-    pointerId: ev.pointerId,
-    clientX: ev.clientX,
-    clientY: ev.clientY,
-    button: ev.button,
-    buttons: ev.buttons,
-    ctrlKey: ev.ctrlKey,
-    shiftKey: ev.shiftKey,
-    altKey: ev.altKey,
-    metaKey: ev.metaKey,
-    pointerType: ev.pointerType,
-  });
+  const forward = (ev: PointerEvent) => {
+    const clamp = (x: number, y: number) => {
+      const obj = fc.getActiveObject();
+      if (!obj || !canvasRef.current) return { x, y };
+      const box = obj.getBoundingRect(true, true);
+      const rect = canvasRef.current.getBoundingClientRect();
+      const left   = rect.left + box.left * SCALE;
+      const top    = rect.top  + box.top  * SCALE;
+      const right  = left + box.width  * SCALE;
+      const bottom = top  + box.height * SCALE;
+      return {
+        x: Math.min(Math.max(x, left), right),
+        y: Math.min(Math.max(y, top ), bottom)
+      };
+    };
+    const { x, y } = clamp(ev.clientX, ev.clientY);
+    return {
+      pointerId: ev.pointerId,
+      clientX: x,
+      clientY: y,
+      button: ev.button,
+      buttons: ev.buttons,
+      ctrlKey: ev.ctrlKey,
+      shiftKey: ev.shiftKey,
+      altKey: ev.altKey,
+      metaKey: ev.metaKey,
+      pointerType: ev.pointerType,
+    };
+  };
 
   const bridge = (e: PointerEvent) => {
     const down = new PointerEvent('pointerdown', forward(e));
@@ -644,7 +661,7 @@ useEffect(() => {
     document.addEventListener('pointerup', up);
     e.preventDefault();
   };
-  selEl.addEventListener('pointerdown', bridge);
+  Object.values(handleMap).forEach(h => h.addEventListener('pointerdown', bridge));
 
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
