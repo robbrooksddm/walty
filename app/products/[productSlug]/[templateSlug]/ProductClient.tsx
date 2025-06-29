@@ -20,14 +20,38 @@ export default function ProductClient({
 }) {
   const [selected, setSelected] = useState<string>('')
   const [tab, setTab] = useState<'desc'|'delivery'>('desc')
+  const [pageIndex, setPageIndex] = useState(0)
 
   return (
-    <main className="p-6 space-y-6">
+    <main className="max-w-5xl mx-auto p-6 space-y-6">
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4">
-          {images.map((src, i) => (
-            <Image key={i} src={src} width={420} height={580} alt={`page ${i+1}`} className="w-full rounded shadow" />
-          ))}
+          {images[pageIndex] && (
+            <Image
+              src={images[pageIndex]}
+              width={420}
+              height={580}
+              alt={`page ${pageIndex + 1}`}
+              className="w-60 mx-auto rounded shadow"
+            />
+          )}
+          <div className="flex justify-center gap-2">
+            {images.map((src, i) => (
+              <button
+                key={i}
+                onClick={() => setPageIndex(i)}
+                className={`thumb ${pageIndex === i ? 'thumb-active' : ''}`}
+              >
+                <Image
+                  src={src}
+                  width={70}
+                  height={98}
+                  alt={`page ${i + 1}`}
+                  className="h-full w-full object-cover"
+                />
+              </button>
+            ))}
+          </div>
         </div>
         <div className="space-y-4">
           <h1 className="text-2xl font-bold">{title}</h1>
