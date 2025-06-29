@@ -26,6 +26,9 @@ export class CropTool {
   private baseW = 0;
   private baseH = 0;
   private wrapStyles: { w:string; h:string; mw:string; mh:string } | null = null;
+  /** outer wrapper element (eg. .canvas-wrap) */
+  private host: HTMLElement | null = null;
+  private hostStyles: { w:string; h:string; overflow:string } | null = null;
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
 
@@ -128,6 +131,15 @@ export class CropTool {
         mw: wrapper.style.maxWidth,
         mh: wrapper.style.maxHeight,
       }
+      const host = wrapper.parentElement as HTMLElement | null
+      if (host) {
+        this.host = host
+        this.hostStyles = {
+          w: host.style.width,
+          h: host.style.height,
+          overflow: host.style.overflow,
+        }
+      }
     }
     const br = img.getBoundingRect(true, true)
     const needW = Math.max(this.baseW, (br.left + br.width) * this.SCALE)
@@ -140,6 +152,11 @@ export class CropTool {
         wrapper.style.height = `${needH}px`
         wrapper.style.maxWidth = `${needW}px`
         wrapper.style.maxHeight = `${needH}px`
+      }
+      if (this.host) {
+        this.host.style.width = `${needW}px`
+        this.host.style.height = `${needH}px`
+        this.host.style.overflow = 'visible'
       }
     }
     this.cleanup.push(() => {
@@ -726,9 +743,16 @@ export class CropTool {
         wrap.style.maxWidth = this.wrapStyles.mw
         wrap.style.maxHeight = this.wrapStyles.mh
       }
+      if (this.host && this.hostStyles) {
+        this.host.style.width = this.hostStyles.w
+        this.host.style.height = this.hostStyles.h
+        this.host.style.overflow = this.hostStyles.overflow
+      }
       this.baseW = 0
       this.baseH = 0
       this.wrapStyles = null
+      this.host = null
+      this.hostStyles = null
     }
     // ensure any leftover overlay is cleared
     const ctx = (this.fc as any).contextTop
