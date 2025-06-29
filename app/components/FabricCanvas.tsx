@@ -592,6 +592,10 @@ useEffect(() => {
   const fc = new fabric.Canvas(canvasRef.current!) as fabric.Canvas & { upperCanvasEl: HTMLCanvasElement };
   fc.backgroundColor = '#fff';
   fc.preserveObjectStacking = true;
+  fc.selectionColor = 'transparent';
+  fc.selectionBorderColor = 'transparent';
+  fc.selectionDashArray = [];
+  fc.selectionLineWidth = 0;
 
   /* create DOM overlays for hover & selection */
   const hoverEl = document.createElement('div');
@@ -1315,6 +1319,7 @@ img.on('mouseup', () => {
           /* keep z-order */
           ;(img as any).layerIdx = idx
           fc.insertAt(img, idx, false)
+          img.set({ hasControls:false, hasBorders:false })
           img.setCoords()
           fc.requestRenderAll()
           doSync()
@@ -1348,6 +1353,7 @@ img.on('mouseup', () => {
         })
         ;(tb as any).layerIdx = idx
         fc.insertAt(tb, idx, false)
+        tb.set({ hasControls:false, hasBorders:false })
       }
     }
 
