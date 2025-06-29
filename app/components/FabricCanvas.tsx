@@ -601,7 +601,7 @@ useEffect(() => {
   hoverDomRef.current = hoverEl;
 
   const selEl = document.createElement('div');
-  selEl.className = 'sel-overlay';
+  selEl.className = 'sel-overlay interactive';
   selEl.style.display = 'none';
   document.body.appendChild(selEl);
   selDomRef.current = selEl;
@@ -915,6 +915,7 @@ fc.on('selection:created', () => {
   fc.requestRenderAll()
   selDomRef.current && (selDomRef.current.style.display = 'block')
   syncSel()
+  requestAnimationFrame(syncSel)
   scrollHandler = () => syncSel()
   window.addEventListener('scroll', scrollHandler, { passive:true })
   window.addEventListener('resize', scrollHandler)
@@ -1312,6 +1313,7 @@ img.on('mouseup', () => {
           fc.insertAt(img, idx, false)
           img.setCoords()
           fc.requestRenderAll()
+          doSync()
           document.dispatchEvent(
             new CustomEvent('card-canvas-rendered', {
               detail: { pageIdx, canvas: fc },
