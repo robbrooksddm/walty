@@ -907,8 +907,9 @@ const syncSel = () => {
   if (!obj || !selDomRef.current || !canvasRef.current) return
   const box = obj.getBoundingRect(true, true)
   const rect = canvasRef.current.getBoundingClientRect()
-  const left   = rect.left + box.left * SCALE
-  const top    = rect.top  + box.top  * SCALE
+  const vt = fc.viewportTransform || [1,0,0,1,0,0]
+  const left   = rect.left + vt[4] + box.left * SCALE
+  const top    = rect.top  + vt[5] + box.top  * SCALE
   const width  = box.width  * SCALE
   const height = box.height * SCALE
   const overlay = selDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement> }
@@ -959,9 +960,10 @@ fc.on('mouse:over', e => {
   if (fc.getActiveObject() === t) return           // skip active selection
   const box = t.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
+  const vt = fc.viewportTransform || [1,0,0,1,0,0]
   hoverDomRef.current && (() => {
-    hoverDomRef.current.style.left = `${rect.left + (box.left - PAD) * SCALE}px`
-    hoverDomRef.current.style.top = `${rect.top + (box.top - PAD) * SCALE}px`
+    hoverDomRef.current.style.left = `${rect.left + vt[4] + (box.left - PAD) * SCALE}px`
+    hoverDomRef.current.style.top = `${rect.top + vt[5] + (box.top - PAD) * SCALE}px`
     hoverDomRef.current.style.width = `${(box.width + PAD * 2) * SCALE}px`
     hoverDomRef.current.style.height = `${(box.height + PAD * 2) * SCALE}px`
     hoverDomRef.current.style.display = 'block'
