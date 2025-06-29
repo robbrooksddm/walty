@@ -696,6 +696,9 @@ useEffect(() => {
   // create a reusable crop helper and keep it in a ref
   const crop = new CropTool(fc, SCALE, SEL_COLOR, state => {
     croppingRef.current = state
+    if (state && selDomRef.current) {
+      selDomRef.current.style.display = 'none'
+    }
     onCroppingChange?.(state)
   })
   cropToolRef.current = crop;
@@ -904,11 +907,13 @@ let scrollHandler: (() => void) | null = null
 
 const syncSel = () => {
   const obj = fc.getActiveObject() as fabric.Object | undefined
+  if (croppingRef.current) return
   if (!obj || !selDomRef.current || !canvasRef.current) return
   const box = obj.getBoundingRect(true, true)
   const rect = canvasRef.current.getBoundingClientRect()
-  const left   = rect.left + box.left * SCALE
-  const top    = rect.top  + box.top  * SCALE
+  const vt = fc.viewportTransform || [1,0,0,1,0,0]
+  const left   = rect.left + vt[4] + box.left * SCALE
+  const top    = rect.top  + vt[5] + box.top  * SCALE
   const width  = box.width  * SCALE
   const height = box.height * SCALE
   const overlay = selDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement> }
@@ -934,12 +939,14 @@ const syncSel = () => {
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
-  selDomRef.current && (selDomRef.current.style.display = 'block')
-  syncSel()
-  requestAnimationFrame(syncSel)
-  scrollHandler = () => syncSel()
-  window.addEventListener('scroll', scrollHandler, { passive:true })
-  window.addEventListener('resize', scrollHandler)
+  if (!croppingRef.current) {
+    selDomRef.current && (selDomRef.current.style.display = 'block')
+    syncSel()
+    requestAnimationFrame(syncSel)
+    scrollHandler = () => syncSel()
+    window.addEventListener('scroll', scrollHandler, { passive:true })
+    window.addEventListener('resize', scrollHandler)
+  }
 })
 .on('selection:updated', syncSel)
 .on('selection:cleared', () => {
@@ -959,9 +966,10 @@ fc.on('mouse:over', e => {
   if (fc.getActiveObject() === t) return           // skip active selection
   const box = t.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
+  const vt = fc.viewportTransform || [1,0,0,1,0,0]
   hoverDomRef.current && (() => {
-    hoverDomRef.current.style.left = `${rect.left + (box.left - PAD) * SCALE}px`
-    hoverDomRef.current.style.top = `${rect.top + (box.top - PAD) * SCALE}px`
+    hoverDomRef.current.style.left = `${rect.left + vt[4] + (box.left - PAD) * SCALE}px`
+    hoverDomRef.current.style.top = `${rect.top + vt[5] + (box.top - PAD) * SCALE}px`
     hoverDomRef.current.style.width = `${(box.width + PAD * 2) * SCALE}px`
     hoverDomRef.current.style.height = `${(box.height + PAD * 2) * SCALE}px`
     hoverDomRef.current.style.display = 'block'
