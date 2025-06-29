@@ -696,8 +696,15 @@ useEffect(() => {
   // create a reusable crop helper and keep it in a ref
   const crop = new CropTool(fc, SCALE, SEL_COLOR, state => {
     croppingRef.current = state
-    if (state && selDomRef.current) {
-      selDomRef.current.style.display = 'none'
+    if (selDomRef.current) {
+      if (state) {
+        selDomRef.current.classList.add('cropping')
+        selDomRef.current.style.display = 'block'
+        requestAnimationFrame(syncSel)
+      } else {
+        selDomRef.current.classList.remove('cropping')
+        selDomRef.current.style.display = 'none'
+      }
     }
     onCroppingChange?.(state)
   })
@@ -907,7 +914,6 @@ let scrollHandler: (() => void) | null = null
 
 const syncSel = () => {
   const obj = fc.getActiveObject() as fabric.Object | undefined
-  if (croppingRef.current) return
   if (!obj || !selDomRef.current || !canvasRef.current) return
   const box = obj.getBoundingRect(true, true)
   const rect = canvasRef.current.getBoundingClientRect()
@@ -939,19 +945,17 @@ const syncSel = () => {
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
-  if (!croppingRef.current) {
-    selDomRef.current && (selDomRef.current.style.display = 'block')
-    syncSel()
-    requestAnimationFrame(syncSel)
-    scrollHandler = () => syncSel()
-    window.addEventListener('scroll', scrollHandler, { passive:true })
-    window.addEventListener('resize', scrollHandler)
-  }
+  selDomRef.current && (selDomRef.current.style.display = 'block')
+  syncSel()
+  requestAnimationFrame(syncSel)
+  scrollHandler = () => syncSel()
+  window.addEventListener('scroll', scrollHandler, { passive:true })
+  window.addEventListener('resize', scrollHandler)
 })
 .on('selection:updated', syncSel)
 .on('selection:cleared', () => {
   if (scrollHandler) { window.removeEventListener('scroll', scrollHandler); window.removeEventListener('resize', scrollHandler); scrollHandler = null }
-  selDomRef.current && (selDomRef.current.style.display = 'none')
+  if (!croppingRef.current) selDomRef.current && (selDomRef.current.style.display = 'none')
 })
 
 /* also hide hover during any transform of the active object */

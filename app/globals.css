@@ -122,4 +122,10 @@ html {
   .sel-overlay .handle.mr { cursor:ew-resize; }
   .sel-overlay .handle.mt,
   .sel-overlay .handle.mb { cursor:ns-resize; }
+
+  .sel-overlay.cropping {
+    opacity: 0;
+    border: none;
+  }
+  .sel-overlay.cropping .handle { display: none; }
 }
