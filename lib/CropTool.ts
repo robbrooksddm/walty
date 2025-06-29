@@ -112,6 +112,44 @@ export class CropTool {
       selectable     : true,
       evented        : true,
     }).setCoords()
+    /* expand canvas so the entire bitmap is visible */
+    const origW = this.fc.getWidth()
+    const origH = this.fc.getHeight()
+    const br = img.getBoundingRect(true, true)
+    const needW = Math.max(origW / this.SCALE, br.left + br.width)
+    const needH = Math.max(origH / this.SCALE, br.top + br.height)
+    const newW = needW * this.SCALE
+    const newH = needH * this.SCALE
+    const canvasEl = this.fc.getElement() as HTMLCanvasElement
+    const container = canvasEl.parentElement as HTMLElement | null
+    if (newW > origW || newH > origH) {
+      this.fc.setWidth(newW)
+      this.fc.setHeight(newH)
+      canvasEl.width = newW
+      canvasEl.height = newH
+      canvasEl.style.width = `${newW}px`
+      canvasEl.style.height = `${newH}px`
+      if (container) {
+        container.style.width = `${newW}px`
+        container.style.height = `${newH}px`
+        container.style.maxWidth = `${newW}px`
+        container.style.maxHeight = `${newH}px`
+      }
+      this.cleanup.push(() => {
+        this.fc.setWidth(origW)
+        this.fc.setHeight(origH)
+        canvasEl.width = origW
+        canvasEl.height = origH
+        canvasEl.style.width = `${origW}px`
+        canvasEl.style.height = `${origH}px`
+        if (container) {
+          container.style.width = `${origW}px`
+          container.style.height = `${origH}px`
+          container.style.maxWidth = `${origW}px`
+          container.style.maxHeight = `${origH}px`
+        }
+      })
+    }
     this.cleanup.push(() => {
       img.lockUniScaling  = prevLockUniScaling
       img.centeredScaling = prevCenteredScaling

@@ -650,6 +650,10 @@ useEffect(() => {
     fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
   selEl.addEventListener('pointermove', relayMove)
 
+  selEl.addEventListener('dblclick', e =>
+    fc.upperCanvasEl.dispatchEvent(new MouseEvent('dblclick', forward(e)))
+  )
+
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
