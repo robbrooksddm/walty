@@ -94,25 +94,33 @@ html {
 @layer utilities {
   .sel-overlay {
     @apply absolute pointer-events-none box-border z-40;
-    border:1px dashed #2EC4B6; /* SEL_COLOR */
+    border:1px solid #2EC4B6; /* SEL_COLOR */
   }
   .sel-overlay.interactive {
     @apply pointer-events-auto;
   }
   .sel-overlay .handle {
     position:absolute;
-    width:8px;
-    height:8px;
+    width:12px;
+    height:12px;
     background:#fff;
     border:1px solid #2EC4B6;
     border-radius:50%;
+    box-shadow:0 0 4px rgba(0,0,0,0.15);
     transform:translate(-50%,-50%);
     pointer-events:auto;
   }
-  .sel-overlay .handle.side {
-    width:4px;
-    height:12px;
-    border-radius:2px;
+  .sel-overlay .handle.ml,
+  .sel-overlay .handle.mr {
+    width:5px;
+    height:20px;
+    border-radius:2.5px;
+  }
+  .sel-overlay .handle.mt,
+  .sel-overlay .handle.mb {
+    width:20px;
+    height:5px;
+    border-radius:2.5px;
   }
   .sel-overlay .handle.tl,
   .sel-overlay .handle.br { cursor:nwse-resize; }
