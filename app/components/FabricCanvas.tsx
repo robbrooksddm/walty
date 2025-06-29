@@ -617,10 +617,10 @@ useEffect(() => {
   });
   (selEl as any)._handles = handleMap;
 
-  const forward = (ev: PointerEvent) => ({
+  const forward = (ev: PointerEvent, x?: number, y?: number) => ({
     pointerId: ev.pointerId,
-    clientX: ev.clientX,
-    clientY: ev.clientY,
+    clientX: x ?? ev.clientX,
+    clientY: y ?? ev.clientY,
     button: ev.button,
     buttons: ev.buttons,
     ctrlKey: ev.ctrlKey,
@@ -631,12 +631,31 @@ useEffect(() => {
   });
 
   const bridge = (e: PointerEvent) => {
-    const down = new PointerEvent('pointerdown', forward(e));
+    const obj = fc.getActiveObject();
+    const rect = canvasRef.current?.getBoundingClientRect();
+    let left = 0, top = 0, right = 0, bottom = 0;
+    if (obj && rect) {
+      const box = obj.getBoundingRect(true, true);
+      left = rect.left + box.left * SCALE;
+      top = rect.top + box.top * SCALE;
+      right = left + box.width * SCALE;
+      bottom = top + box.height * SCALE;
+    }
+    const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
+    const fx = obj ? clamp(e.clientX, left, right) : e.clientX;
+    const fy = obj ? clamp(e.clientY, top, bottom) : e.clientY;
+
+    const down = new PointerEvent('pointerdown', forward(e, fx, fy));
     fc.upperCanvasEl.dispatchEvent(down);
-    const move = (ev: PointerEvent) =>
-      fc.upperCanvasEl.dispatchEvent(new PointerEvent('pointermove', forward(ev)));
+    const move = (ev: PointerEvent) => {
+      const mx = obj ? clamp(ev.clientX, left, right) : ev.clientX;
+      const my = obj ? clamp(ev.clientY, top, bottom) : ev.clientY;
+      fc.upperCanvasEl.dispatchEvent(new PointerEvent('pointermove', forward(ev, mx, my)));
+    };
     const up = (ev: PointerEvent) => {
-      fc.upperCanvasEl.dispatchEvent(new PointerEvent('pointerup', forward(ev)));
+      const ux = obj ? clamp(ev.clientX, left, right) : ev.clientX;
+      const uy = obj ? clamp(ev.clientY, top, bottom) : ev.clientY;
+      fc.upperCanvasEl.dispatchEvent(new PointerEvent('pointerup', forward(ev, ux, uy)));
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
     };
