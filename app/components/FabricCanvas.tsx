@@ -601,7 +601,7 @@ useEffect(() => {
   hoverDomRef.current = hoverEl;
 
   const selEl = document.createElement('div');
-  selEl.className = 'sel-overlay';
+  selEl.className = 'sel-overlay interactive';
   selEl.style.display = 'none';
   document.body.appendChild(selEl);
   selDomRef.current = selEl;
@@ -631,20 +631,30 @@ useEffect(() => {
   });
 
   const bridge = (e: PointerEvent) => {
-    const down = new MouseEvent('mousedown', forward(e));
-    fc.upperCanvasEl.dispatchEvent(down);
-    const move = (ev: PointerEvent) =>
-      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)));
+    const down = new MouseEvent('mousedown', forward(e))
+    fc.upperCanvasEl.dispatchEvent(down)
+    requestAnimationFrame(syncSel)
+    const move = (ev: PointerEvent) => {
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
+      syncSel()
+    }
     const up = (ev: PointerEvent) => {
-      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev)));
-      document.removeEventListener('pointermove', move);
-      document.removeEventListener('pointerup', up);
-    };
-    document.addEventListener('pointermove', move);
-    document.addEventListener('pointerup', up);
-    e.preventDefault();
-  };
-  selEl.addEventListener('pointerdown', bridge);
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev)))
+      document.removeEventListener('pointermove', move)
+      document.removeEventListener('pointerup', up)
+      syncSel()
+    }
+    document.addEventListener('pointermove', move)
+    document.addEventListener('pointerup', up)
+    e.preventDefault()
+  }
+  selEl.addEventListener('pointerdown', bridge)
+
+  const relayMove = (ev: PointerEvent) => {
+    fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
+    syncSel()
+  }
+  selEl.addEventListener('pointermove', relayMove)
 
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
@@ -915,6 +925,7 @@ fc.on('selection:created', () => {
   fc.requestRenderAll()
   selDomRef.current && (selDomRef.current.style.display = 'block')
   syncSel()
+  requestAnimationFrame(syncSel)
   scrollHandler = () => syncSel()
   window.addEventListener('scroll', scrollHandler, { passive:true })
   window.addEventListener('resize', scrollHandler)
@@ -1312,6 +1323,7 @@ img.on('mouseup', () => {
           fc.insertAt(img, idx, false)
           img.setCoords()
           fc.requestRenderAll()
+          doSync()
           document.dispatchEvent(
             new CustomEvent('card-canvas-rendered', {
               detail: { pageIdx, canvas: fc },
