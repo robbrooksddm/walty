@@ -130,9 +130,15 @@ export class CropTool {
       }
     }
     const br = img.getBoundingRect(true, true)
-    const needW = Math.max(this.baseW, (br.left + br.width) * this.SCALE)
-    const needH = Math.max(this.baseH, (br.top + br.height) * this.SCALE)
-    if (needW > this.baseW || needH > this.baseH) {
+    const minL = Math.min(0, br.left)
+    const minT = Math.min(0, br.top)
+    const right  = br.left + br.width
+    const bottom = br.top  + br.height
+
+    const needW = Math.max(this.baseW, (right - minL) * this.SCALE)
+    const needH = Math.max(this.baseH, (bottom - minT) * this.SCALE)
+
+    if (needW > this.baseW || needH > this.baseH || minL < 0 || minT < 0) {
       this.fc.setWidth(needW)
       this.fc.setHeight(needH)
       if (wrapper) {
@@ -141,6 +147,10 @@ export class CropTool {
         wrapper.style.maxWidth = `${needW}px`
         wrapper.style.maxHeight = `${needH}px`
       }
+
+      const prevVpt = (this.fc.viewportTransform || [this.SCALE,0,0,this.SCALE,0,0]).slice() as number[]
+      this.fc.absolutePan({ x: minL, y: minT })
+      this.cleanup.push(() => this.fc.setViewportTransform(prevVpt))
     }
     this.cleanup.push(() => {
       img.lockUniScaling  = prevLockUniScaling
