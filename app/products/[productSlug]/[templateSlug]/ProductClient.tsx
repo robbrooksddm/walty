@@ -19,15 +19,31 @@ export default function ProductClient({
   variants: Variant[]
 }) {
   const [selected, setSelected] = useState<string>('')
-  const [tab, setTab] = useState<'desc'|'delivery'>('desc')
+  const [tab, setTab] = useState<'desc' | 'delivery'>('desc')
+  const [active, setActive] = useState(0)
 
   return (
-    <main className="p-6 space-y-6">
+    <main className="p-6 space-y-6 max-w-5xl mx-auto">
       <div className="grid md:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          {images.map((src, i) => (
-            <Image key={i} src={src} width={420} height={580} alt={`page ${i+1}`} className="w-full rounded shadow" />
-          ))}
+        <div className="space-y-2">
+          <Image
+            src={images[active]}
+            width={320}
+            height={440}
+            alt={`page ${active + 1}`}
+            className="w-full rounded shadow"
+          />
+          <div className="flex justify-center gap-2">
+            {images.map((src, i) => (
+              <button
+                key={i}
+                className={`thumb ${i === active ? 'thumb-active' : ''}`}
+                onClick={() => setActive(i)}
+              >
+                <img src={src} alt={`page ${i + 1}`} className="h-full w-full object-cover" />
+              </button>
+            ))}
+          </div>
         </div>
         <div className="space-y-4">
           <h1 className="text-2xl font-bold">{title}</h1>
