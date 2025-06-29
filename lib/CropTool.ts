@@ -131,29 +131,7 @@ export class CropTool {
         mh: wrapper.style.maxHeight,
       }
     }
-    const br = img.getBoundingRect(true, true)
-
-    const offsetX = Math.max(0, -br.left) * this.SCALE
-    const offsetY = Math.max(0, -br.top)  * this.SCALE
-
-    if (offsetX || offsetY) {
-      this.fc.relativePan(new fabric.Point(offsetX, offsetY))
-      this.panX = offsetX
-      this.panY = offsetY
-    }
-
-    const needW = Math.max(this.baseW, offsetX + (br.left + br.width) * this.SCALE)
-    const needH = Math.max(this.baseH, offsetY + (br.top + br.height) * this.SCALE)
-    if (needW > this.baseW || needH > this.baseH) {
-      this.fc.setWidth(needW)
-      this.fc.setHeight(needH)
-      if (wrapper) {
-        wrapper.style.width = `${needW}px`
-        wrapper.style.height = `${needH}px`
-        wrapper.style.maxWidth = `${needW}px`
-        wrapper.style.maxHeight = `${needH}px`
-      }
-    }
+    this.adjustCanvas()
     this.cleanup.push(() => {
       img.lockUniScaling  = prevLockUniScaling
       img.centeredScaling = prevCenteredScaling
@@ -581,6 +559,7 @@ export class CropTool {
         this.clamp();
         this.img!.setCoords();
         this.updateMasks();        // automatic redraw already in flight
+        this.adjustCanvas();
       })
       .on('scaling', (e: fabric.IEvent) => {
         // defer min-size enforcement until 'scaled' to avoid jitter
@@ -642,6 +621,7 @@ export class CropTool {
         this.updateMasks();
         this.frameScaling = true;       // ON while photo itself is scaling
         // Fabric’s own transform loop is already rendering each tick
+        this.adjustCanvas();
       })
       .on('scaled', () => {
         imgEdge = {};
@@ -652,6 +632,7 @@ export class CropTool {
         this.img!.hasControls = true;
         if (this.frame) this.frame.hasControls = true;
         this.updateMasks();
+        this.adjustCanvas();
         this.fc.requestRenderAll();
       });
 
@@ -846,6 +827,41 @@ export class CropTool {
     this.masks[3].set({ left:viewLeft, top:fT, width: clamp(fL - viewLeft), height:fH })
 
     this.masks.forEach(m => m.setCoords())
+  }
+
+  private adjustCanvas = () => {
+    if (!this.img) return
+
+    const br = this.img.getBoundingRect(true, true)
+    const PAD = 20 / this.SCALE
+
+    const extL = br.left - PAD
+    const extT = br.top  - PAD
+    const extR = br.left + br.width  + PAD
+    const extB = br.top  + br.height + PAD
+
+    const offsetX = Math.max(0, -extL) * this.SCALE
+    const offsetY = Math.max(0, -extT) * this.SCALE
+
+    if (offsetX || offsetY) {
+      this.fc.relativePan(new fabric.Point(offsetX, offsetY))
+      this.panX += offsetX
+      this.panY += offsetY
+    }
+
+    const needW = Math.max(this.baseW, this.panX + extR * this.SCALE, this.fc.getWidth())
+    const needH = Math.max(this.baseH, this.panY + extB * this.SCALE, this.fc.getHeight())
+    if (needW > this.fc.getWidth() || needH > this.fc.getHeight()) {
+      this.fc.setWidth(needW)
+      this.fc.setHeight(needH)
+      const wrap = (this.fc as any).wrapperEl as HTMLElement | undefined
+      if (wrap) {
+        wrap.style.width = `${needW}px`
+        wrap.style.height = `${needH}px`
+        wrap.style.maxWidth = `${needW}px`
+        wrap.style.maxHeight = `${needH}px`
+      }
+    }
   }
 
     /** Minimum uniform scale so the image fully covers the crop window,
