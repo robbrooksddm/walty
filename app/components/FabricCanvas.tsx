@@ -631,20 +631,24 @@ useEffect(() => {
   });
 
   const bridge = (e: PointerEvent) => {
-    const down = new MouseEvent('mousedown', forward(e));
-    fc.upperCanvasEl.dispatchEvent(down);
+    const down = new MouseEvent('mousedown', forward(e))
+    fc.upperCanvasEl.dispatchEvent(down)
     const move = (ev: PointerEvent) =>
-      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)));
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
     const up = (ev: PointerEvent) => {
-      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev)));
-      document.removeEventListener('pointermove', move);
-      document.removeEventListener('pointerup', up);
-    };
-    document.addEventListener('pointermove', move);
-    document.addEventListener('pointerup', up);
-    e.preventDefault();
-  };
-  selEl.addEventListener('pointerdown', bridge);
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev)))
+      document.removeEventListener('pointermove', move)
+      document.removeEventListener('pointerup', up)
+    }
+    document.addEventListener('pointermove', move)
+    document.addEventListener('pointerup', up)
+    e.preventDefault()
+  }
+  selEl.addEventListener('pointerdown', bridge)
+
+  const relayMove = (ev: PointerEvent) =>
+    fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
+  selEl.addEventListener('pointermove', relayMove)
 
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
