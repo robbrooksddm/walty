@@ -29,6 +29,33 @@ export class CropTool {
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
 
+  /** ensure the canvas is large enough to display the full bitmap */
+  private expandCanvas = () => {
+    if (!this.img) return;
+    const br = this.img.getBoundingRect(true, true);
+    const needW = Math.max(this.baseW, (br.left + br.width) * this.SCALE);
+    const needH = Math.max(this.baseH, (br.top + br.height) * this.SCALE);
+    const currW = this.fc.getWidth();
+    const currH = this.fc.getHeight();
+    if (needW > currW || needH > currH) {
+      this.fc.setWidth(Math.max(currW, needW));
+      this.fc.setHeight(Math.max(currH, needH));
+      const wrap = (this.fc as any).wrapperEl as HTMLElement | undefined;
+      if (wrap) {
+        if (needW > currW) {
+          wrap.style.width = `${needW}px`;
+          wrap.style.maxWidth = `${needW}px`;
+        }
+        if (needH > currH) {
+          wrap.style.height = `${needH}px`;
+          wrap.style.maxHeight = `${needH}px`;
+        }
+      }
+      this.updateMasks();
+      this.fc.requestRenderAll();
+    }
+  }
+
   constructor (fc: fabric.Canvas, scale: number, selColour: string,
                onChange?: (state: boolean) => void) {
     this.fc      = fc
@@ -129,19 +156,7 @@ export class CropTool {
         mh: wrapper.style.maxHeight,
       }
     }
-    const br = img.getBoundingRect(true, true)
-    const needW = Math.max(this.baseW, (br.left + br.width) * this.SCALE)
-    const needH = Math.max(this.baseH, (br.top + br.height) * this.SCALE)
-    if (needW > this.baseW || needH > this.baseH) {
-      this.fc.setWidth(needW)
-      this.fc.setHeight(needH)
-      if (wrapper) {
-        wrapper.style.width = `${needW}px`
-        wrapper.style.height = `${needH}px`
-        wrapper.style.maxWidth = `${needW}px`
-        wrapper.style.maxHeight = `${needH}px`
-      }
-    }
+    this.expandCanvas()
     this.cleanup.push(() => {
       img.lockUniScaling  = prevLockUniScaling
       img.centeredScaling = prevCenteredScaling
@@ -569,6 +584,7 @@ export class CropTool {
         this.clamp();
         this.img!.setCoords();
         this.updateMasks();        // automatic redraw already in flight
+        this.expandCanvas();
       })
       .on('scaling', (e: fabric.IEvent) => {
         // defer min-size enforcement until 'scaled' to avoid jitter
@@ -628,6 +644,7 @@ export class CropTool {
 
         i.setCoords();
         this.updateMasks();
+        this.expandCanvas();
         this.frameScaling = true;       // ON while photo itself is scaling
         // Fabric’s own transform loop is already rendering each tick
       })
@@ -640,6 +657,7 @@ export class CropTool {
         this.img!.hasControls = true;
         if (this.frame) this.frame.hasControls = true;
         this.updateMasks();
+        this.expandCanvas();
         this.fc.requestRenderAll();
       });
 
