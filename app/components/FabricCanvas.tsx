@@ -645,6 +645,7 @@ useEffect(() => {
     e.preventDefault();
   };
   selEl.addEventListener('pointerdown', bridge);
+  Object.values(handleMap).forEach(h => h.addEventListener('pointerdown', bridge));
 
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
