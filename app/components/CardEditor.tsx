@@ -658,7 +658,11 @@ const handleProofAll = async () => {
         />
       )}
       
-      <div className="flex flex-1 relative bg-[--walty-cream] lg:max-w-6xl mx-auto">
+      <div
+        className={`flex flex-1 relative bg-[--walty-cream] mx-auto ${
+          isCropMode ? '' : 'lg:max-w-6xl'
+        }`}
+      >
         {/* global overlays */}
         <CoachMark
           anchor={anchor}
@@ -685,7 +689,11 @@ const handleProofAll = async () => {
         {!isCropMode && <LayerPanel />}
 
         {/* main */}
-        <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[868px]">
+        <div
+          className={`flex flex-col flex-1 min-h-0 mx-auto ${
+            isCropMode ? 'max-w-none' : 'max-w-[868px]'
+          }`}
+        >
           {!isCropMode && (activeType === 'text' ? (
             <TextToolbar
               canvas={activeFc}
@@ -711,7 +719,11 @@ const handleProofAll = async () => {
           ))}
 
                     {/* canvases */}
-          <div className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6">
+          <div
+            className={`flex-1 flex justify-center items-start bg-[--walty-cream] pt-6 gap-6 ${
+              isCropMode ? 'overflow-visible' : 'overflow-auto'
+            }`}
+          >
             {/* front */}
             <div className={section === 'front' ? box : 'hidden'} style={{ width: boxWidth }}>
               <FabricCanvas
