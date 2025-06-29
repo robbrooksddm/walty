@@ -630,6 +630,19 @@ useEffect(() => {
     cancelable: true,
   });
 
+  const forwardMouse = (ev: MouseEvent) => ({
+    clientX   : ev.clientX,
+    clientY   : ev.clientY,
+    button    : ev.button,
+    buttons   : ev.buttons,
+    ctrlKey   : ev.ctrlKey,
+    shiftKey  : ev.shiftKey,
+    altKey    : ev.altKey,
+    metaKey   : ev.metaKey,
+    bubbles   : true,
+    cancelable: true,
+  });
+
   const bridge = (e: PointerEvent) => {
     const down = new MouseEvent('mousedown', forward(e))
     fc.upperCanvasEl.dispatchEvent(down)
@@ -645,6 +658,10 @@ useEffect(() => {
     e.preventDefault()
   }
   selEl.addEventListener('pointerdown', bridge)
+
+  selEl.addEventListener('dblclick', e => {
+    fc.upperCanvasEl.dispatchEvent(new MouseEvent('dblclick', forwardMouse(e)))
+  })
 
   const relayMove = (ev: PointerEvent) =>
     fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
@@ -915,6 +932,12 @@ const syncSel = () => {
 }
 
 fc.on('selection:created', () => {
+  if (croppingRef.current) {
+    hoverHL.visible = false
+    fc.requestRenderAll()
+    selDomRef.current && (selDomRef.current.style.display = 'none')
+    return
+  }
   hoverHL.visible = false
   fc.requestRenderAll()
   selDomRef.current && (selDomRef.current.style.display = 'block')
@@ -924,16 +947,16 @@ fc.on('selection:created', () => {
   window.addEventListener('scroll', scrollHandler, { passive:true })
   window.addEventListener('resize', scrollHandler)
 })
-.on('selection:updated', syncSel)
+.on('selection:updated', () => { if (!croppingRef.current) syncSel() })
 .on('selection:cleared', () => {
   if (scrollHandler) { window.removeEventListener('scroll', scrollHandler); window.removeEventListener('resize', scrollHandler); scrollHandler = null }
   selDomRef.current && (selDomRef.current.style.display = 'none')
 })
 
 /* also hide hover during any transform of the active object */
-fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
-  .on('object:scaling',  () => { hoverHL.visible = false; syncSel() })
-  .on('object:rotating', () => { hoverHL.visible = false; syncSel() })
+fc.on('object:moving',   () => { if (!croppingRef.current) { hoverHL.visible = false; syncSel() } })
+  .on('object:scaling',  () => { if (!croppingRef.current) { hoverHL.visible = false; syncSel() } })
+  .on('object:rotating', () => { if (!croppingRef.current) { hoverHL.visible = false; syncSel() } })
 
 /* ── 4 ▸ Hover outline (only when NOT the active object) ─── */
 fc.on('mouse:over', e => {
@@ -1164,6 +1187,10 @@ window.addEventListener('keydown', onKey)
   useEffect(() => {
     const fc = fcRef.current
     if (!fc) return
+
+    if (isCropping) {
+      selDomRef.current && (selDomRef.current.style.display = 'none')
+    }
 
     if (isCropping && !croppingRef.current) {
       const act = fc.getActiveObject() as fabric.Object | undefined
