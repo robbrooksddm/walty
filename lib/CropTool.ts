@@ -26,6 +26,7 @@ export class CropTool {
   private baseW = 0;
   private baseH = 0;
   private wrapStyles: { w:string; h:string; mw:string; mh:string } | null = null;
+  private contStyles: { w:string; h:string; mw:string; mh:string } | null = null;
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
 
@@ -121,12 +122,21 @@ export class CropTool {
     this.baseW = this.fc.getWidth()
     this.baseH = this.fc.getHeight()
     const wrapper = (this.fc as any).wrapperEl as HTMLElement | undefined
+    const container = (this.fc as any)._container as HTMLElement | undefined
     if (wrapper) {
       this.wrapStyles = {
         w : wrapper.style.width,
         h : wrapper.style.height,
         mw: wrapper.style.maxWidth,
         mh: wrapper.style.maxHeight,
+      }
+    }
+    if (container) {
+      this.contStyles = {
+        w : container.style.width,
+        h : container.style.height,
+        mw: container.style.maxWidth,
+        mh: container.style.maxHeight,
       }
     }
     const br = img.getBoundingRect(true, true)
@@ -140,6 +150,14 @@ export class CropTool {
         wrapper.style.height = `${needH}px`
         wrapper.style.maxWidth = `${needW}px`
         wrapper.style.maxHeight = `${needH}px`
+      }
+      if (container) {
+        const w = needW * this.SCALE
+        const h = needH * this.SCALE
+        container.style.width = `${w}px`
+        container.style.height = `${h}px`
+        container.style.maxWidth = `${w}px`
+        container.style.maxHeight = `${h}px`
       }
     }
     this.cleanup.push(() => {
@@ -720,15 +738,23 @@ export class CropTool {
       this.fc.setWidth(this.baseW)
       this.fc.setHeight(this.baseH)
       const wrap = (this.fc as any).wrapperEl as HTMLElement | undefined
+      const container = (this.fc as any)._container as HTMLElement | undefined
       if (wrap && this.wrapStyles) {
         wrap.style.width = this.wrapStyles.w
         wrap.style.height = this.wrapStyles.h
         wrap.style.maxWidth = this.wrapStyles.mw
         wrap.style.maxHeight = this.wrapStyles.mh
       }
+      if (container && this.contStyles) {
+        container.style.width = this.contStyles.w
+        container.style.height = this.contStyles.h
+        container.style.maxWidth = this.contStyles.mw
+        container.style.maxHeight = this.contStyles.mh
+      }
       this.baseW = 0
       this.baseH = 0
       this.wrapStyles = null
+      this.contStyles = null
     }
     // ensure any leftover overlay is cleared
     const ctx = (this.fc as any).contextTop

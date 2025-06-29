@@ -680,6 +680,7 @@ useEffect(() => {
     container.style.height = `${PREVIEW_H}px`;
     container.style.maxWidth  = `${PREVIEW_W}px`;
     container.style.maxHeight = `${PREVIEW_H}px`;
+    ;(fc as any)._container = container;              // allow CropTool to resize
   }
   addBackdrop(fc);
   // keep the preview scaled to the configured width
