@@ -25,7 +25,10 @@ export class CropTool {
   /** canvas size before cropping */
   private baseW = 0;
   private baseH = 0;
+  private panX = 0;
+  private panY = 0;
   private wrapStyles: { w:string; h:string; mw:string; mh:string } | null = null;
+  private parentStyles: { w:string; h:string; mw:string; mh:string } | null = null;
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
 
@@ -121,6 +124,7 @@ export class CropTool {
     this.baseW = this.fc.getWidth()
     this.baseH = this.fc.getHeight()
     const wrapper = (this.fc as any).wrapperEl as HTMLElement | undefined
+    const parent  = wrapper?.parentElement as HTMLElement | null
     if (wrapper) {
       this.wrapStyles = {
         w : wrapper.style.width,
@@ -129,9 +133,27 @@ export class CropTool {
         mh: wrapper.style.maxHeight,
       }
     }
+    if (parent) {
+      this.parentStyles = {
+        w : parent.style.width,
+        h : parent.style.height,
+        mw: parent.style.maxWidth,
+        mh: parent.style.maxHeight,
+      }
+    }
     const br = img.getBoundingRect(true, true)
-    const needW = Math.max(this.baseW, (br.left + br.width) * this.SCALE)
-    const needH = Math.max(this.baseH, (br.top + br.height) * this.SCALE)
+
+    const offsetX = Math.max(0, -br.left) * this.SCALE
+    const offsetY = Math.max(0, -br.top)  * this.SCALE
+
+    if (offsetX || offsetY) {
+      this.fc.relativePan(new fabric.Point(offsetX, offsetY))
+      this.panX = offsetX
+      this.panY = offsetY
+    }
+
+    const needW = Math.max(this.baseW, offsetX + (br.left + br.width) * this.SCALE)
+    const needH = Math.max(this.baseH, offsetY + (br.top + br.height) * this.SCALE)
     if (needW > this.baseW || needH > this.baseH) {
       this.fc.setWidth(needW)
       this.fc.setHeight(needH)
@@ -140,6 +162,12 @@ export class CropTool {
         wrapper.style.height = `${needH}px`
         wrapper.style.maxWidth = `${needW}px`
         wrapper.style.maxHeight = `${needH}px`
+      }
+      if (parent) {
+        parent.style.width = `${needW}px`
+        parent.style.height = `${needH}px`
+        parent.style.maxWidth = `${needW}px`
+        parent.style.maxHeight = `${needH}px`
       }
     }
     this.cleanup.push(() => {
@@ -720,15 +748,28 @@ export class CropTool {
       this.fc.setWidth(this.baseW)
       this.fc.setHeight(this.baseH)
       const wrap = (this.fc as any).wrapperEl as HTMLElement | undefined
+      const parent = wrap?.parentElement as HTMLElement | null
       if (wrap && this.wrapStyles) {
         wrap.style.width = this.wrapStyles.w
         wrap.style.height = this.wrapStyles.h
         wrap.style.maxWidth = this.wrapStyles.mw
         wrap.style.maxHeight = this.wrapStyles.mh
       }
+      if (parent && this.parentStyles) {
+        parent.style.width = this.parentStyles.w
+        parent.style.height = this.parentStyles.h
+        parent.style.maxWidth = this.parentStyles.mw
+        parent.style.maxHeight = this.parentStyles.mh
+      }
       this.baseW = 0
       this.baseH = 0
       this.wrapStyles = null
+      this.parentStyles = null
+    }
+    if (this.panX || this.panY) {
+      this.fc.relativePan(new fabric.Point(-this.panX, -this.panY))
+      this.panX = 0
+      this.panY = 0
     }
     // ensure any leftover overlay is cleared
     const ctx = (this.fc as any).contextTop
