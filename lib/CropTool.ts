@@ -25,7 +25,7 @@ export class CropTool {
   /** canvas size before cropping */
   private baseW = 0;
   private baseH = 0;
-  private wrapStyles: { w:string; h:string; mw:string; mh:string } | null = null;
+  private wrapStyles: { w:string; h:string; mw:string; mh:string; left:string; top:string } | null = null;
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
 
@@ -123,24 +123,37 @@ export class CropTool {
     const wrapper = (this.fc as any).wrapperEl as HTMLElement | undefined
     if (wrapper) {
       this.wrapStyles = {
-        w : wrapper.style.width,
-        h : wrapper.style.height,
-        mw: wrapper.style.maxWidth,
-        mh: wrapper.style.maxHeight,
+        w   : wrapper.style.width,
+        h   : wrapper.style.height,
+        mw  : wrapper.style.maxWidth,
+        mh  : wrapper.style.maxHeight,
+        left: wrapper.style.left,
+        top : wrapper.style.top,
       }
     }
     const br = img.getBoundingRect(true, true)
-    const needW = Math.max(this.baseW, (br.left + br.width) * this.SCALE)
-    const needH = Math.max(this.baseH, (br.top + br.height) * this.SCALE)
-    if (needW > this.baseW || needH > this.baseH) {
+    const pageW = this.baseW / this.SCALE
+    const pageH = this.baseH / this.SCALE
+    const leftBound   = Math.min(0, br.left)
+    const topBound    = Math.min(0, br.top)
+    const rightBound  = Math.max(pageW, br.left + br.width)
+    const bottomBound = Math.max(pageH, br.top + br.height)
+    const needW = (rightBound - leftBound) * this.SCALE
+    const needH = (bottomBound - topBound) * this.SCALE
+    const offsetX = -leftBound * this.SCALE
+    const offsetY = -topBound * this.SCALE
+    if (needW !== this.baseW || needH !== this.baseH || offsetX || offsetY) {
       this.fc.setWidth(needW)
       this.fc.setHeight(needH)
-      if (wrapper) {
-        wrapper.style.width = `${needW}px`
-        wrapper.style.height = `${needH}px`
-        wrapper.style.maxWidth = `${needW}px`
-        wrapper.style.maxHeight = `${needH}px`
+      if (wrapper && this.wrapStyles) {
+        wrapper.style.width = this.wrapStyles.w
+        wrapper.style.height = this.wrapStyles.h
+        wrapper.style.maxWidth = this.wrapStyles.mw
+        wrapper.style.maxHeight = this.wrapStyles.mh
+        wrapper.style.left = `${-offsetX}px`
+        wrapper.style.top  = `${-offsetY}px`
       }
+      this.fc.calcOffset()
     }
     this.cleanup.push(() => {
       img.lockUniScaling  = prevLockUniScaling
@@ -725,6 +738,8 @@ export class CropTool {
         wrap.style.height = this.wrapStyles.h
         wrap.style.maxWidth = this.wrapStyles.mw
         wrap.style.maxHeight = this.wrapStyles.mh
+        wrap.style.left = this.wrapStyles.left
+        wrap.style.top  = this.wrapStyles.top
       }
       this.baseW = 0
       this.baseH = 0
