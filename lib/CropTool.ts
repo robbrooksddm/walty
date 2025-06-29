@@ -132,9 +132,15 @@ export class CropTool {
       }
     }
     const br = img.getBoundingRect(true, true)
+    const PAD = 20 / this.SCALE           // margin around the image while cropping
 
-    const offsetX = Math.max(0, -br.left) * this.SCALE
-    const offsetY = Math.max(0, -br.top)  * this.SCALE
+    const extL = br.left - PAD
+    const extT = br.top  - PAD
+    const extR = br.left + br.width  + PAD
+    const extB = br.top  + br.height + PAD
+
+    const offsetX = Math.max(0, -extL) * this.SCALE
+    const offsetY = Math.max(0, -extT) * this.SCALE
 
     if (offsetX || offsetY) {
       this.fc.relativePan(new fabric.Point(offsetX, offsetY))
@@ -142,8 +148,8 @@ export class CropTool {
       this.panY = offsetY
     }
 
-    const needW = Math.max(this.baseW, offsetX + (br.left + br.width) * this.SCALE)
-    const needH = Math.max(this.baseH, offsetY + (br.top + br.height) * this.SCALE)
+    const needW = Math.max(this.baseW, offsetX + extR * this.SCALE)
+    const needH = Math.max(this.baseH, offsetY + extB * this.SCALE)
     if (needW > this.baseW || needH > this.baseH) {
       this.fc.setWidth(needW)
       this.fc.setHeight(needH)
