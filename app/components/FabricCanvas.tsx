@@ -597,6 +597,7 @@ useEffect(() => {
   const hoverEl = document.createElement('div');
   hoverEl.className = 'sel-overlay';
   hoverEl.style.display = 'none';
+  hoverEl.style.pointerEvents = 'none';
   document.body.appendChild(hoverEl);
   hoverDomRef.current = hoverEl;
 
@@ -884,6 +885,7 @@ let scrollHandler: (() => void) | null = null
 const syncSel = () => {
   const obj = fc.getActiveObject() as fabric.Object | undefined
   if (!obj || !selDomRef.current || !canvasRef.current) return
+  obj.setCoords()
   const box = obj.getBoundingRect(true, true)
   const rect = canvasRef.current.getBoundingClientRect()
   const left   = rect.left + box.left * SCALE
