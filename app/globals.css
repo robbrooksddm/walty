@@ -97,6 +97,10 @@ html {
     @apply absolute pointer-events-auto box-border z-40;
     border:1px dashed #2EC4B6; /* SEL_COLOR */
   }
+  .hover-overlay {
+    @apply absolute pointer-events-none box-border z-40;
+    border:1px dashed #2EC4B6; /* SEL_COLOR */
+  }
   .sel-overlay .handle {
     position:absolute;
     width:8px;

@@ -595,7 +595,7 @@ useEffect(() => {
 
   /* create DOM overlays for hover & selection */
   const hoverEl = document.createElement('div');
-  hoverEl.className = 'sel-overlay';
+  hoverEl.className = 'sel-overlay hover-overlay';
   hoverEl.style.display = 'none';
   document.body.appendChild(hoverEl);
   hoverDomRef.current = hoverEl;
@@ -883,6 +883,7 @@ let scrollHandler: (() => void) | null = null
 
 const syncSel = () => {
   const obj = fc.getActiveObject() as fabric.Object | undefined
+  fc.calcOffset()
   if (!obj || !selDomRef.current || !canvasRef.current) return
   const box = obj.getBoundingRect(true, true)
   const rect = canvasRef.current.getBoundingClientRect()
@@ -913,6 +914,7 @@ const syncSel = () => {
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
+  hoverDomRef.current && (hoverDomRef.current.style.display = 'none')
   selDomRef.current && (selDomRef.current.style.display = 'block')
   syncSel()
   scrollHandler = () => syncSel()
