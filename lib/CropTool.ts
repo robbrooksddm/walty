@@ -25,7 +25,8 @@ export class CropTool {
   /** canvas size before cropping */
   private baseW = 0;
   private baseH = 0;
-  private wrapStyles: { w:string; h:string; mw:string; mh:string } | null = null;
+  private wrapStyles: { w:string; h:string; mw:string; mh:string; left:string; top:string } | null = null;
+  private origVpt: number[] | null = null;
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
 
@@ -127,12 +128,22 @@ export class CropTool {
         h : wrapper.style.height,
         mw: wrapper.style.maxWidth,
         mh: wrapper.style.maxHeight,
+        left: wrapper.style.left,
+        top : wrapper.style.top,
       }
     }
     const br = img.getBoundingRect(true, true)
-    const needW = Math.max(this.baseW, (br.left + br.width) * this.SCALE)
-    const needH = Math.max(this.baseH, (br.top + br.height) * this.SCALE)
-    if (needW > this.baseW || needH > this.baseH) {
+    const minX = Math.min(0, br.left)
+    const minY = Math.min(0, br.top)
+    const maxX = Math.max(this.baseW, br.left + br.width)
+    const maxY = Math.max(this.baseH, br.top + br.height)
+
+    const needW = maxX - minX
+    const needH = maxY - minY
+    const offX  = minX < 0 ? -minX : 0
+    const offY  = minY < 0 ? -minY : 0
+
+    if (needW > this.baseW || needH > this.baseH || offX || offY) {
       this.fc.setWidth(needW)
       this.fc.setHeight(needH)
       if (wrapper) {
@@ -140,7 +151,12 @@ export class CropTool {
         wrapper.style.height = `${needH}px`
         wrapper.style.maxWidth = `${needW}px`
         wrapper.style.maxHeight = `${needH}px`
+        wrapper.style.left = `${-offX}px`
+        wrapper.style.top  = `${-offY}px`
       }
+      this.origVpt = [...this.fc.viewportTransform!]
+      this.fc.relativePan(new fabric.Point(offX, offY))
+      this.fc.calcOffset()
     }
     this.cleanup.push(() => {
       img.lockUniScaling  = prevLockUniScaling
@@ -725,10 +741,17 @@ export class CropTool {
         wrap.style.height = this.wrapStyles.h
         wrap.style.maxWidth = this.wrapStyles.mw
         wrap.style.maxHeight = this.wrapStyles.mh
+        wrap.style.left = this.wrapStyles.left
+        wrap.style.top  = this.wrapStyles.top
       }
       this.baseW = 0
       this.baseH = 0
       this.wrapStyles = null
+      if (this.origVpt) {
+        this.fc.setViewportTransform(this.origVpt)
+        this.fc.calcOffset()
+        this.origVpt = null
+      }
     }
     // ensure any leftover overlay is cleared
     const ctx = (this.fc as any).contextTop
