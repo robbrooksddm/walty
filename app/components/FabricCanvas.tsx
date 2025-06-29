@@ -480,6 +480,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const croppingRef = useRef(false)
 
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
+  const [canvasSize, setCanvasSize] = useState({ w: PREVIEW_W, h: PREVIEW_H })
 
 
 
@@ -680,6 +681,11 @@ useEffect(() => {
     container.style.height = `${PREVIEW_H}px`;
     container.style.maxWidth  = `${PREVIEW_W}px`;
     container.style.maxHeight = `${PREVIEW_H}px`;
+  }
+  setCanvasSize({ w: PREVIEW_W, h: PREVIEW_H });
+  (fc as any)._updateDomSize = (w:number, h:number) => {
+    setCanvasSize({ w, h });
+    fc.calcOffset();
   }
   addBackdrop(fc);
   // keep the preview scaled to the configured width
@@ -1384,9 +1390,9 @@ img.on('mouseup', () => {
     <>
       <canvas
         ref={canvasRef}
-        width={PREVIEW_W}
-        height={PREVIEW_H}
-        style={{ width: PREVIEW_W, height: PREVIEW_H }}   // lock CSS size
+        width={canvasSize.w}
+        height={canvasSize.h}
+        style={{ width: canvasSize.w, height: canvasSize.h }}   // lock CSS size
         className="border shadow rounded"
       />
       {menuPos && (
