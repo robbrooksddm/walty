@@ -618,25 +618,25 @@ useEffect(() => {
   (selEl as any)._handles = handleMap;
 
   const forward = (ev: PointerEvent) => ({
-    pointerId: ev.pointerId,
-    clientX: ev.clientX,
-    clientY: ev.clientY,
-    button: ev.button,
-    buttons: ev.buttons,
-    ctrlKey: ev.ctrlKey,
-    shiftKey: ev.shiftKey,
-    altKey: ev.altKey,
-    metaKey: ev.metaKey,
-    pointerType: ev.pointerType,
+    clientX   : ev.clientX,
+    clientY   : ev.clientY,
+    button    : ev.button,
+    buttons   : ev.buttons,
+    ctrlKey   : ev.ctrlKey,
+    shiftKey  : ev.shiftKey,
+    altKey    : ev.altKey,
+    metaKey   : ev.metaKey,
+    bubbles   : true,
+    cancelable: true,
   });
 
   const bridge = (e: PointerEvent) => {
-    const down = new PointerEvent('pointerdown', forward(e));
+    const down = new MouseEvent('mousedown', forward(e));
     fc.upperCanvasEl.dispatchEvent(down);
     const move = (ev: PointerEvent) =>
-      fc.upperCanvasEl.dispatchEvent(new PointerEvent('pointermove', forward(ev)));
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)));
     const up = (ev: PointerEvent) => {
-      fc.upperCanvasEl.dispatchEvent(new PointerEvent('pointerup', forward(ev)));
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev)));
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
     };
