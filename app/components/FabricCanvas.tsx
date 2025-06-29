@@ -606,17 +606,6 @@ useEffect(() => {
   document.body.appendChild(selEl);
   selDomRef.current = selEl;
 
-  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
-  const handleMap: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
-    const h = document.createElement('div');
-    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
-    h.dataset.corner = c;
-    selEl.appendChild(h);
-    handleMap[c] = h;
-  });
-  (selEl as any)._handles = handleMap;
-
   const forward = (ev: PointerEvent) => ({
     pointerId: ev.pointerId,
     clientX: ev.clientX,
@@ -644,6 +633,19 @@ useEffect(() => {
     document.addEventListener('pointerup', up);
     e.preventDefault();
   };
+
+  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const handleMap: Record<string, HTMLDivElement> = {};
+  corners.forEach(c => {
+    const h = document.createElement('div');
+    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
+    h.dataset.corner = c;
+    selEl.appendChild(h);
+    handleMap[c] = h;
+    h.addEventListener('pointerdown', ev => { ev.stopPropagation(); bridge(ev); });
+  });
+  (selEl as any)._handles = handleMap;
+
   selEl.addEventListener('pointerdown', bridge);
 
   const ctxMenu = (e: MouseEvent) => {
