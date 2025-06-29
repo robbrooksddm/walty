@@ -140,6 +140,7 @@ export default async function HomePage() {
       {/* FOOTER */}
       <footer className="py-10 text-center text-sm" style={{ backgroundColor: teal, color: cream }}>
         © {new Date().getFullYear()} Walty Ltd. All rights reserved.
+                  <div className="mt-2"><Link href="/products/cards/test-27-jun-2025" className="underline">Test product page</Link></div>
       </footer>
     </main>
   );
