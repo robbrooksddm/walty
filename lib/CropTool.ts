@@ -24,6 +24,22 @@ export class CropTool {
   private orig: { left:number; top:number; cropX:number; cropY:number; width:number; height:number; } | null = null;
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
+  /** original canvas size & transform */
+  private canvasState: { w:number; h:number; vpt:number[]; wrapper?:HTMLElement } | null = null;
+
+  private restoreCanvas () {
+    if (!this.canvasState) return
+    const { w, h, vpt, wrapper } = this.canvasState
+    this.fc.setWidth(w)
+    this.fc.setHeight(h)
+    if (wrapper) {
+      wrapper.style.width = `${w}px`
+      wrapper.style.height = `${h}px`
+    }
+    this.fc.setViewportTransform(vpt)
+    this.fc.calcOffset()
+    this.canvasState = null
+  }
 
   constructor (fc: fabric.Canvas, scale: number, selColour: string,
                onChange?: (state: boolean) => void) {
@@ -117,6 +133,37 @@ export class CropTool {
       img.centeredScaling = prevCenteredScaling
       img.hasBorders      = prevHasBorders
     })
+    /* expand canvas so the entire bitmap stays visible */
+    const br = img.getBoundingRect(true, true)
+    const origW = this.fc.getWidth()
+    const origH = this.fc.getHeight()
+    const leftPad = Math.min(0, br.left)
+    const topPad  = Math.min(0, br.top)
+    const right   = Math.max(origW, br.left + br.width)
+    const bottom  = Math.max(origH, br.top + br.height)
+    const newW = right - leftPad
+    const newH = bottom - topPad
+    this.canvasState = {
+      w: origW,
+      h: origH,
+      vpt: [...(this.fc.viewportTransform || [1,0,0,1,0,0])],
+      wrapper: (this.fc as any).wrapperEl as HTMLElement | undefined,
+    }
+    this.fc.setWidth(newW)
+    this.fc.setHeight(newH)
+    if (this.canvasState.wrapper) {
+      this.canvasState.wrapper.style.width = `${newW}px`
+      this.canvasState.wrapper.style.height = `${newH}px`
+    }
+    this.fc.setViewportTransform([
+      this.SCALE,
+      0,
+      0,
+      this.SCALE,
+      -leftPad * this.SCALE,
+      -topPad  * this.SCALE,
+    ])
+    this.fc.calcOffset()
     /* hide the rotate ("mtr") and side controls while cropping */
     img.setControlsVisibility({
       mtr: false,          // hide rotation
@@ -689,6 +736,8 @@ export class CropTool {
     // ensure any leftover overlay is cleared
     const ctx = (this.fc as any).contextTop
     if (ctx) this.fc.clearContext(ctx)
+
+    this.restoreCanvas()
 
     if (this.img) {
       this.img.lockMovementX = false

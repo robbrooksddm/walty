@@ -646,6 +646,11 @@ useEffect(() => {
   }
   selEl.addEventListener('pointerdown', bridge)
 
+  const dblBridge = (e: MouseEvent) => {
+    fc.upperCanvasEl.dispatchEvent(new MouseEvent('dblclick', forward(e as any)))
+  }
+  selEl.addEventListener('dblclick', dblBridge)
+
   const relayMove = (ev: PointerEvent) =>
     fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
   selEl.addEventListener('pointermove', relayMove)
@@ -1151,6 +1156,7 @@ window.addEventListener('keydown', onKey)
       fc.dispose()
       hoverDomRef.current?.remove()
       selDomRef.current?.remove()
+      selEl.removeEventListener('dblclick', dblBridge)
       if (scrollHandler) {
         window.removeEventListener('scroll', scrollHandler)
         window.removeEventListener('resize', scrollHandler)
