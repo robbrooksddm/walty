@@ -25,6 +25,8 @@ export class CropTool {
   /** canvas size before cropping */
   private baseW = 0;
   private baseH = 0;
+  private basePanX = 0;
+  private basePanY = 0;
   private wrapStyles: { w:string; h:string; mw:string; mh:string } | null = null;
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
@@ -129,12 +131,21 @@ export class CropTool {
         mh: wrapper.style.maxHeight,
       }
     }
+    const vpt = this.fc.viewportTransform || [1, 0, 0, 1, 0, 0]
+    this.basePanX = vpt[4] || 0
+    this.basePanY = vpt[5] || 0
+
     const br = img.getBoundingRect(true, true)
-    const needW = Math.max(this.baseW, (br.left + br.width) * this.SCALE)
-    const needH = Math.max(this.baseH, (br.top + br.height) * this.SCALE)
-    if (needW > this.baseW || needH > this.baseH) {
+    const minX = Math.min(0, br.left)
+    const minY = Math.min(0, br.top)
+    const maxX = Math.max(this.baseW / this.SCALE, br.left + br.width)
+    const maxY = Math.max(this.baseH / this.SCALE, br.top + br.height)
+    const needW = (maxX - minX) * this.SCALE
+    const needH = (maxY - minY) * this.SCALE
+    if (needW > this.baseW || needH > this.baseH || minX < 0 || minY < 0) {
       this.fc.setWidth(needW)
       this.fc.setHeight(needH)
+      this.fc.absolutePan({ x: -minX, y: -minY })
       if (wrapper) {
         wrapper.style.width = `${needW}px`
         wrapper.style.height = `${needH}px`
@@ -719,6 +730,7 @@ export class CropTool {
     if (this.baseW && this.baseH) {
       this.fc.setWidth(this.baseW)
       this.fc.setHeight(this.baseH)
+      this.fc.absolutePan({ x: this.basePanX, y: this.basePanY })
       const wrap = (this.fc as any).wrapperEl as HTMLElement | undefined
       if (wrap && this.wrapStyles) {
         wrap.style.width = this.wrapStyles.w
@@ -744,6 +756,8 @@ export class CropTool {
     this.img      = null
     this.orig     = null
     this.isActive = false
+    this.basePanX = 0
+    this.basePanY = 0
     this.onChange?.(false)
   }
 
