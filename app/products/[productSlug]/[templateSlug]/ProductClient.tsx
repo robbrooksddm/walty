@@ -20,14 +20,36 @@ export default function ProductClient({
 }) {
   const [selected, setSelected] = useState<string>('')
   const [tab, setTab] = useState<'desc'|'delivery'>('desc')
+  const [pageIdx, setPageIdx] = useState(0)
 
   return (
-    <main className="p-6 space-y-6">
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          {images.map((src, i) => (
-            <Image key={i} src={src} width={420} height={580} alt={`page ${i+1}`} className="w-full rounded shadow" />
-          ))}
+    <main className="p-6 space-y-6 max-w-4xl mx-auto">
+      <div className="grid md:grid-cols-[auto_1fr] gap-6 items-start">
+        <div className="space-y-2 flex flex-col items-center">
+          <Image
+            src={images[pageIdx]}
+            width={300}
+            height={420}
+            alt={`page ${pageIdx + 1}`}
+            className="rounded shadow w-[300px] h-auto"
+          />
+          <div className="flex gap-2 mt-2">
+            {images.map((src, i) => (
+              <button
+                key={i}
+                className={`thumb ${pageIdx === i ? 'thumb-active' : ''}`}
+                onClick={() => setPageIdx(i)}
+              >
+                <Image
+                  src={src}
+                  width={70}
+                  height={98}
+                  alt={`page ${i + 1}`}
+                  className="h-full w-full object-cover"
+                />
+              </button>
+            ))}
+          </div>
         </div>
         <div className="space-y-4">
           <h1 className="text-2xl font-bold">{title}</h1>
