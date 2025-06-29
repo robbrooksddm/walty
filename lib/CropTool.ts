@@ -25,6 +25,8 @@ export class CropTool {
   /** canvas size before cropping */
   private baseW = 0;
   private baseH = 0;
+  /** viewport pan before cropping */
+  private basePan: { x:number; y:number } | null = null;
   private wrapStyles: { w:string; h:string; mw:string; mh:string } | null = null;
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
@@ -120,6 +122,10 @@ export class CropTool {
     /* temporarily enlarge the canvas so the full image stays visible */
     this.baseW = this.fc.getWidth()
     this.baseH = this.fc.getHeight()
+    const vpt = this.fc.viewportTransform || [1, 0, 0, 1, 0, 0]
+    const zoom = vpt[0] || 1
+    this.basePan = { x: -vpt[4] / zoom, y: -vpt[5] / zoom }
+
     const wrapper = (this.fc as any).wrapperEl as HTMLElement | undefined
     if (wrapper) {
       this.wrapStyles = {
@@ -129,9 +135,16 @@ export class CropTool {
         mh: wrapper.style.maxHeight,
       }
     }
+
     const br = img.getBoundingRect(true, true)
-    const needW = Math.max(this.baseW, (br.left + br.width) * this.SCALE)
-    const needH = Math.max(this.baseH, (br.top + br.height) * this.SCALE)
+    const left   = Math.min(0, br.left)
+    const top    = Math.min(0, br.top)
+    const right  = Math.max(this.baseW / this.SCALE, br.left + br.width)
+    const bottom = Math.max(this.baseH / this.SCALE, br.top + br.height)
+
+    const needW = (right - left) * this.SCALE
+    const needH = (bottom - top) * this.SCALE
+
     if (needW > this.baseW || needH > this.baseH) {
       this.fc.setWidth(needW)
       this.fc.setHeight(needH)
@@ -142,6 +155,8 @@ export class CropTool {
         wrapper.style.maxHeight = `${needH}px`
       }
     }
+    this.fc.absolutePan(new fabric.Point(left, top))
+    this.fc.calcOffset()
     this.cleanup.push(() => {
       img.lockUniScaling  = prevLockUniScaling
       img.centeredScaling = prevCenteredScaling
@@ -729,6 +744,11 @@ export class CropTool {
       this.baseW = 0
       this.baseH = 0
       this.wrapStyles = null
+    }
+    if (this.basePan) {
+      this.fc.absolutePan(new fabric.Point(this.basePan.x, this.basePan.y))
+      this.fc.calcOffset()
+      this.basePan = null
     }
     // ensure any leftover overlay is cleared
     const ctx = (this.fc as any).contextTop
