@@ -26,6 +26,7 @@ export class CropTool {
   private baseW = 0;
   private baseH = 0;
   private wrapStyles: { w:string; h:string; mw:string; mh:string } | null = null;
+  private canvasStyles: { w:string; h:string } | null = null;
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
 
@@ -121,12 +122,19 @@ export class CropTool {
     this.baseW = this.fc.getWidth()
     this.baseH = this.fc.getHeight()
     const wrapper = (this.fc as any).wrapperEl as HTMLElement | undefined
+    const canvas  = this.fc.lowerCanvasEl as HTMLCanvasElement | undefined
     if (wrapper) {
       this.wrapStyles = {
         w : wrapper.style.width,
         h : wrapper.style.height,
         mw: wrapper.style.maxWidth,
         mh: wrapper.style.maxHeight,
+      }
+    }
+    if (canvas) {
+      this.canvasStyles = {
+        w: canvas.style.width,
+        h: canvas.style.height,
       }
     }
     const br = img.getBoundingRect(true, true)
@@ -140,6 +148,10 @@ export class CropTool {
         wrapper.style.height = `${needH}px`
         wrapper.style.maxWidth = `${needW}px`
         wrapper.style.maxHeight = `${needH}px`
+      }
+      if (canvas) {
+        canvas.style.width  = `${needW}px`
+        canvas.style.height = `${needH}px`
       }
     }
     this.cleanup.push(() => {
@@ -720,15 +732,21 @@ export class CropTool {
       this.fc.setWidth(this.baseW)
       this.fc.setHeight(this.baseH)
       const wrap = (this.fc as any).wrapperEl as HTMLElement | undefined
+      const canvas = this.fc.lowerCanvasEl as HTMLCanvasElement | undefined
       if (wrap && this.wrapStyles) {
         wrap.style.width = this.wrapStyles.w
         wrap.style.height = this.wrapStyles.h
         wrap.style.maxWidth = this.wrapStyles.mw
         wrap.style.maxHeight = this.wrapStyles.mh
       }
+      if (canvas && this.canvasStyles) {
+        canvas.style.width = this.canvasStyles.w
+        canvas.style.height = this.canvasStyles.h
+      }
       this.baseW = 0
       this.baseH = 0
       this.wrapStyles = null
+      this.canvasStyles = null
     }
     // ensure any leftover overlay is cleared
     const ctx = (this.fc as any).contextTop
