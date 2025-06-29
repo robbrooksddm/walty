@@ -612,6 +612,7 @@ useEffect(() => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
     h.dataset.corner = c;
+    h.addEventListener('pointerdown', bridge);
     selEl.appendChild(h);
     handleMap[c] = h;
   });
@@ -630,7 +631,7 @@ useEffect(() => {
     pointerType: ev.pointerType,
   });
 
-  const bridge = (e: PointerEvent) => {
+  function bridge(e: PointerEvent) {
     const down = new PointerEvent('pointerdown', forward(e));
     fc.upperCanvasEl.dispatchEvent(down);
     const move = (ev: PointerEvent) =>
@@ -643,8 +644,7 @@ useEffect(() => {
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', up);
     e.preventDefault();
-  };
-  selEl.addEventListener('pointerdown', bridge);
+  }
 
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
