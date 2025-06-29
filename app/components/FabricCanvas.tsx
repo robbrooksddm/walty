@@ -630,6 +630,19 @@ useEffect(() => {
     cancelable: true,
   });
 
+  const forwardMouse = (ev: MouseEvent) => ({
+    clientX   : ev.clientX,
+    clientY   : ev.clientY,
+    button    : ev.button,
+    buttons   : ev.buttons,
+    ctrlKey   : ev.ctrlKey,
+    shiftKey  : ev.shiftKey,
+    altKey    : ev.altKey,
+    metaKey   : ev.metaKey,
+    bubbles   : true,
+    cancelable: true,
+  });
+
   const bridge = (e: PointerEvent) => {
     const down = new MouseEvent('mousedown', forward(e))
     fc.upperCanvasEl.dispatchEvent(down)
@@ -645,6 +658,10 @@ useEffect(() => {
     e.preventDefault()
   }
   selEl.addEventListener('pointerdown', bridge)
+
+  selEl.addEventListener('dblclick', e => {
+    fc.upperCanvasEl.dispatchEvent(new MouseEvent('dblclick', forwardMouse(e)))
+  })
 
   const relayMove = (ev: PointerEvent) =>
     fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
