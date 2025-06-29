@@ -631,20 +631,29 @@ useEffect(() => {
   });
 
   const bridge = (e: PointerEvent) => {
-    const down = new MouseEvent('mousedown', forward(e));
-    fc.upperCanvasEl.dispatchEvent(down);
+    const down = new MouseEvent('mousedown', forward(e))
+    const active = (fc as any).findTarget(down) === fc.getActiveObject()
+    fc.upperCanvasEl.dispatchEvent(down)
+    requestAnimationFrame(syncSel)
+    if (!active) return
     const move = (ev: PointerEvent) =>
-      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)));
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
     const up = (ev: PointerEvent) => {
-      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev)));
-      document.removeEventListener('pointermove', move);
-      document.removeEventListener('pointerup', up);
-    };
-    document.addEventListener('pointermove', move);
-    document.addEventListener('pointerup', up);
-    e.preventDefault();
-  };
-  selEl.addEventListener('pointerdown', bridge);
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev)))
+      document.removeEventListener('pointermove', move)
+      document.removeEventListener('pointerup', up)
+    }
+    document.addEventListener('pointermove', move)
+    document.addEventListener('pointerup', up)
+    e.preventDefault()
+  }
+  selEl.addEventListener('pointerdown', bridge)
+  selEl.addEventListener('pointerup', e =>
+    fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(e))))
+
+  const relayMove = (ev: PointerEvent) =>
+    fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
+  selEl.addEventListener('pointermove', relayMove)
 
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
@@ -895,6 +904,11 @@ const syncSel = () => {
   overlay.style.top    = `${top}px`
   overlay.style.width  = `${width}px`
   overlay.style.height = `${height}px`
+  const outLeft   = left < rect.left
+  const outTop    = top  < rect.top
+  const outRight  = left + width  > rect.right
+  const outBottom = top  + height > rect.bottom
+  overlay.classList.toggle('interactive', outLeft || outTop || outRight || outBottom)
   if (overlay._handles) {
     const h = overlay._handles
     const midX = width / 2
@@ -915,6 +929,7 @@ fc.on('selection:created', () => {
   fc.requestRenderAll()
   selDomRef.current && (selDomRef.current.style.display = 'block')
   syncSel()
+  requestAnimationFrame(syncSel)
   scrollHandler = () => syncSel()
   window.addEventListener('scroll', scrollHandler, { passive:true })
   window.addEventListener('resize', scrollHandler)
@@ -1312,6 +1327,7 @@ img.on('mouseup', () => {
           fc.insertAt(img, idx, false)
           img.setCoords()
           fc.requestRenderAll()
+          doSync()
           document.dispatchEvent(
             new CustomEvent('card-canvas-rendered', {
               detail: { pageIdx, canvas: fc },
