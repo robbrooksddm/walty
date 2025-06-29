@@ -148,9 +148,10 @@ export class CropTool {
         wrapper.style.height = `${needH}px`
         wrapper.style.maxWidth = `${needW}px`
         wrapper.style.maxHeight = `${needH}px`
-        wrapper.style.left = `${-minX * this.SCALE}px`
-        wrapper.style.top  = `${-minY * this.SCALE}px`
+        wrapper.style.left = `${minX * this.SCALE}px`
+        wrapper.style.top  = `${minY * this.SCALE}px`
       }
+      this.fc.calcOffset()
     }
     this.cleanup.push(() => {
       img.lockUniScaling  = prevLockUniScaling
