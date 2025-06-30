@@ -696,9 +696,6 @@ useEffect(() => {
   // create a reusable crop helper and keep it in a ref
   const crop = new CropTool(fc, SCALE, SEL_COLOR, state => {
     croppingRef.current = state
-    if (state && selDomRef.current) {
-      selDomRef.current.style.display = 'none'
-    }
     onCroppingChange?.(state)
   })
   cropToolRef.current = crop;
@@ -907,24 +904,35 @@ let scrollHandler: (() => void) | null = null
 
 const syncSel = () => {
   const obj = fc.getActiveObject() as fabric.Object | undefined
-  if (croppingRef.current) return
   if (!obj || !selDomRef.current || !canvasRef.current) return
-  const box = obj.getBoundingRect(true, true)
+  obj.setCoords()
   const rect = canvasRef.current.getBoundingClientRect()
   const vt = fc.viewportTransform || [1,0,0,1,0,0]
-  const left   = rect.left + vt[4] + box.left * SCALE
-  const top    = rect.top  + vt[5] + box.top  * SCALE
-  const width  = box.width  * SCALE
-  const height = box.height * SCALE
+  const center = obj.getCenterPoint()
+  const cw = obj.getScaledWidth()
+  const ch = obj.getScaledHeight()
+  const left   = rect.left + (center.x * vt[0] + vt[4]) * SCALE - cw * SCALE / 2
+  const top    = rect.top  + (center.y * vt[3] + vt[5]) * SCALE - ch * SCALE / 2
+  const width  = cw * SCALE
+  const height = ch * SCALE
   const overlay = selDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement> }
   overlay.style.left   = `${left}px`
   overlay.style.top    = `${top}px`
   overlay.style.width  = `${width}px`
   overlay.style.height = `${height}px`
+  overlay.style.transform = `rotate(${obj.angle || 0}deg)`
+  overlay.style.transformOrigin = 'center'
   if (overlay._handles) {
     const h = overlay._handles
     const midX = width / 2
     const midY = height / 2
+    const vis  = (obj as any).controlsVisibility || {}
+    const ctrls = (obj as any).controls || {}
+    const all = ['tl','tr','br','bl','ml','mr','mt','mb'] as const
+    all.forEach(key => {
+      const show = obj.hasControls && ctrls[key] && vis[key] !== false
+      h[key].style.display = show ? 'block' : 'none'
+    })
     h.tl.style.left = '0px';      h.tl.style.top = '0px'
     h.tr.style.left = `${width}px`; h.tr.style.top = '0px'
     h.br.style.left = `${width}px`; h.br.style.top = `${height}px`
@@ -939,14 +947,12 @@ const syncSel = () => {
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
-  if (!croppingRef.current) {
-    selDomRef.current && (selDomRef.current.style.display = 'block')
-    syncSel()
-    requestAnimationFrame(syncSel)
-    scrollHandler = () => syncSel()
-    window.addEventListener('scroll', scrollHandler, { passive:true })
-    window.addEventListener('resize', scrollHandler)
-  }
+  selDomRef.current && (selDomRef.current.style.display = 'block')
+  syncSel()
+  requestAnimationFrame(syncSel)
+  scrollHandler = () => syncSel()
+  window.addEventListener('scroll', scrollHandler, { passive:true })
+  window.addEventListener('resize', scrollHandler)
 })
 .on('selection:updated', syncSel)
 .on('selection:cleared', () => {
