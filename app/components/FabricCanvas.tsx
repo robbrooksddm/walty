@@ -696,9 +696,6 @@ useEffect(() => {
   // create a reusable crop helper and keep it in a ref
   const crop = new CropTool(fc, SCALE, SEL_COLOR, state => {
     croppingRef.current = state
-    if (state && selDomRef.current) {
-      selDomRef.current.style.display = 'none'
-    }
     onCroppingChange?.(state)
   })
   cropToolRef.current = crop;
@@ -907,7 +904,6 @@ let scrollHandler: (() => void) | null = null
 
 const syncSel = () => {
   const obj = fc.getActiveObject() as fabric.Object | undefined
-  if (croppingRef.current) return
   if (!obj || !selDomRef.current || !canvasRef.current) return
   const box = obj.getBoundingRect(true, true)
   const rect = canvasRef.current.getBoundingClientRect()
@@ -939,14 +935,12 @@ const syncSel = () => {
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
-  if (!croppingRef.current) {
-    selDomRef.current && (selDomRef.current.style.display = 'block')
-    syncSel()
-    requestAnimationFrame(syncSel)
-    scrollHandler = () => syncSel()
-    window.addEventListener('scroll', scrollHandler, { passive:true })
-    window.addEventListener('resize', scrollHandler)
-  }
+  selDomRef.current && (selDomRef.current.style.display = 'block')
+  syncSel()
+  requestAnimationFrame(syncSel)
+  scrollHandler = () => syncSel()
+  window.addEventListener('scroll', scrollHandler, { passive:true })
+  window.addEventListener('resize', scrollHandler)
 })
 .on('selection:updated', syncSel)
 .on('selection:cleared', () => {
@@ -958,6 +952,7 @@ fc.on('selection:created', () => {
 fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
   .on('object:scaling',  () => { hoverHL.visible = false; syncSel() })
   .on('object:rotating', () => { hoverHL.visible = false; syncSel() })
+  .on('after:render',    syncSel)
 
 /* ── 4 ▸ Hover outline (only when NOT the active object) ─── */
 fc.on('mouse:over', e => {
@@ -1171,6 +1166,7 @@ window.addEventListener('keydown', onKey)
       fc.off('before:transform', startCrop);
       fc.off('object:scaling', duringCrop);
       fc.off('object:scaled', endCrop);
+      fc.off('after:render', syncSel);
       onReady(null)
       cropToolRef.current?.abort()
       fc.dispose()
