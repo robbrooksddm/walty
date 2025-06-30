@@ -967,16 +967,20 @@ const syncSel = () => {
     if (obj === frame) {
       drawOverlay(frame, selEl)
       selEl._object = frame
+      selEl.style.pointerEvents = 'none'
       if (cropEl) {
         cropEl.style.display = 'block'
+        cropEl.style.pointerEvents = 'auto'
         drawOverlay(img, cropEl)
         cropEl._object = img
       }
     } else {
       drawOverlay(img, selEl)
       selEl._object = img
+      selEl.style.pointerEvents = 'none'
       if (cropEl) {
         cropEl.style.display = 'block'
+        cropEl.style.pointerEvents = 'auto'
         drawOverlay(frame, cropEl)
         cropEl._object = frame
       }
@@ -985,7 +989,8 @@ const syncSel = () => {
     return
   }
 
-  cropEl && (cropEl.style.display = 'none', cropEl._object = null)
+  cropEl && (cropEl.style.display = 'none', cropEl._object = null, cropEl.style.pointerEvents = 'auto')
+  selEl.style.pointerEvents = 'auto'
   if (!obj) return
   drawOverlay(obj, selEl)
   selEl._object = obj
