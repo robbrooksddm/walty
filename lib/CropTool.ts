@@ -63,6 +63,23 @@ export class CropTool {
     this.isActive = true
     this.onChange?.(true)
     this.img      = img
+
+    const prevSelection = this.fc.selection
+    this.fc.selection = false
+
+    const others: Array<{o:fabric.Object, sel:boolean, evt:boolean}> = []
+    this.fc.getObjects().forEach(o => {
+      if (o !== img) {
+        others.push({ o, sel: o.selectable ?? false, evt: o.evented ?? false })
+        o.selectable = false
+        o.evented = false
+      }
+    })
+
+    this.cleanup.push(() => {
+      this.fc.selection = prevSelection
+      others.forEach(({o, sel, evt}) => { o.selectable = sel; o.evented = evt })
+    })
     // allow freeform scaling of the crop window
     const prevUniformScaling = this.fc.uniformScaling
     const prevUniScaleKey    = this.fc.uniScaleKey
