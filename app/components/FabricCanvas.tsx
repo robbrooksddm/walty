@@ -961,9 +961,10 @@ const syncSel = () => {
   if (croppingRef.current && tool?.isActive && tool.img && tool.frame) {
     const img   = tool.img as fabric.Object
     const frame = tool.frame as fabric.Object
-    // whichever is active uses selEl; the other uses cropEl
-    selEl.style.zIndex = '41'
-    cropEl && (cropEl.style.zIndex = '40')
+    // whichever object is *not* active sits on top so its handles
+    // can be grabbed without first reselecting it
+    selEl.style.zIndex = '40'
+    cropEl && (cropEl.style.zIndex = '41')
     if (obj === frame) {
       drawOverlay(frame, selEl)
       selEl._object = frame
