@@ -665,6 +665,10 @@ useEffect(() => {
   });
 
   const bridge = (e: PointerEvent) => {
+    const target = (e.currentTarget as any)._target as fabric.Object | undefined
+    if (target && fc.getActiveObject() !== target) {
+      fc.setActiveObject(target)
+    }
     const down = new MouseEvent('mousedown', forward(e))
     fc.upperCanvasEl.dispatchEvent(down)
     const move = (ev: PointerEvent) =>
@@ -910,7 +914,7 @@ let scrollHandler: (() => void) | null = null
 
 const drawOverlay = (
   obj: fabric.Object,
-  el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement> }
+  el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _target?: fabric.Object }
 ) => {
   const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
@@ -923,6 +927,7 @@ const drawOverlay = (
   el.style.top    = `${top}px`
   el.style.width  = `${width}px`
   el.style.height = `${height}px`
+  el._target = obj
   if (el._handles) {
     const h = el._handles
     const midX = width / 2
@@ -941,8 +946,8 @@ const drawOverlay = (
 const syncSel = () => {
   const obj = fc.getActiveObject() as fabric.Object | undefined
   if (!selDomRef.current || !canvasRef.current) return
-  const selEl  = selDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement> }
-  const cropEl = cropDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement> } | null
+  const selEl  = selDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _target?: fabric.Object }
+  const cropEl = cropDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _target?: fabric.Object } | null
 
   const tool = cropToolRef.current as any
   if (croppingRef.current && tool?.isActive && tool.img && tool.frame) {
