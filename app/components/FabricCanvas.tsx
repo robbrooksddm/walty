@@ -681,7 +681,17 @@ useEffect(() => {
     e.preventDefault()
   }
   const onSelDown = (e: PointerEvent) => {
-    const obj = (selEl as any)._object as fabric.Object | null
+    let obj = (selEl as any)._object as fabric.Object | null
+    if (croppingRef.current && cropEl) {
+      const other = (cropEl as any)._object as fabric.Object | null
+      if (other) {
+        const r = cropEl.getBoundingClientRect()
+        if (e.clientX >= r.left && e.clientX <= r.right &&
+            e.clientY >= r.top  && e.clientY <= r.bottom) {
+          obj = other
+        }
+      }
+    }
     if (obj) fc.setActiveObject(obj)
     bridge(e)
   }
