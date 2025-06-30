@@ -30,6 +30,11 @@ export class CropTool {
   private wrapStyles: { w:string; h:string; mw:string; mh:string } | null = null;
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
+  /** DOM overlays for bitmap and crop frame */
+  private imgOverlay: HTMLDivElement | null = null;
+  private frameOverlay: HTMLDivElement | null = null;
+  private imgHandles: Record<string, HTMLDivElement> | null = null;
+  private frameHandles: Record<string, HTMLDivElement> | null = null;
 
   constructor (fc: fabric.Canvas, scale: number, selColour: string,
                onChange?: (state: boolean) => void) {
@@ -63,6 +68,95 @@ export class CropTool {
     this.isActive = true
     this.onChange?.(true)
     this.img      = img
+
+    /* create DOM overlays for the image and crop frame */
+    const makeOverlay = () => {
+      const el = document.createElement('div')
+      el.className = 'sel-overlay interactive'
+      el.style.display = 'block'
+      document.body.appendChild(el)
+      const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const
+      const handles: Record<string, HTMLDivElement> = {}
+      corners.forEach(c => {
+        const h = document.createElement('div')
+        h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`
+        h.dataset.corner = c
+        el.appendChild(h)
+        handles[c] = h
+      })
+      return { el, handles }
+    }
+    const imgOv = makeOverlay()
+    const frameOv = makeOverlay()
+    this.imgOverlay = imgOv.el
+    this.frameOverlay = frameOv.el
+    this.imgHandles = imgOv.handles
+    this.frameHandles = frameOv.handles
+
+    const forward = (ev: PointerEvent) => ({
+      clientX   : ev.clientX,
+      clientY   : ev.clientY,
+      button    : ev.button,
+      buttons   : ev.buttons,
+      ctrlKey   : ev.ctrlKey,
+      shiftKey  : ev.shiftKey,
+      altKey    : ev.altKey,
+      metaKey   : ev.metaKey,
+      bubbles   : true,
+      cancelable: true,
+    })
+    const forwardMouse = (ev: MouseEvent) => ({
+      clientX   : ev.clientX,
+      clientY   : ev.clientY,
+      button    : ev.button,
+      buttons   : ev.buttons,
+      ctrlKey   : ev.ctrlKey,
+      shiftKey  : ev.shiftKey,
+      altKey    : ev.altKey,
+      metaKey   : ev.metaKey,
+      bubbles   : true,
+      cancelable: true,
+    })
+    const bridge = (e: PointerEvent) => {
+      const down = new MouseEvent('mousedown', forward(e))
+      this.fc.upperCanvasEl.dispatchEvent(down)
+      const move = (ev: PointerEvent) =>
+        this.fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
+      const up = (ev: PointerEvent) => {
+        this.fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev)))
+        document.removeEventListener('pointermove', move)
+        document.removeEventListener('pointerup', up)
+      }
+      document.addEventListener('pointermove', move)
+      document.addEventListener('pointerup', up)
+      e.preventDefault()
+    }
+    const relayMove = (ev: PointerEvent) =>
+      this.fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
+    const dbl = (e: any) => {
+      this.fc.upperCanvasEl.dispatchEvent(new MouseEvent('dblclick', forwardMouse(e)))
+    }
+    ;[imgOv.el, frameOv.el].forEach(el => {
+      el.addEventListener('pointerdown', bridge)
+      el.addEventListener('pointermove', relayMove)
+      el.addEventListener('dblclick', dbl)
+    })
+    this.syncOverlays()
+    const scrollHandler = () => this.syncOverlays()
+    window.addEventListener('scroll', scrollHandler, { passive: true })
+    window.addEventListener('resize', scrollHandler)
+    this.cleanup.push(() => {
+      imgOv.el.removeEventListener('pointerdown', bridge)
+      imgOv.el.removeEventListener('pointermove', relayMove)
+      imgOv.el.removeEventListener('dblclick', dbl)
+      frameOv.el.removeEventListener('pointerdown', bridge)
+      frameOv.el.removeEventListener('pointermove', relayMove)
+      frameOv.el.removeEventListener('dblclick', dbl)
+      window.removeEventListener('scroll', scrollHandler)
+      window.removeEventListener('resize', scrollHandler)
+      imgOv.el.remove()
+      frameOv.el.remove()
+    })
     // allow freeform scaling of the crop window
     const prevUniformScaling = this.fc.uniformScaling
     const prevUniScaleKey    = this.fc.uniScaleKey
@@ -757,6 +851,12 @@ export class CropTool {
       // allow free resizing again
       this.img.minScaleLimit = 0
     }
+    this.imgOverlay?.remove()
+    this.frameOverlay?.remove()
+    this.imgOverlay = null
+    this.frameOverlay = null
+    this.imgHandles = null
+    this.frameHandles = null
     this.frame    = null
     this.img      = null
     this.orig     = null
@@ -848,6 +948,45 @@ export class CropTool {
     this.masks.forEach(m => m.setCoords())
   }
 
+  /* keep DOM overlays aligned with both objects */
+  private syncOverlays = () => {
+    if (!this.img || !this.frame || !this.imgOverlay || !this.frameOverlay) return
+
+    const canvasRect = this.fc.getElement().getBoundingClientRect()
+    const vt = this.fc.viewportTransform || [1,0,0,1,0,0]
+
+    const upd = (
+      obj: fabric.Object,
+      ov: HTMLDivElement,
+      handles: Record<string, HTMLDivElement> | null,
+    ) => {
+      const box = obj.getBoundingRect(true, true)
+      const left   = canvasRect.left + vt[4] + box.left * this.SCALE
+      const top    = canvasRect.top  + vt[5] + box.top  * this.SCALE
+      const width  = box.width  * this.SCALE
+      const height = box.height * this.SCALE
+      ov.style.left   = `${left}px`
+      ov.style.top    = `${top}px`
+      ov.style.width  = `${width}px`
+      ov.style.height = `${height}px`
+      if (handles) {
+        const midX = width / 2
+        const midY = height / 2
+        handles.tl.style.left = '0px';      handles.tl.style.top = '0px'
+        handles.tr.style.left = `${width}px`; handles.tr.style.top = '0px'
+        handles.br.style.left = `${width}px`; handles.br.style.top = `${height}px`
+        handles.bl.style.left = '0px';      handles.bl.style.top = `${height}px`
+        handles.ml.style.left = '0px';      handles.ml.style.top = `${midY}px`
+        handles.mr.style.left = `${width}px`; handles.mr.style.top = `${midY}px`
+        handles.mt.style.left = `${midX}px`; handles.mt.style.top = '0px'
+        handles.mb.style.left = `${midX}px`; handles.mb.style.top = `${height}px`
+      }
+    }
+
+    upd(this.img, this.imgOverlay, this.imgHandles)
+    upd(this.frame, this.frameOverlay, this.frameHandles)
+  }
+
     /** Minimum uniform scale so the image fully covers the crop window,
    *  taking the current left/top gap into account.
    */
@@ -900,5 +1039,7 @@ export class CropTool {
     if (this.img?.hasControls)   this.img.drawControls(ctx);
     if (this.frame?.hasControls) this.frame.drawControls(ctx);
     ctx.restore()
+
+    this.syncOverlays()
   }
 }
