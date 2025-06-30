@@ -544,6 +544,16 @@ const generateProofURL = async (variantHandle: string): Promise<string | null> =
   const product = products.find(p => p.variantHandle === variantHandle)
   const sku = product?.slug ?? variantHandle
   const showGuides = product?.showProofSafeArea ?? false
+  if (typeof document !== 'undefined') {
+    try {
+      if (document.fonts?.status !== 'loaded') {
+        await document.fonts.ready
+      }
+      await new Promise(r => requestAnimationFrame(() => r(null)))
+    } catch {
+      /* ignore */
+    }
+  }
   const { pages, pageImages } = collectProofData(showGuides)
   const blob = await fetchProofBlob(sku, `${variantHandle}.jpg`, pages, pageImages)
   if (!blob) return null
@@ -580,6 +590,17 @@ const generateProofURLs = async (
 const handleProofAll = async () => {
   if (!products.length) return
   const JSZip = (await import('jszip')).default
+
+  if (typeof document !== 'undefined') {
+    try {
+      if (document.fonts?.status !== 'loaded') {
+        await document.fonts.ready
+      }
+      await new Promise(r => requestAnimationFrame(() => r(null)))
+    } catch {
+      /* ignore */
+    }
+  }
 
   const zip = new JSZip()
   for (const p of products) {
