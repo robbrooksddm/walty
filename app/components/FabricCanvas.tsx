@@ -608,12 +608,14 @@ useEffect(() => {
   const selEl = document.createElement('div');
   selEl.className = 'sel-overlay interactive';
   selEl.style.display = 'none';
+  selEl.style.zIndex = '40';
   document.body.appendChild(selEl);
   selDomRef.current = selEl;
 
   const cropEl = document.createElement('div');
   cropEl.className = 'sel-overlay interactive';
   cropEl.style.display = 'none';
+  cropEl.style.zIndex = '40';
   document.body.appendChild(cropEl);
   cropDomRef.current = cropEl;
 
@@ -912,13 +914,14 @@ const drawOverlay = (
   obj: fabric.Object,
   el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement> }
 ) => {
-  const box  = obj.getBoundingRect(true, true)
-  const rect = canvasRef.current!.getBoundingClientRect()
-  const vt   = fc.viewportTransform || [1,0,0,1,0,0]
-  const left   = rect.left + vt[4] + box.left * SCALE
-  const top    = rect.top  + vt[5] + box.top  * SCALE
-  const width  = box.width  * SCALE
-  const height = box.height * SCALE
+  obj.setCoords()
+  const c     = obj.oCoords
+  const rect  = canvasRef.current!.getBoundingClientRect()
+  const vt    = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
+  const left  = rect.left + vt[4] + c.tl.x * SCALE
+  const top   = rect.top  + vt[5] + c.tl.y * SCALE
+  const width = (c.tr.x - c.tl.x) * SCALE
+  const height= (c.bl.y - c.tl.y) * SCALE
   el.style.left   = `${left}px`
   el.style.top    = `${top}px`
   el.style.width  = `${width}px`
@@ -951,26 +954,41 @@ const syncSel = () => {
     // whichever is active uses selEl; the other uses cropEl
     if (obj === frame) {
       drawOverlay(frame, selEl)
-      cropEl && (cropEl.style.display = 'block', drawOverlay(img, cropEl))
+      selEl.style.zIndex = '41'
+      cropEl && (() => {
+        cropEl.style.zIndex = '40'
+        cropEl.style.display = 'block'
+        drawOverlay(img, cropEl)
+      })()
     } else {
       drawOverlay(img, selEl)
-      cropEl && (cropEl.style.display = 'block', drawOverlay(frame, cropEl))
+      selEl.style.zIndex = '41'
+      cropEl && (() => {
+        cropEl.style.zIndex = '40'
+        cropEl.style.display = 'block'
+        drawOverlay(frame, cropEl)
+      })()
     }
     selEl.style.display = 'block'
     return
   }
 
-  cropEl && (cropEl.style.display = 'none')
+  cropEl && (() => { cropEl.style.display = 'none'; cropEl.style.zIndex = '40' })()
   if (!obj) return
+  selEl.style.zIndex = '40'
   drawOverlay(obj, selEl)
 }
 
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
-  selDomRef.current && (selDomRef.current.style.display = 'block')
+  selDomRef.current && (() => {
+    selDomRef.current.style.display = 'block'
+    selDomRef.current.style.zIndex = '41'
+  })()
   if (croppingRef.current && cropDomRef.current) {
     cropDomRef.current.style.display = 'block'
+    cropDomRef.current.style.zIndex = '40'
   }
   syncSel()
   requestAnimationFrame(syncSel)
@@ -985,8 +1003,14 @@ fc.on('selection:created', () => {
     window.removeEventListener('resize', scrollHandler)
     scrollHandler = null
   }
-  selDomRef.current && (selDomRef.current.style.display = 'none')
-  cropDomRef.current && (cropDomRef.current.style.display = 'none')
+  selDomRef.current && (() => {
+    selDomRef.current.style.display = 'none'
+    selDomRef.current.style.zIndex = '40'
+  })()
+  cropDomRef.current && (() => {
+    cropDomRef.current.style.display = 'none'
+    cropDomRef.current.style.zIndex = '40'
+  })()
 })
 
 /* also hide hover during any transform of the active object */
