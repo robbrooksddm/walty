@@ -665,6 +665,21 @@ useEffect(() => {
   });
 
   const bridge = (e: PointerEvent) => {
+    // during cropping, clicking the secondary overlay should immediately
+    // activate its object so the drag begins without an extra click
+    if (croppingRef.current && cropDomRef.current && cropToolRef.current) {
+      if (e.currentTarget === cropDomRef.current) {
+        const tool = cropToolRef.current as any
+        const active = fc.getActiveObject()
+        if (tool?.isActive && tool.img && tool.frame) {
+          const other = active === tool.frame ? tool.img : tool.frame
+          if (other) {
+            fc.setActiveObject(other)
+            syncSel()
+          }
+        }
+      }
+    }
     const down = new MouseEvent('mousedown', forward(e))
     fc.upperCanvasEl.dispatchEvent(down)
     const move = (ev: PointerEvent) =>
