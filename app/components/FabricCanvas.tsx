@@ -1315,10 +1315,11 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
           })
 
           /* ---------- AI placeholder extras -------------------------------- */
-if (raw._type === 'aiLayer') {
-  const spec = raw.source
-  const locked = !!ly.locked
-  img.set({ selectable: !locked, evented: !locked, hasControls: !locked })
+          let doSync: (() => void) | undefined
+          if (raw._type === 'aiLayer') {
+            const spec = raw.source
+            const locked = !!ly.locked
+            img.set({ selectable: !locked, evented: !locked, hasControls: !locked })
 
  
             // ─── open the Selfie Drawer on click ─────────────────────────
@@ -1357,7 +1358,7 @@ img.on('mouseup', () => {
               img.on('mouseout',  () => { ghost!.style.opacity = '0' })
             }
 
-            const doSync = () => canvasRef.current && ghost && syncGhost(img, ghost, canvasRef.current)
+            doSync = () => canvasRef.current && ghost && syncGhost(img, ghost, canvasRef.current)
             doSync()
             img.on('moving',   doSync)
                .on('scaling',  doSync)
@@ -1389,7 +1390,7 @@ img.on('mouseup', () => {
           fc.insertAt(img, idx, false)
           img.setCoords()
           fc.requestRenderAll()
-          doSync()
+          doSync?.()
           document.dispatchEvent(
             new CustomEvent('card-canvas-rendered', {
               detail: { pageIdx, canvas: fc },
