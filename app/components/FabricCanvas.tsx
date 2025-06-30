@@ -473,8 +473,10 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const hydrating    = useRef(false)
   const isEditing    = useRef(false)
 
-  const hoverDomRef  = useRef<HTMLDivElement | null>(null)
-  const selDomRef    = useRef<HTMLDivElement | null>(null)
+  const hoverDomRef     = useRef<HTMLDivElement | null>(null)
+  const selDomRef       = useRef<HTMLDivElement | null>(null)
+  const cropImgDomRef   = useRef<HTMLDivElement | null>(null)
+  const cropFrameDomRef = useRef<HTMLDivElement | null>(null)
 
   const cropToolRef = useRef<CropTool | null>(null)
   const croppingRef = useRef(false)
@@ -594,28 +596,36 @@ useEffect(() => {
   fc.preserveObjectStacking = true;
 
   /* create DOM overlays for hover & selection */
+  const makeOverlay = () => {
+    const el = document.createElement('div');
+    el.className = 'sel-overlay interactive';
+    el.style.display = 'none';
+    document.body.appendChild(el);
+    const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+    const map: Record<string, HTMLDivElement> = {};
+    corners.forEach(c => {
+      const h = document.createElement('div');
+      h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
+      h.dataset.corner = c;
+      el.appendChild(h);
+      map[c] = h;
+    });
+    (el as any)._handles = map;
+    return el as HTMLDivElement & { _handles?: Record<string, HTMLDivElement> };
+  };
+
   const hoverEl = document.createElement('div');
   hoverEl.className = 'sel-overlay';
   hoverEl.style.display = 'none';
   document.body.appendChild(hoverEl);
   hoverDomRef.current = hoverEl;
 
-  const selEl = document.createElement('div');
-  selEl.className = 'sel-overlay interactive';
-  selEl.style.display = 'none';
-  document.body.appendChild(selEl);
-  selDomRef.current = selEl;
-
-  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
-  const handleMap: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
-    const h = document.createElement('div');
-    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
-    h.dataset.corner = c;
-    selEl.appendChild(h);
-    handleMap[c] = h;
-  });
-  (selEl as any)._handles = handleMap;
+  const selEl       = makeOverlay();
+  const cropImgEl   = makeOverlay();
+  const cropFrameEl = makeOverlay();
+  selDomRef.current       = selEl;
+  cropImgDomRef.current   = cropImgEl;
+  cropFrameDomRef.current = cropFrameEl;
 
   const forward = (ev: PointerEvent) => ({
     clientX   : ev.clientX,
@@ -657,15 +667,15 @@ useEffect(() => {
     document.addEventListener('pointerup', up)
     e.preventDefault()
   }
-  selEl.addEventListener('pointerdown', bridge)
-
-  selEl.addEventListener('dblclick', e => {
-    fc.upperCanvasEl.dispatchEvent(new MouseEvent('dblclick', forwardMouse(e)))
-  })
-
   const relayMove = (ev: PointerEvent) =>
     fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
-  selEl.addEventListener('pointermove', relayMove)
+  ;[selEl, cropImgEl, cropFrameEl].forEach(el => {
+    el.addEventListener('pointerdown', bridge)
+    el.addEventListener('pointermove', relayMove)
+    el.addEventListener('dblclick', e =>
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('dblclick', forwardMouse(e)))
+    )
+  })
 
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
@@ -697,6 +707,14 @@ useEffect(() => {
   const crop = new CropTool(fc, SCALE, SEL_COLOR, state => {
     croppingRef.current = state
     onCroppingChange?.(state)
+    if (state) {
+      cropImgDomRef.current && (cropImgDomRef.current.style.display = 'block')
+      cropFrameDomRef.current && (cropFrameDomRef.current.style.display = 'block')
+      syncCrop()
+    } else {
+      cropImgDomRef.current && (cropImgDomRef.current.style.display = 'none')
+      cropFrameDomRef.current && (cropFrameDomRef.current.style.display = 'none')
+    }
   })
   cropToolRef.current = crop;
   ;(fc as any)._cropTool = crop;
@@ -799,74 +817,26 @@ useEffect(() => {
     if (corner === 'mr' || corner === 'ml') {
       if (corner === 'mr') {
         const maxW = st.startWidth + (st.natW - (st.startCropX + st.startWidth));
-        if (newW <= maxW) {
-          width = Math.min(newW, st.natW - st.startCropX);
-        } else {
-          const baseW = st.natW - st.startCropX;
-          const factor = newW / maxW;
-          width  = baseW;
-          scaleX = st.startScaleX * factor;
-          scaleY = st.startScaleY * factor;
-          const bottom = st.startTop + st.startHeight * st.startScaleY;
-          left   = st.startLeft;
-          top    = bottom - st.startHeight * scaleY;
-        }
+        width = Math.min(newW, maxW);
       } else {
         const maxW = st.startWidth + st.startCropX;
-        if (newW <= maxW) {
-          const diff = st.startWidth - newW;
-          cropX = st.startCropX + diff;
-          width = newW;
-          left  = st.startLeft + diff * st.startScaleX;
-        } else {
-          const baseW = st.startWidth + st.startCropX;
-          const factor = newW / maxW;
-          const right  = st.startLeft + st.startWidth * st.startScaleX;
-          const bottom = st.startTop + st.startHeight * st.startScaleY;
-          cropX  = 0;
-          width  = baseW;
-          scaleX = st.startScaleX * factor;
-          scaleY = st.startScaleY * factor;
-          left   = right - width * scaleX;
-          top    = bottom - st.startHeight * scaleY;
-        }
+        const clamped = Math.min(newW, maxW);
+        const diff = st.startWidth - clamped;
+        cropX = st.startCropX + diff;
+        width = clamped;
+        left  = st.startLeft + diff * st.startScaleX;
       }
     } else if (corner === 'mb' || corner === 'mt') {
       if (corner === 'mb') {
         const maxH = st.startHeight + (st.natH - (st.startCropY + st.startHeight));
-        if (newH <= maxH) {
-          height = Math.min(newH, st.natH - st.startCropY);
-        } else {
-          const baseH = st.natH - st.startCropY;
-          const factor = newH / maxH;
-          const center = st.startLeft +
-            (st.startWidth * st.startScaleX) / 2;
-          height = baseH;
-          scaleX = st.startScaleX * factor;
-          scaleY = st.startScaleY * factor;
-          left   = center - (st.startWidth * scaleX) / 2;
-          top    = st.startTop;
-        }
+        height = Math.min(newH, maxH);
       } else {
         const maxH = st.startHeight + st.startCropY;
-        if (newH <= maxH) {
-          const diff = st.startHeight - newH;
-          cropY = st.startCropY + diff;
-          height = newH;
-          top = st.startTop + diff * st.startScaleY;
-        } else {
-          const baseH = st.startHeight + st.startCropY;
-          const factor = newH / maxH;
-          const bottom = st.startTop + st.startHeight * st.startScaleY;
-          const center = st.startLeft +
-            (st.startWidth * st.startScaleX) / 2;
-          cropY  = 0;
-          height = baseH;
-          scaleX = st.startScaleX * factor;
-          scaleY = st.startScaleY * factor;
-          left   = center - (st.startWidth * scaleX) / 2;
-          top    = bottom - height * scaleY;
-        }
+        const clamped = Math.min(newH, maxH);
+        const diff = st.startHeight - clamped;
+        cropY = st.startCropY + diff;
+        height = clamped;
+        top = st.startTop + diff * st.startScaleY;
       }
     }
 
@@ -932,27 +902,72 @@ const syncSel = () => {
   }
 }
 
+const syncCrop = () => {
+  const crop = cropToolRef.current as any
+  if (!crop || !crop.isActive || !canvasRef.current) {
+    cropImgDomRef.current && (cropImgDomRef.current.style.display = 'none')
+    cropFrameDomRef.current && (cropFrameDomRef.current.style.display = 'none')
+    return
+  }
+  const { img, frame } = crop
+  if (!img || !frame || !cropImgDomRef.current || !cropFrameDomRef.current) return
+  const rect = canvasRef.current.getBoundingClientRect()
+  const vt = fc.viewportTransform || [1,0,0,1,0,0]
+  const upd = (o: fabric.Object, el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement> }) => {
+    const box = o.getBoundingRect(true, true)
+    const left   = rect.left + vt[4] + box.left * SCALE
+    const top    = rect.top  + vt[5] + box.top  * SCALE
+    const width  = box.width  * SCALE
+    const height = box.height * SCALE
+    el.style.left   = `${left}px`
+    el.style.top    = `${top}px`
+    el.style.width  = `${width}px`
+    el.style.height = `${height}px`
+    if (el._handles) {
+      const h = el._handles
+      const midX = width / 2
+      const midY = height / 2
+      h.tl.style.left = '0px';      h.tl.style.top = '0px'
+      h.tr.style.left = `${width}px`; h.tr.style.top = '0px'
+      h.br.style.left = `${width}px`; h.br.style.top = `${height}px`
+      h.bl.style.left = '0px';      h.bl.style.top = `${height}px`
+      h.ml.style.left = '0px';      h.ml.style.top = `${midY}px`
+      h.mr.style.left = `${width}px`; h.mr.style.top = `${midY}px`
+      h.mt.style.left = `${midX}px`; h.mt.style.top = '0px'
+      h.mb.style.left = `${midX}px`; h.mb.style.top = `${height}px`
+    }
+  }
+  cropImgDomRef.current.style.display = 'block'
+  cropFrameDomRef.current.style.display = 'block'
+  upd(img, cropImgDomRef.current as any)
+  upd(frame, cropFrameDomRef.current as any)
+}
+
+const onRender = () => { syncSel(); syncCrop() }
+
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
   selDomRef.current && (selDomRef.current.style.display = 'block')
   syncSel()
-  requestAnimationFrame(syncSel)
-  scrollHandler = () => syncSel()
+  syncCrop()
+  requestAnimationFrame(() => { syncSel(); syncCrop() })
+  scrollHandler = () => { syncSel(); syncCrop() }
   window.addEventListener('scroll', scrollHandler, { passive:true })
   window.addEventListener('resize', scrollHandler)
 })
-.on('selection:updated', syncSel)
+.on('selection:updated', () => { syncSel(); syncCrop() })
 .on('selection:cleared', () => {
   if (scrollHandler) { window.removeEventListener('scroll', scrollHandler); window.removeEventListener('resize', scrollHandler); scrollHandler = null }
   selDomRef.current && (selDomRef.current.style.display = 'none')
+  syncCrop()
 })
 
 /* also hide hover during any transform of the active object */
-fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
-  .on('object:scaling',  () => { hoverHL.visible = false; syncSel() })
-  .on('object:rotating', () => { hoverHL.visible = false; syncSel() })
-  .on('after:render',    syncSel)
+fc.on('object:moving',   () => { hoverHL.visible = false; syncSel(); syncCrop() })
+  .on('object:scaling',  () => { hoverHL.visible = false; syncSel(); syncCrop() })
+  .on('object:rotating', () => { hoverHL.visible = false; syncSel(); syncCrop() })
+  .on('after:render',    onRender)
 
 /* ── 4 ▸ Hover outline (only when NOT the active object) ─── */
 fc.on('mouse:over', e => {
@@ -1166,12 +1181,14 @@ window.addEventListener('keydown', onKey)
       fc.off('before:transform', startCrop);
       fc.off('object:scaling', duringCrop);
       fc.off('object:scaled', endCrop);
-      fc.off('after:render', syncSel);
+      fc.off('after:render', onRender);
       onReady(null)
       cropToolRef.current?.abort()
       fc.dispose()
       hoverDomRef.current?.remove()
       selDomRef.current?.remove()
+      cropImgDomRef.current?.remove()
+      cropFrameDomRef.current?.remove()
       if (scrollHandler) {
         window.removeEventListener('scroll', scrollHandler)
         window.removeEventListener('resize', scrollHandler)
