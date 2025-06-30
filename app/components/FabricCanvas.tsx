@@ -612,7 +612,7 @@ useEffect(() => {
   selDomRef.current = selEl;
 
   const cropEl = document.createElement('div');
-  cropEl.className = 'sel-overlay interactive';
+  cropEl.className = 'sel-overlay crop interactive';
   cropEl.style.display = 'none';
   document.body.appendChild(cropEl);
   cropDomRef.current = cropEl;
@@ -621,7 +621,9 @@ useEffect(() => {
   const handleMap: Record<string, HTMLDivElement> = {};
   corners.forEach(c => {
     const h = document.createElement('div');
-    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
+    const side = ['ml','mr','mt','mb'].includes(c);
+    const orient = ['ml','mr'].includes(c) ? 'vert' : ['mt','mb'].includes(c) ? 'horz' : 'corner';
+    h.className = `handle ${side ? 'side ' + orient : 'corner'} ${c}`;
     h.dataset.corner = c;
     selEl.appendChild(h);
     handleMap[c] = h;
@@ -631,7 +633,9 @@ useEffect(() => {
   const cropHandles: Record<string, HTMLDivElement> = {};
   corners.forEach(c => {
     const h = document.createElement('div');
-    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
+    const side = ['ml','mr','mt','mb'].includes(c);
+    const orient = ['ml','mr'].includes(c) ? 'vert' : ['mt','mb'].includes(c) ? 'horz' : 'corner';
+    h.className = `handle ${side ? 'side ' + orient : 'corner'} ${c}`;
     h.dataset.corner = c;
     cropEl.appendChild(h);
     cropHandles[c] = h;

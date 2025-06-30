@@ -94,7 +94,7 @@ html {
 @layer utilities {
   .sel-overlay {
     @apply absolute pointer-events-none box-border z-40;
-    border:1px dashed #2EC4B6; /* SEL_COLOR */
+    border:1px solid #2EC4B6; /* SEL_COLOR */
   }
   .sel-overlay.interactive {
     @apply pointer-events-auto;
@@ -106,14 +106,46 @@ html {
     background:#fff;
     border:1px solid #2EC4B6;
     border-radius:50%;
+    box-shadow:0 0 2px rgba(0,0,0,0.15);
     transform:translate(-50%,-50%);
     pointer-events:auto;
   }
-  .sel-overlay .handle.side {
+  .sel-overlay .handle.side.vert {
     width:4px;
     height:12px;
     border-radius:2px;
   }
+  .sel-overlay .handle.side.horz {
+    width:12px;
+    height:4px;
+    border-radius:2px;
+  }
+  .sel-overlay.crop .handle.corner {
+    width:8px;
+    height:8px;
+    background:none;
+    border:none;
+  }
+  .sel-overlay.crop .handle.corner::before,
+  .sel-overlay.crop .handle.corner::after {
+    content:'';
+    position:absolute;
+    left:0;
+    top:0;
+    background:#fff;
+    box-shadow:0 0 3px rgba(0,0,0,0.35);
+  }
+  .sel-overlay.crop .handle.corner::before {
+    width:2px;
+    height:8px;
+  }
+  .sel-overlay.crop .handle.corner::after {
+    width:8px;
+    height:2px;
+  }
+  .sel-overlay.crop .handle.tr   { transform:translate(-50%,-50%) rotate(90deg); }
+  .sel-overlay.crop .handle.br   { transform:translate(-50%,-50%) rotate(180deg); }
+  .sel-overlay.crop .handle.bl   { transform:translate(-50%,-50%) rotate(-90deg); }
   .sel-overlay .handle.tl,
   .sel-overlay .handle.br { cursor:nwse-resize; }
   .sel-overlay .handle.tr,
