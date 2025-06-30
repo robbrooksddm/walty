@@ -610,12 +610,14 @@ useEffect(() => {
   selEl.style.display = 'none';
   document.body.appendChild(selEl);
   selDomRef.current = selEl;
+  (selEl as any)._object = null;
 
   const cropEl = document.createElement('div');
   cropEl.className = 'sel-overlay interactive';
   cropEl.style.display = 'none';
   document.body.appendChild(cropEl);
   cropDomRef.current = cropEl;
+  (cropEl as any)._object = null;
 
   const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
@@ -678,8 +680,18 @@ useEffect(() => {
     document.addEventListener('pointerup', up)
     e.preventDefault()
   }
-  selEl.addEventListener('pointerdown', bridge)
-  cropEl.addEventListener('pointerdown', bridge)
+  const onSelDown = (e: PointerEvent) => {
+    const obj = (selEl as any)._object as fabric.Object | null
+    if (obj) fc.setActiveObject(obj)
+    bridge(e)
+  }
+  const onCropDown = (e: PointerEvent) => {
+    const obj = (cropEl as any)._object as fabric.Object | null
+    if (obj) fc.setActiveObject(obj)
+    bridge(e)
+  }
+  selEl.addEventListener('pointerdown', onSelDown)
+  cropEl.addEventListener('pointerdown', onCropDown)
 
   selEl.addEventListener('dblclick', e => {
     fc.upperCanvasEl.dispatchEvent(new MouseEvent('dblclick', forwardMouse(e)))
@@ -910,7 +922,7 @@ let scrollHandler: (() => void) | null = null
 
 const drawOverlay = (
   obj: fabric.Object,
-  el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement> }
+  el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
 ) => {
   const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
@@ -923,6 +935,7 @@ const drawOverlay = (
   el.style.top    = `${top}px`
   el.style.width  = `${width}px`
   el.style.height = `${height}px`
+  el._object = obj
   if (el._handles) {
     const h = el._handles
     const midX = width / 2
@@ -941,8 +954,8 @@ const drawOverlay = (
 const syncSel = () => {
   const obj = fc.getActiveObject() as fabric.Object | undefined
   if (!selDomRef.current || !canvasRef.current) return
-  const selEl  = selDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement> }
-  const cropEl = cropDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement> } | null
+  const selEl  = selDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
+  const cropEl = cropDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null } | null
 
   const tool = cropToolRef.current as any
   if (croppingRef.current && tool?.isActive && tool.img && tool.frame) {
@@ -953,18 +966,29 @@ const syncSel = () => {
     cropEl && (cropEl.style.zIndex = '40')
     if (obj === frame) {
       drawOverlay(frame, selEl)
-      cropEl && (cropEl.style.display = 'block', drawOverlay(img, cropEl))
+      selEl._object = frame
+      if (cropEl) {
+        cropEl.style.display = 'block'
+        drawOverlay(img, cropEl)
+        cropEl._object = img
+      }
     } else {
       drawOverlay(img, selEl)
-      cropEl && (cropEl.style.display = 'block', drawOverlay(frame, cropEl))
+      selEl._object = img
+      if (cropEl) {
+        cropEl.style.display = 'block'
+        drawOverlay(frame, cropEl)
+        cropEl._object = frame
+      }
     }
     selEl.style.display = 'block'
     return
   }
 
-  cropEl && (cropEl.style.display = 'none')
+  cropEl && (cropEl.style.display = 'none', cropEl._object = null)
   if (!obj) return
   drawOverlay(obj, selEl)
+  selEl._object = obj
 }
 
 fc.on('selection:created', () => {
@@ -1216,6 +1240,8 @@ window.addEventListener('keydown', onKey)
       fc.off('object:scaling', duringCrop);
       fc.off('object:scaled', endCrop);
       fc.off('after:render', syncSel);
+      selEl.removeEventListener('pointerdown', onSelDown)
+      cropEl.removeEventListener('pointerdown', onCropDown)
       onReady(null)
       cropToolRef.current?.abort()
       isolateCrop(false)
