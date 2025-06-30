@@ -1331,6 +1331,8 @@ img.on('mouseup', () => {
 });
 
             let ghost = (img as any)._ghost as HTMLDivElement | undefined
+            const doSync = () =>
+              canvasRef.current && ghost && syncGhost(img, ghost, canvasRef.current)
             if (!ghost) {
               ghost = document.createElement('div')
               ghost.className = 'ai-ghost'
@@ -1357,7 +1359,6 @@ img.on('mouseup', () => {
               img.on('mouseout',  () => { ghost!.style.opacity = '0' })
             }
 
-            const doSync = () => canvasRef.current && ghost && syncGhost(img, ghost, canvasRef.current)
             doSync()
             img.on('moving',   doSync)
                .on('scaling',  doSync)
