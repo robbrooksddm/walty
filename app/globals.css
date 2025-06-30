@@ -99,6 +99,9 @@ html {
   .sel-overlay.interactive {
     @apply pointer-events-auto;
   }
+  .sel-overlay.crop {
+    border-style: solid;
+  }
   .sel-overlay .handle {
     position:absolute;
     width:8px;
