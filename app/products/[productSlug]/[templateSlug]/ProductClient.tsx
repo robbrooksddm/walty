@@ -3,7 +3,19 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 
-interface Variant { title: string; variantHandle: string; slug: string }
+const ICONS: Record<string, string> = {
+  'gc-mini': '/icons/mini_card_icon.svg',
+  'gc-classic': '/icons/classic_card_icon.svg',
+  'gc-large': '/icons/giant_card_icon.svg',
+}
+
+interface Variant {
+  title: string
+  variantHandle: string
+  slug: string
+  blurb?: string
+  price?: number
+}
 
 export default function ProductClient({
   title,
@@ -53,25 +65,42 @@ export default function ProductClient({
         </div>
         <div className="space-y-4">
           <h1 className="text-2xl font-bold">{title}</h1>
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {variants.map(v => (
               <li key={v.variantHandle}>
-                <label className="flex items-center gap-2">
+                <label
+                  className={`flex items-center gap-4 p-3 border rounded-md cursor-pointer ${selected === v.variantHandle ? 'border-[--walty-orange] bg-[--walty-cream]' : 'border-gray-300'}`}
+                >
+                  <Image
+                    src={ICONS[v.variantHandle] ?? '/icons/classic_card_icon.svg'}
+                    alt=""
+                    width={40}
+                    height={40}
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium">{v.title}</div>
+                    {v.blurb && (
+                      <p className="text-sm text-gray-600">{v.blurb}</p>
+                    )}
+                    {typeof v.price === 'number' && (
+                      <div className="mt-1 font-semibold">£{v.price.toFixed(2)}</div>
+                    )}
+                  </div>
                   <input
                     type="radio"
                     name="variant"
                     value={v.variantHandle}
+                    checked={selected === v.variantHandle}
                     onChange={() => setSelected(v.variantHandle)}
                     className="accent-[--walty-orange]"
                   />
-                  {v.title}
                 </label>
               </li>
             ))}
           </ul>
           <Link
             href={`/cards/${slug}/customise`}
-            className="inline-block bg-[--walty-orange] text-white px-6 py-3 rounded text-center w-full"
+            className="block bg-[--walty-orange] text-white px-6 py-3 rounded text-center w-full mt-4"
           >
             Personalise →
           </Link>
