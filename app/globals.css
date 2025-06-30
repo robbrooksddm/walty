@@ -94,7 +94,7 @@ html {
 @layer utilities {
   .sel-overlay {
     @apply absolute pointer-events-none box-border z-40;
-    border:1px dashed #2EC4B6; /* SEL_COLOR */
+    border:1px solid #2EC4B6; /* SEL_COLOR */
   }
   .sel-overlay.interactive {
     @apply pointer-events-auto;
@@ -104,15 +104,22 @@ html {
     width:8px;
     height:8px;
     background:#fff;
-    border:1px solid #2EC4B6;
+    border:1px solid #fff;
     border-radius:50%;
+    box-shadow:0 0 3px rgba(0,0,0,0.35);
     transform:translate(-50%,-50%);
     pointer-events:auto;
   }
-  .sel-overlay .handle.side {
+  .sel-overlay .handle.side { border-radius:2px; }
+  .sel-overlay .handle.ml,
+  .sel-overlay .handle.mr {
     width:4px;
     height:12px;
-    border-radius:2px;
+  }
+  .sel-overlay .handle.mt,
+  .sel-overlay .handle.mb {
+    width:12px;
+    height:4px;
   }
   .sel-overlay .handle.tl,
   .sel-overlay .handle.br { cursor:nwse-resize; }
@@ -122,4 +129,28 @@ html {
   .sel-overlay .handle.mr { cursor:ew-resize; }
   .sel-overlay .handle.mt,
   .sel-overlay .handle.mb { cursor:ns-resize; }
+
+  /* crop window handles – L shaped */
+  .sel-overlay.crop .handle {
+    width:8px;
+    height:8px;
+    border-radius:0;
+    box-sizing:border-box;
+  }
+  .sel-overlay.crop .handle.tl {
+    border-left:2px solid #fff;
+    border-top:2px solid #fff;
+  }
+  .sel-overlay.crop .handle.tr {
+    border-right:2px solid #fff;
+    border-top:2px solid #fff;
+  }
+  .sel-overlay.crop .handle.bl {
+    border-left:2px solid #fff;
+    border-bottom:2px solid #fff;
+  }
+  .sel-overlay.crop .handle.br {
+    border-right:2px solid #fff;
+    border-bottom:2px solid #fff;
+  }
 }

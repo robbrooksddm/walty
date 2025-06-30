@@ -612,7 +612,7 @@ useEffect(() => {
   selDomRef.current = selEl;
 
   const cropEl = document.createElement('div');
-  cropEl.className = 'sel-overlay interactive';
+  cropEl.className = 'sel-overlay crop interactive';
   cropEl.style.display = 'none';
   document.body.appendChild(cropEl);
   cropDomRef.current = cropEl;
@@ -628,8 +628,9 @@ useEffect(() => {
   });
   (selEl as any)._handles = handleMap;
 
+  const cropCorners = ['tl','tr','br','bl'] as const;
   const cropHandles: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  cropCorners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
     h.dataset.corner = c;
