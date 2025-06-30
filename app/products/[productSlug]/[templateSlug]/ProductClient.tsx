@@ -36,7 +36,7 @@ export default function ProductClient({
 
   return (
     <main className="p-6 space-y-6 max-w-4xl mx-auto">
-      <div className="grid md:grid-cols-[auto_1fr] gap-6 items-start">
+      <div className="grid md:grid-cols-[auto_1fr] gap-8 items-start">
         <div className="space-y-2 flex flex-col items-center">
           <Image
             src={images[pageIdx]}
@@ -69,7 +69,7 @@ export default function ProductClient({
             {variants.map(v => (
               <li key={v.variantHandle}>
                 <label
-                  className={`flex items-center gap-4 p-3 border-2 rounded-md cursor-pointer w-[65%] ${selected === v.variantHandle ? 'border-[--walty-orange] bg-[--walty-cream]' : 'border-gray-300'}`}
+                  className={`flex items-center gap-4 p-3 border-2 rounded-md cursor-pointer w-[65%] ${selected === v.variantHandle ? 'border-[--walty-orange] bg-[#f3dea8]' : 'border-gray-300 bg-white'}`}
                 >
                   <Image
                     src={ICONS[v.variantHandle] ?? '/icons/classic_card_icon.svg'}
@@ -100,7 +100,7 @@ export default function ProductClient({
           </ul>
           <Link
             href={`/cards/${slug}/customise`}
-            className="block bg-[--walty-orange] text-white px-6 py-3 rounded text-center w-full mt-4"
+            className="block bg-[--walty-orange] text-white px-6 py-3 rounded text-center w-[65%] mt-4"
           >
             Personalise →
           </Link>
