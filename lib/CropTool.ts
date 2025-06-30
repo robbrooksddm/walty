@@ -30,6 +30,9 @@ export class CropTool {
   private wrapStyles: { w:string; h:string; mw:string; mh:string } | null = null;
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
+  /** DOM overlays for image and crop frame */
+  private imgDom: HTMLDivElement | null = null;
+  private frameDom: HTMLDivElement | null = null;
 
   constructor (fc: fabric.Canvas, scale: number, selColour: string,
                onChange?: (state: boolean) => void) {
@@ -63,6 +66,64 @@ export class CropTool {
     this.isActive = true
     this.onChange?.(true)
     this.img      = img
+    /* ----- create DOM overlays for bitmap and crop window ----- */
+    const mkOverlay = (corners: string[]) => {
+      const el = document.createElement('div') as HTMLDivElement & {
+        _handles?: Record<string, HTMLDivElement>
+      }
+      el.className = 'sel-overlay interactive'
+      document.body.appendChild(el)
+      const handleMap: Record<string, HTMLDivElement> = {}
+      corners.forEach(c => {
+        const h = document.createElement('div')
+        h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`
+        h.dataset.corner = c
+        el.appendChild(h)
+        handleMap[c] = h
+      })
+      el._handles = handleMap
+
+      const forward = (ev: PointerEvent) => ({
+        clientX: ev.clientX,
+        clientY: ev.clientY,
+        button : ev.button,
+        buttons: ev.buttons,
+        ctrlKey: ev.ctrlKey,
+        shiftKey: ev.shiftKey,
+        altKey  : ev.altKey,
+        metaKey : ev.metaKey,
+        bubbles : true,
+        cancelable: true,
+      })
+      const bridge = (e: PointerEvent) => {
+        const down = new MouseEvent('mousedown', forward(e))
+        this.fc.upperCanvasEl.dispatchEvent(down)
+        const move = (ev: PointerEvent) =>
+          this.fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
+        const up = (ev: PointerEvent) => {
+          this.fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev)))
+          document.removeEventListener('pointermove', move)
+          document.removeEventListener('pointerup', up)
+        }
+        document.addEventListener('pointermove', move)
+        document.addEventListener('pointerup', up)
+        e.preventDefault()
+      }
+      const relayMove = (ev: PointerEvent) =>
+        this.fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
+      el.addEventListener('pointerdown', bridge)
+      el.addEventListener('pointermove', relayMove)
+      this.cleanup.push(() => {
+        el.removeEventListener('pointerdown', bridge)
+        el.removeEventListener('pointermove', relayMove)
+        el.remove()
+      })
+      return el
+    }
+
+    this.imgDom = mkOverlay(['tl','tr','br','bl'])
+    this.frameDom = mkOverlay(['tl','tr','br','bl'])
+    this.syncDom()
     // allow freeform scaling of the crop window
     const prevUniformScaling = this.fc.uniformScaling
     const prevUniScaleKey    = this.fc.uniScaleKey
@@ -747,6 +808,8 @@ export class CropTool {
       this.panX = 0
       this.panY = 0
     }
+    if (this.imgDom) { this.imgDom.remove(); this.imgDom = null }
+    if (this.frameDom) { this.frameDom.remove(); this.frameDom = null }
     // ensure any leftover overlay is cleared
     const ctx = (this.fc as any).contextTop
     if (ctx) this.fc.clearContext(ctx)
@@ -900,5 +963,41 @@ export class CropTool {
     if (this.img?.hasControls)   this.img.drawControls(ctx);
     if (this.frame?.hasControls) this.frame.drawControls(ctx);
     ctx.restore()
+
+    this.syncDom()
+  }
+
+  private syncDom = () => {
+    if (!this.imgDom || !this.frameDom || !this.img || !this.frame) return
+    const rect = this.fc.upperCanvasEl.getBoundingClientRect()
+    const vt = this.fc.viewportTransform || [1,0,0,1,0,0]
+
+    const sync = (obj: fabric.Object, el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement> }) => {
+      const box = obj.getBoundingRect(true, true)
+      const left   = rect.left + vt[4] + box.left * this.SCALE
+      const top    = rect.top  + vt[5] + box.top  * this.SCALE
+      const width  = box.width  * this.SCALE
+      const height = box.height * this.SCALE
+      el.style.left = `${left}px`
+      el.style.top = `${top}px`
+      el.style.width = `${width}px`
+      el.style.height = `${height}px`
+      if (el._handles) {
+        const midX = width / 2
+        const midY = height / 2
+        const h = el._handles
+        if (h.tl) { h.tl.style.left = '0px'; h.tl.style.top = '0px' }
+        if (h.tr) { h.tr.style.left = `${width}px`; h.tr.style.top = '0px' }
+        if (h.br) { h.br.style.left = `${width}px`; h.br.style.top = `${height}px` }
+        if (h.bl) { h.bl.style.left = '0px'; h.bl.style.top = `${height}px` }
+        if (h.ml) { h.ml.style.left = '0px'; h.ml.style.top = `${midY}px` }
+        if (h.mr) { h.mr.style.left = `${width}px`; h.mr.style.top = `${midY}px` }
+        if (h.mt) { h.mt.style.left = `${midX}px`; h.mt.style.top = '0px' }
+        if (h.mb) { h.mb.style.left = `${midX}px`; h.mb.style.top = `${height}px` }
+      }
+    }
+
+    sync(this.img, this.imgDom)
+    sync(this.frame, this.frameDom)
   }
 }
