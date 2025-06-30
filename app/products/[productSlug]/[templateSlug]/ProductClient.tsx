@@ -69,21 +69,21 @@ export default function ProductClient({
             {variants.map(v => (
               <li key={v.variantHandle}>
                 <label
-                  className={`flex items-center gap-4 p-3 border rounded-md cursor-pointer ${selected === v.variantHandle ? 'border-[--walty-orange] bg-[--walty-cream]' : 'border-gray-300'}`}
+                  className={`flex items-center gap-4 p-3 border-2 rounded-md cursor-pointer w-[65%] ${selected === v.variantHandle ? 'border-[--walty-orange] bg-[--walty-cream]' : 'border-gray-300'}`}
                 >
                   <Image
                     src={ICONS[v.variantHandle] ?? '/icons/classic_card_icon.svg'}
                     alt=""
-                    width={40}
-                    height={40}
+                    width={52}
+                    height={52}
                   />
-                  <div className="flex-1">
-                    <div className="font-medium">{v.title}</div>
+                  <div className="flex-1 flex flex-col space-y-1">
+                    <div className="font-bold">{v.title}</div>
                     {v.blurb && (
                       <p className="text-sm text-gray-600">{v.blurb}</p>
                     )}
                     {typeof v.price === 'number' && (
-                      <div className="mt-1 font-semibold">£{v.price.toFixed(2)}</div>
+                      <div className="font-normal">£{v.price.toFixed(2)}</div>
                     )}
                   </div>
                   <input
