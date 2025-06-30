@@ -3,7 +3,19 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 
-interface Variant { title: string; variantHandle: string; slug: string }
+function iconFor(handle: string): string {
+  if (handle.includes('mini')) return 'mini_card_icon.svg'
+  if (handle.includes('large')) return 'giant_card_icon.svg'
+  return 'classic_card_icon.svg'
+}
+
+interface Variant {
+  title: string
+  variantHandle: string
+  slug: string
+  price: number
+  blurb?: string
+}
 
 export default function ProductClient({
   title,
@@ -56,22 +68,34 @@ export default function ProductClient({
           <ul className="space-y-2">
             {variants.map(v => (
               <li key={v.variantHandle}>
-                <label className="flex items-center gap-2">
+                <label
+                  className={`flex items-center gap-4 border rounded-md p-3 w-full justify-between ${
+                    selected === v.variantHandle ? 'border-[--walty-orange] bg-[--walty-cream]' : 'border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-start gap-3 flex-1">
+                    <Image src={`/icons/${iconFor(v.variantHandle)}`} alt="" width={40} height={40} />
+                    <div className="flex-1">
+                      <div className="font-medium">{v.title}</div>
+                      {v.blurb && <div className="text-sm text-gray-500">{v.blurb}</div>}
+                      <div className="text-sm font-semibold">£{v.price.toFixed(2)}</div>
+                    </div>
+                  </div>
                   <input
                     type="radio"
                     name="variant"
                     value={v.variantHandle}
+                    checked={selected === v.variantHandle}
                     onChange={() => setSelected(v.variantHandle)}
                     className="accent-[--walty-orange]"
                   />
-                  {v.title}
                 </label>
               </li>
             ))}
           </ul>
           <Link
             href={`/cards/${slug}/customise`}
-            className="inline-block bg-[--walty-orange] text-white px-6 py-3 rounded text-center w-full"
+            className="mt-2 block w-full rounded bg-[--walty-orange] px-6 py-3 text-center text-white"
           >
             Personalise →
           </Link>
