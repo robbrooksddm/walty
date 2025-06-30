@@ -94,7 +94,7 @@ html {
 @layer utilities {
   .sel-overlay {
     @apply absolute pointer-events-none box-border z-40;
-    border:1px dashed #2EC4B6; /* SEL_COLOR */
+    border:1px solid #2EC4B6; /* SEL_COLOR */
   }
   .sel-overlay.interactive {
     @apply pointer-events-auto;
@@ -108,6 +108,7 @@ html {
     border-radius:50%;
     transform:translate(-50%,-50%);
     pointer-events:auto;
+    box-shadow:0 0 2px rgba(0,0,0,0.15);
   }
   .sel-overlay .handle.side {
     width:4px;
@@ -122,4 +123,32 @@ html {
   .sel-overlay .handle.mr { cursor:ew-resize; }
   .sel-overlay .handle.mt,
   .sel-overlay .handle.mb { cursor:ns-resize; }
+}
+
+/* --- crop window DOM overlay --- */
+@layer utilities {
+  .crop-overlay {
+    @apply absolute pointer-events-none box-border z-40;
+    border:1px solid #2EC4B6;
+  }
+  .crop-overlay.interactive { @apply pointer-events-auto; }
+  .crop-overlay .handle {
+    position:absolute;
+    width:8px;
+    height:8px;
+    box-sizing:border-box;
+    border:2px solid #fff;
+    border-right:none;
+    border-bottom:none;
+    transform:translate(-50%,-50%);
+    box-shadow:0 0 3px rgba(0,0,0,0.35);
+    pointer-events:auto;
+  }
+  .crop-overlay .handle.tr { transform:translate(-50%,-50%) rotate(90deg); }
+  .crop-overlay .handle.br { transform:translate(-50%,-50%) rotate(180deg); }
+  .crop-overlay .handle.bl { transform:translate(-50%,-50%) rotate(270deg); }
+  .crop-overlay .handle.tl,
+  .crop-overlay .handle.br { cursor:nwse-resize; }
+  .crop-overlay .handle.tr,
+  .crop-overlay .handle.bl { cursor:nesw-resize; }
 }

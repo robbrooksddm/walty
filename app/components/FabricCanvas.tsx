@@ -612,7 +612,7 @@ useEffect(() => {
   selDomRef.current = selEl;
 
   const cropEl = document.createElement('div');
-  cropEl.className = 'sel-overlay interactive';
+  cropEl.className = 'crop-overlay interactive';
   cropEl.style.display = 'none';
   document.body.appendChild(cropEl);
   cropDomRef.current = cropEl;
@@ -629,9 +629,9 @@ useEffect(() => {
   (selEl as any)._handles = handleMap;
 
   const cropHandles: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  ['tl','tr','br','bl'].forEach(c => {
     const h = document.createElement('div');
-    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
+    h.className = `handle ${c}`;
     h.dataset.corner = c;
     cropEl.appendChild(h);
     cropHandles[c] = h;
@@ -927,14 +927,14 @@ const drawOverlay = (
     const h = el._handles
     const midX = width / 2
     const midY = height / 2
-    h.tl.style.left = '0px';      h.tl.style.top = '0px'
-    h.tr.style.left = `${width}px`; h.tr.style.top = '0px'
-    h.br.style.left = `${width}px`; h.br.style.top = `${height}px`
-    h.bl.style.left = '0px';      h.bl.style.top = `${height}px`
-    h.ml.style.left = '0px';      h.ml.style.top = `${midY}px`
-    h.mr.style.left = `${width}px`; h.mr.style.top = `${midY}px`
-    h.mt.style.left = `${midX}px`; h.mt.style.top = '0px'
-    h.mb.style.left = `${midX}px`; h.mb.style.top = `${height}px`
+    if (h.tl) { h.tl.style.left = '0px';      h.tl.style.top = '0px' }
+    if (h.tr) { h.tr.style.left = `${width}px`; h.tr.style.top = '0px' }
+    if (h.br) { h.br.style.left = `${width}px`; h.br.style.top = `${height}px` }
+    if (h.bl) { h.bl.style.left = '0px';      h.bl.style.top = `${height}px` }
+    if (h.ml) { h.ml.style.left = '0px';      h.ml.style.top = `${midY}px` }
+    if (h.mr) { h.mr.style.left = `${width}px`; h.mr.style.top = `${midY}px` }
+    if (h.mt) { h.mt.style.left = `${midX}px`; h.mt.style.top = '0px' }
+    if (h.mb) { h.mb.style.left = `${midX}px`; h.mb.style.top = `${height}px` }
   }
 }
 
