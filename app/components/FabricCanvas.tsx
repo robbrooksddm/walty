@@ -612,7 +612,7 @@ useEffect(() => {
   selDomRef.current = selEl;
 
   const cropEl = document.createElement('div');
-  cropEl.className = 'sel-overlay interactive';
+  cropEl.className = 'sel-overlay crop interactive';
   cropEl.style.display = 'none';
   document.body.appendChild(cropEl);
   cropDomRef.current = cropEl;
@@ -927,14 +927,25 @@ const drawOverlay = (
     const h = el._handles
     const midX = width / 2
     const midY = height / 2
-    h.tl.style.left = '0px';      h.tl.style.top = '0px'
-    h.tr.style.left = `${width}px`; h.tr.style.top = '0px'
-    h.br.style.left = `${width}px`; h.br.style.top = `${height}px`
-    h.bl.style.left = '0px';      h.bl.style.top = `${height}px`
-    h.ml.style.left = '0px';      h.ml.style.top = `${midY}px`
-    h.mr.style.left = `${width}px`; h.mr.style.top = `${midY}px`
-    h.mt.style.left = `${midX}px`; h.mt.style.top = '0px'
-    h.mb.style.left = `${midX}px`; h.mb.style.top = `${height}px`
+    const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const
+    corners.forEach(pos => {
+      const handle = h[pos]
+      if (obj.controls && (obj.controls as any)[pos]) {
+        handle.style.display = 'block'
+        switch (pos) {
+          case 'tl': handle.style.left = '0px';       handle.style.top = '0px'; break
+          case 'tr': handle.style.left = `${width}px`; handle.style.top = '0px'; break
+          case 'br': handle.style.left = `${width}px`; handle.style.top = `${height}px`; break
+          case 'bl': handle.style.left = '0px';       handle.style.top = `${height}px`; break
+          case 'ml': handle.style.left = '0px';       handle.style.top = `${midY}px`; break
+          case 'mr': handle.style.left = `${width}px`; handle.style.top = `${midY}px`; break
+          case 'mt': handle.style.left = `${midX}px`; handle.style.top = '0px'; break
+          case 'mb': handle.style.left = `${midX}px`; handle.style.top = `${height}px`; break
+        }
+      } else {
+        handle.style.display = 'none'
+      }
+    })
   }
 }
 
