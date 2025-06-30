@@ -492,7 +492,7 @@ const handlePreview = () => {
 }
 
 /* helper – gather pages and rendered images once */
-const collectProofData = (showGuides = false) => {
+const collectProofData = async (showGuides = false) => {
   canvasMap.forEach(fc => {
     const tool = (fc as any)?._cropTool as CropTool | undefined
     if (tool?.isActive) tool.commit()
@@ -504,16 +504,17 @@ const collectProofData = (showGuides = false) => {
 
   const pages = useEditor.getState().pages
   const pageImages: string[] = []
-  canvasMap.forEach(fc => {
-    if (!fc) { pageImages.push(''); return }
+  for (const fc of canvasMap) {
+    if (!fc) { pageImages.push(''); continue }
     const guides = fc.getObjects().filter(o => (o as any)._guide)
     guides.forEach(g => g.set('visible', showGuides))
     fc.renderAll()
+    await new Promise(r => setTimeout(r, 50))
     pageImages.push(
       fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT() })
     )
     guides.forEach(g => g.set('visible', true))
-  })
+  }
   return { pages, pageImages }
 }
 
@@ -544,7 +545,7 @@ const generateProofURL = async (variantHandle: string): Promise<string | null> =
   const product = products.find(p => p.variantHandle === variantHandle)
   const sku = product?.slug ?? variantHandle
   const showGuides = product?.showProofSafeArea ?? false
-  const { pages, pageImages } = collectProofData(showGuides)
+  const { pages, pageImages } = await collectProofData(showGuides)
   const blob = await fetchProofBlob(sku, `${variantHandle}.jpg`, pages, pageImages)
   if (!blob) return null
 
@@ -583,7 +584,7 @@ const handleProofAll = async () => {
 
   const zip = new JSZip()
   for (const p of products) {
-    const { pages, pageImages } = collectProofData(p.showProofSafeArea)
+    const { pages, pageImages } = await collectProofData(p.showProofSafeArea)
     const name = `${p.slug}.jpg`
     const blob = await fetchProofBlob(p.slug, name, pages, pageImages)
     if (blob) zip.file(name, blob)
