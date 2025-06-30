@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import ProductClient from './ProductClient'
 import { sanityPreview } from '@/sanity/lib/client'
 import { urlFor } from '@/sanity/lib/image'
+import SiteFooter from '@/components/site/SiteFooter'
 
 export default async function ProductPage({
   params,
@@ -36,12 +37,15 @@ export default async function ProductPage({
   }
 
   return (
-    <ProductClient
-      title={data.title}
-      slug={data.slug.current}
-      description={data.description}
-      images={images}
-      variants={data.variants || []}
-    />
+    <>
+      <ProductClient
+        title={data.title}
+        slug={data.slug.current}
+        description={data.description}
+        images={images}
+        variants={data.variants || []}
+      />
+      <SiteFooter />
+    </>
   )
 }
