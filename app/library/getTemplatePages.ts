@@ -23,6 +23,7 @@ export interface TemplateProduct {
   title: string
   variantHandle: string
   price?: number
+  blurb?: string
   printSpec?: PrintSpec
   showSafeArea?: boolean
   showProofSafeArea?: boolean
@@ -62,6 +63,7 @@ export async function getTemplatePages(
       "slug": slug.current,
       variantHandle,
       price,
+      blurb,
       "printSpec": coalesce(printSpec->, printSpec),
       "showSafeArea": ^.showSafeArea,
       "showProofSafeArea": ^.showProofSafeArea
@@ -96,6 +98,7 @@ export async function getTemplatePages(
       slug: string
       variantHandle: string
       price?: number
+      blurb?: string
       printSpec?: PrintSpec
       showSafeArea?: boolean
       showProofSafeArea?: boolean

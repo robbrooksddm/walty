@@ -3,7 +3,19 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 
-interface Variant { title: string; variantHandle: string; slug: string }
+const iconMap: Record<string, string> = {
+  'gc-mini': '/icons/mini_card_icon.svg',
+  'gc-classic': '/icons/classic_card_icon.svg',
+  'gc-large': '/icons/giant_card_icon.svg',
+}
+
+interface Variant {
+  title: string
+  variantHandle: string
+  slug: string
+  price?: number
+  blurb?: string
+}
 
 export default function ProductClient({
   title,
@@ -54,24 +66,44 @@ export default function ProductClient({
         <div className="space-y-4">
           <h1 className="text-2xl font-bold">{title}</h1>
           <ul className="space-y-2">
-            {variants.map(v => (
-              <li key={v.variantHandle}>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="variant"
-                    value={v.variantHandle}
-                    onChange={() => setSelected(v.variantHandle)}
-                    className="accent-[--walty-orange]"
-                  />
-                  {v.title}
-                </label>
-              </li>
-            ))}
+            {variants
+              .filter(v => iconMap[v.variantHandle])
+              .map(v => (
+                <li key={v.variantHandle}>
+                  <label
+                    className={`flex items-center justify-between gap-4 border rounded-lg p-3 w-full ${
+                      selected === v.variantHandle
+                        ? 'border-[--walty-orange] bg-[--walty-cream]'
+                        : 'border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <Image src={iconMap[v.variantHandle]} alt="" width={40} height={40} />
+                      <div>
+                        <div className="font-semibold">{v.title}</div>
+                        {v.blurb && (
+                          <p className="text-sm text-gray-600">{v.blurb}</p>
+                        )}
+                        {typeof v.price === 'number' && (
+                          <div className="text-sm mt-1">£{v.price.toFixed(2)}</div>
+                        )}
+                      </div>
+                    </div>
+                    <input
+                      type="radio"
+                      name="variant"
+                      value={v.variantHandle}
+                      checked={selected === v.variantHandle}
+                      onChange={() => setSelected(v.variantHandle)}
+                      className="accent-[--walty-orange]"
+                    />
+                  </label>
+                </li>
+              ))}
           </ul>
           <Link
             href={`/cards/${slug}/customise`}
-            className="inline-block bg-[--walty-orange] text-white px-6 py-3 rounded text-center w-full"
+            className="inline-block bg-[--walty-orange] text-white px-6 py-3 rounded text-center w-full mt-4"
           >
             Personalise →
           </Link>

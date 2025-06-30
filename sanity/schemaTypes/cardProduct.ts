@@ -52,6 +52,13 @@ export default defineType({
       validation: (Rule) => Rule.required().positive(),
     }),
 
+    defineField({
+      name : 'blurb',
+      type : 'string',
+      title: 'Short blurb',
+      description: 'Few words shown on the product page',
+    }),
+
     /* how the product should be printed */
     defineField({
       name: 'printSpec',
