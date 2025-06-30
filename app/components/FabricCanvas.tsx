@@ -678,8 +678,24 @@ useEffect(() => {
     document.addEventListener('pointerup', up)
     e.preventDefault()
   }
-  selEl.addEventListener('pointerdown', bridge)
-  cropEl.addEventListener('pointerdown', bridge)
+
+  const overlayDown = (which: 'sel' | 'crop') => (e: PointerEvent) => {
+    if (croppingRef.current && cropToolRef.current?.isActive) {
+      const tool = cropToolRef.current as any
+      const fcAct = fc.getActiveObject()
+      const frame = tool.frame as fabric.Object | undefined
+      const img   = tool.img   as fabric.Object | undefined
+      if (frame && img) {
+        const target = which === 'crop'
+          ? (fcAct === frame ? img : frame)
+          : fcAct
+        if (target && fcAct !== target) fc.setActiveObject(target)
+      }
+    }
+    bridge(e)
+  }
+  selEl.addEventListener('pointerdown', overlayDown('sel'))
+  cropEl.addEventListener('pointerdown', overlayDown('crop'))
 
   selEl.addEventListener('dblclick', e => {
     fc.upperCanvasEl.dispatchEvent(new MouseEvent('dblclick', forwardMouse(e)))
