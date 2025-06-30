@@ -18,7 +18,7 @@ export default defineType({
       validation: (Rule) => Rule.required(),
     }),
 
-    /* slug used in URLs (/products/{slug}) */
+    /* slug used in URLs (/<product-slug>/...) */
     defineField({
       name : 'slug',
       type : 'slug',

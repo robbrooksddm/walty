@@ -1,6 +1,7 @@
 // app/page.tsx
 import Image from "next/image";
 import Link from "next/link";
+import Footer from "@/components/site/Footer";
 import { Pencil, Truck, Star } from "lucide-react";
 import { recoleta } from "@/lib/fonts"; // ① <— brings in your local Recoleta
 import { sanityFetch } from "@/lib/sanityClient";
@@ -138,13 +139,7 @@ export default async function HomePage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="py-10 text-center text-sm" style={{ backgroundColor: teal, color: cream }}>
-        © {new Date().getFullYear()} Walty Ltd. All rights reserved.
-        {' '}
-        <Link href="/products/digital/test-27-jun-2025" className="underline ml-2">
-          Test product page
-        </Link>
-      </footer>
+      <Footer />
     </main>
   );
 }
