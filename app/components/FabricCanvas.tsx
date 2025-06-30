@@ -884,6 +884,8 @@ useEffect(() => {
   const endCrop = (e: fabric.IEvent) => {
     const img = e.target as fabric.Image | undefined;
     if (img) cropState.delete(img);
+    fc.requestRenderAll();
+    requestAnimationFrame(syncSel);
   };
 
   fc.on('before:transform', startCrop);
