@@ -35,6 +35,13 @@ export default defineType({
       validation: r => r.required(),
     }),
 
+    defineField({
+      name: 'blurb',
+      type: 'string',
+      title: 'Blurb',
+      description: 'Short description shown on the product page',
+    }),
+
 
     /* which mockup images define the preview */
     defineField({
