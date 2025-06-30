@@ -1219,6 +1219,7 @@ window.addEventListener('keydown', onKey)
       onReady(null)
       cropToolRef.current?.abort()
       isolateCrop(false)
+      fcRef.current = null
       fc.dispose()
       hoverDomRef.current?.remove()
       selDomRef.current?.remove()
@@ -1279,7 +1280,9 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
   // ② CORS flag only for http/https URLs
   const opts = srcUrl.startsWith('http') ? { crossOrigin: 'anonymous' } : undefined;
 
+  let doSync: (() => void) | undefined
   fabric.Image.fromURL(srcUrl, rawImg => {
+    if (!fcRef.current || fcRef.current !== fc) return
     const img = rawImg instanceof fabric.Image ? rawImg : new fabric.Image(rawImg);
 
     // keep original asset info so objToLayer can round-trip it
@@ -1357,7 +1360,7 @@ img.on('mouseup', () => {
               img.on('mouseout',  () => { ghost!.style.opacity = '0' })
             }
 
-            const doSync = () => canvasRef.current && ghost && syncGhost(img, ghost, canvasRef.current)
+            doSync = () => canvasRef.current && ghost && syncGhost(img, ghost, canvasRef.current)
             doSync()
             img.on('moving',   doSync)
                .on('scaling',  doSync)
@@ -1389,7 +1392,7 @@ img.on('mouseup', () => {
           fc.insertAt(img, idx, false)
           img.setCoords()
           fc.requestRenderAll()
-          doSync()
+          doSync?.()
           document.dispatchEvent(
             new CustomEvent('card-canvas-rendered', {
               detail: { pageIdx, canvas: fc },
