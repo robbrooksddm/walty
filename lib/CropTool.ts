@@ -545,13 +545,24 @@ export class CropTool {
       .on('scaling', (e: fabric.IEvent) => {
         // keep the pre‑determined opposite edges fixed
         const f = this.frame!;
+        // apply locked-edge offsets before clamping
         const w = f.width!  * f.scaleX!;
         const h = f.height! * f.scaleY!;
         if (anchorEdge.left   !== undefined) f.left = anchorEdge.left;
         if (anchorEdge.top    !== undefined) f.top  = anchorEdge.top;
         if (anchorEdge.right  !== undefined) f.left = anchorEdge.right  - w;
         if (anchorEdge.bottom !== undefined) f.top  = anchorEdge.bottom - h;
+
         this.clampFrame();            // keep window within bitmap limits
+
+        // clampFrame may adjust scaleX/scaleY – realign locked edges once more
+        const w2 = f.width! * f.scaleX!;
+        const h2 = f.height! * f.scaleY!;
+        if (anchorEdge.left   !== undefined) f.left = anchorEdge.left;
+        if (anchorEdge.top    !== undefined) f.top  = anchorEdge.top;
+        if (anchorEdge.right  !== undefined) f.left = anchorEdge.right  - w2;
+        if (anchorEdge.bottom !== undefined) f.top  = anchorEdge.bottom - h2;
+
         this.frame!.setCoords();
         this.updateMasks();
         this.frameScaling = true;       // flag ON while corner is dragged
