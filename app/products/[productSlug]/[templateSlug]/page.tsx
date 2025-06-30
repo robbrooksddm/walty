@@ -16,7 +16,7 @@ export default async function ProductPage({
       description,
       pages[]{ layers[]{ _type, src, srcUrl, bgImage } },
       coverImage,
-      "variants": products[]->variants[]->{ title, variantHandle, "slug": slug.current }
+      "variants": products[]->variants[]->{ title, blurb, price, variantHandle, "slug": slug.current }
     }`,
     { slug: templateSlug }
   )
