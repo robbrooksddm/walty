@@ -740,7 +740,7 @@ useEffect(() => {
           o.evented = prev.evt
         }
       })
-      map.clear()
+      savedInteractivityRef.current = new WeakMap()
     }
     fc.requestRenderAll()
   }
