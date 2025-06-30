@@ -36,7 +36,7 @@ export default function ProductClient({
 
   return (
     <main className="p-6 space-y-6 max-w-4xl mx-auto">
-      <div className="grid md:grid-cols-[auto_1fr] gap-6 items-start">
+      <div className="grid md:grid-cols-[auto_1fr] gap-8 items-start">
         <div className="space-y-2 flex flex-col items-center">
           <Image
             src={images[pageIdx]}
@@ -69,21 +69,21 @@ export default function ProductClient({
             {variants.map(v => (
               <li key={v.variantHandle}>
                 <label
-                  className={`flex items-center gap-4 p-3 border rounded-md cursor-pointer ${selected === v.variantHandle ? 'border-[--walty-orange] bg-[--walty-cream]' : 'border-gray-300'}`}
+                  className={`flex items-center gap-4 p-3 border-2 rounded-md cursor-pointer w-[65%] bg-white ${selected === v.variantHandle ? 'border-[--walty-orange] bg-[#f3dea8]' : 'border-gray-300'}`}
                 >
                   <Image
                     src={ICONS[v.variantHandle] ?? '/icons/classic_card_icon.svg'}
                     alt=""
-                    width={40}
-                    height={40}
+                    width={52}
+                    height={52}
                   />
-                  <div className="flex-1">
-                    <div className="font-medium">{v.title}</div>
+                  <div className="flex-1 flex flex-col space-y-1">
+                    <div className="font-bold">{v.title}</div>
                     {v.blurb && (
                       <p className="text-sm text-gray-600">{v.blurb}</p>
                     )}
                     {typeof v.price === 'number' && (
-                      <div className="mt-1 font-semibold">£{v.price.toFixed(2)}</div>
+                      <div className="font-normal">£{v.price.toFixed(2)}</div>
                     )}
                   </div>
                   <input
@@ -100,7 +100,7 @@ export default function ProductClient({
           </ul>
           <Link
             href={`/cards/${slug}/customise`}
-            className="block bg-[--walty-orange] text-white px-6 py-3 rounded text-center w-full mt-4"
+            className="block bg-[--walty-orange] text-white px-6 py-3 rounded text-center w-[65%] mt-4"
           >
             Personalise →
           </Link>
