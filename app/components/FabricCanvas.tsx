@@ -668,6 +668,8 @@ useEffect(() => {
 
   const bridge = (e: PointerEvent) => {
     const down = new MouseEvent('mousedown', forward(e))
+    const corner = (e.target as HTMLElement | null)?.dataset?.corner
+    if (corner) (down as any).corner = corner
     fc.upperCanvasEl.dispatchEvent(down)
     const move = (ev: PointerEvent) =>
       fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
