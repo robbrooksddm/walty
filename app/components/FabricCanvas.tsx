@@ -693,6 +693,17 @@ useEffect(() => {
   selEl.addEventListener('pointerdown', onSelDown)
   cropEl.addEventListener('pointerdown', onCropDown)
 
+  const bringSelFront = () => {
+    selEl.style.zIndex = '41'
+    cropEl.style.zIndex = '40'
+  }
+  const bringCropFront = () => {
+    cropEl.style.zIndex = '41'
+    selEl.style.zIndex = '40'
+  }
+  selEl.addEventListener('pointerenter', bringSelFront)
+  cropEl.addEventListener('pointerenter', bringCropFront)
+
   selEl.addEventListener('dblclick', e => {
     fc.upperCanvasEl.dispatchEvent(new MouseEvent('dblclick', forwardMouse(e)))
   })
@@ -1242,6 +1253,8 @@ window.addEventListener('keydown', onKey)
       fc.off('after:render', syncSel);
       selEl.removeEventListener('pointerdown', onSelDown)
       cropEl.removeEventListener('pointerdown', onCropDown)
+      selEl.removeEventListener('pointerenter', bringSelFront)
+      cropEl.removeEventListener('pointerenter', bringCropFront)
       onReady(null)
       cropToolRef.current?.abort()
       isolateCrop(false)
