@@ -143,13 +143,9 @@ export class CropTool {
     const offsetY = Math.max(0, -br.top)  * this.SCALE
 
     if (offsetX || offsetY) {
-      this.fc.relativePan(new fabric.Point(offsetX, offsetY))
-      this.panX = offsetX
-      this.panY = offsetY
-      if (wrapper) {
-        wrapper.scrollLeft += offsetX
-        wrapper.scrollTop  += offsetY
-      }
+      // Ensure the canvas is large enough for visibility
+      // without shifting its on‑screen position.
+      this.panX = this.panY = 0
     }
 
     const needW = Math.max(this.baseW + offsetX,
