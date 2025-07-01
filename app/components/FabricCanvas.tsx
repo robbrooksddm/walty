@@ -267,14 +267,16 @@ const syncGhost = (
   img   : fabric.Image,
   ghost : HTMLDivElement,
   canvas: HTMLCanvasElement,
+  zoom  : number,
 ) => {
   const canvasRect = canvas.getBoundingClientRect()
   const { left, top, width, height } = img.getBoundingRect()
 
-  ghost.style.left   = `${canvasRect.left + left   * SCALE}px`
-  ghost.style.top    = `${canvasRect.top  + top    * SCALE}px`
-  ghost.style.width  = `${width  * SCALE}px`
-  ghost.style.height = `${height * SCALE}px`
+  const s = SCALE * zoom
+  ghost.style.left   = `${canvasRect.left + left   * s}px`
+  ghost.style.top    = `${canvasRect.top  + top    * s}px`
+  ghost.style.width  = `${width  * s}px`
+  ghost.style.height = `${height * s}px`
 }
 
 const getSrcUrl = (raw: Layer): string | undefined => {
@@ -462,10 +464,11 @@ interface Props {
   onReady    : (fc: fabric.Canvas | null) => void
   isCropping?: boolean
   onCroppingChange?: (state: boolean) => void
+  zoom?: number
   mode?: Mode
 }
 
-export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, mode = 'customer' }: Props) {
+export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, zoom = 1, mode = 'customer' }: Props) {
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const maskRectsRef = useRef<fabric.Rect[]>([]);
@@ -726,18 +729,29 @@ useEffect(() => {
     setMenuPos({ x: e.clientX, y: e.clientY });
   };
   fc.upperCanvasEl.addEventListener('contextmenu', ctxMenu);
-  /* --- keep Fabric’s wrapper the same size as the visible preview --- */
-  const container = canvasRef.current!.parentElement as HTMLElement | null;
-  if (container) {
-    container.style.width  = `${PREVIEW_W}px`;
-    container.style.height = `${PREVIEW_H}px`;
-    container.style.maxWidth  = `${PREVIEW_W}px`;
-    container.style.maxHeight = `${PREVIEW_H}px`;
-    containerRef.current = container;
-  }
+ 
+/* --- keep Fabric’s wrapper the same size as the visible preview --- */
+const container = canvasRef.current!.parentElement as HTMLElement | null;
+if (container) {
+  const pad = 4 * zoom;
+
+  // zoom-aware dimensions
+  container.style.width     = `${PREVIEW_W * zoom}px`;
+  container.style.height    = `${PREVIEW_H * zoom}px`;
+  container.style.maxWidth  = `${PREVIEW_W * zoom}px`;
+  container.style.maxHeight = `${PREVIEW_H * zoom}px`;
+  container.style.padding   = `${pad}px`;
+  container.style.overflow  = 'visible';
+
+  // keep the ref so scroll listeners work
+  containerRef.current = container;
+}
+  
+  fc.setWidth(PREVIEW_W * zoom)
+  fc.setHeight(PREVIEW_H * zoom)
   addBackdrop(fc);
   // keep the preview scaled to the configured width
-  fc.setViewportTransform([SCALE, 0, 0, SCALE, 0, 0]);
+  fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0]);
   enableSnapGuides(fc, PAGE_W, PAGE_H);
 
   /* keep event coordinates aligned with any scroll/resize */
@@ -1281,6 +1295,33 @@ window.addEventListener('keydown', onKey)
 }, [])
 /* ---------- END mount once ----------------------------------- */
 
+  /* ---------- apply zoom -------------------------------------- */
+  useEffect(() => {
+    const fc = fcRef.current
+    const canvas = canvasRef.current
+    if (!fc || !canvas) return
+
+    const container = canvas.parentElement as HTMLElement | null
+    if (container) {
+      const pad = 4 * zoom
+      container.style.width = `${PREVIEW_W * zoom}px`
+      container.style.height = `${PREVIEW_H * zoom}px`
+      container.style.maxWidth = `${PREVIEW_W * zoom}px`
+      container.style.maxHeight = `${PREVIEW_H * zoom}px`
+      container.style.padding = `${pad}px`
+      container.style.overflow = 'visible'
+    }
+
+    fc.setWidth(PREVIEW_W * zoom)
+    fc.setHeight(PREVIEW_H * zoom)
+    canvas.style.width = `${PREVIEW_W * zoom}px`
+    canvas.style.height = `${PREVIEW_H * zoom}px`
+
+    fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
+    if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
+    fc.requestRenderAll()
+  }, [zoom])
+
   /* ---------- crop mode toggle ------------------------------ */
   useEffect(() => {
     const fc = fcRef.current
@@ -1407,7 +1448,8 @@ img.on('mouseup', () => {
               img.on('mouseout',  () => { ghost!.style.opacity = '0' })
             }
 
-            doSync = () => canvasRef.current && ghost && syncGhost(img, ghost, canvasRef.current)
+doSync = () =>
+  canvasRef.current && ghost && syncGhost(img, ghost, canvasRef.current, zoom)
             doSync()
             img.on('moving',   doSync)
                .on('scaling',  doSync)
@@ -1489,9 +1531,9 @@ img.on('mouseup', () => {
     <>
       <canvas
         ref={canvasRef}
-        width={PREVIEW_W}
-        height={PREVIEW_H}
-        style={{ width: PREVIEW_W, height: PREVIEW_H }}   // lock CSS size
+        width={PREVIEW_W * zoom}
+        height={PREVIEW_H * zoom}
+        style={{ width: PREVIEW_W * zoom, height: PREVIEW_H * zoom }}
         className="border shadow rounded"
       />
       {menuPos && (

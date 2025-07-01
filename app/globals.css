@@ -29,7 +29,7 @@
 body {
   background : var(--background);
   color      : var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-ambit), Arial, Helvetica, sans-serif;
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -68,7 +68,16 @@ html {
 }
 
 /* Fabric preview wrapper — clips the ghost */
-.canvas-wrap { @apply relative overflow-hidden; }
+.canvas-wrap {
+  @apply relative;
+  overflow: visible !important;
+}
+
+/* allow Fabric selection boxes outside the canvas bounds */
+.canvas-container {
+  /* allow Fabric selection boxes outside the canvas bounds */
+  overflow: visible !important;
+}
 
 /* Center icon + helper text */
 .ai-ghost__center {

@@ -18,7 +18,7 @@ export default defineType({
       validation: (Rule) => Rule.required(),
     }),
 
-    /* slug used in URLs (/products/{slug}) */
+    /* slug used in URLs (/{slug}/template) */
     defineField({
       name : 'slug',
       type : 'slug',
@@ -33,6 +33,13 @@ export default defineType({
       title: 'Variant handle',
       description: 'Short stable key like "gc-mini"',
       validation: r => r.required(),
+    }),
+
+    defineField({
+      name : 'blurb',
+      type : 'string',
+      title: 'Blurb',
+      description: 'Short description shown on the product page',
     }),
 
 
