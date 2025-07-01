@@ -467,6 +467,7 @@ interface Props {
 
 export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, mode = 'customer' }: Props) {
   const canvasRef    = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLElement | null>(null)
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const maskRectsRef = useRef<fabric.Rect[]>([]);
   const hoverRef     = useRef<fabric.Rect | null>(null)
@@ -602,20 +603,17 @@ useEffect(() => {
   const hoverEl = document.createElement('div');
   hoverEl.className = 'sel-overlay';
   hoverEl.style.display = 'none';
-  document.body.appendChild(hoverEl);
   hoverDomRef.current = hoverEl;
 
   const selEl = document.createElement('div');
   selEl.className = 'sel-overlay interactive';
   selEl.style.display = 'none';
-  document.body.appendChild(selEl);
   selDomRef.current = selEl;
   (selEl as any)._object = null;
 
   const cropEl = document.createElement('div');
   cropEl.className = 'sel-overlay interactive';
   cropEl.style.display = 'none';
-  document.body.appendChild(cropEl);
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
@@ -731,6 +729,11 @@ useEffect(() => {
     container.style.height = `${PREVIEW_H}px`;
     container.style.maxWidth  = `${PREVIEW_W}px`;
     container.style.maxHeight = `${PREVIEW_H}px`;
+    container.style.position = 'relative';
+    containerRef.current = container;
+    container.appendChild(hoverEl);
+    container.appendChild(selEl);
+    container.appendChild(cropEl);
   }
   addBackdrop(fc);
   // keep the preview scaled to the configured width
@@ -742,6 +745,7 @@ useEffect(() => {
   updateOffset();
   window.addEventListener('scroll', updateOffset, { passive: true });
   window.addEventListener('resize', updateOffset);
+  container?.addEventListener('scroll', updateOffset, { passive: true });
 
   const isolateCrop = (active: boolean) => {
     const map = savedInteractivityRef.current
@@ -939,9 +943,10 @@ const drawOverlay = (
 ) => {
   const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
+  const cont = containerRef.current?.getBoundingClientRect()
   const vt   = fc.viewportTransform || [1,0,0,1,0,0]
-  const left   = rect.left + vt[4] + (box.left - PAD) * SCALE
-  const top    = rect.top  + vt[5] + (box.top - PAD) * SCALE
+  const left   = rect.left - (cont?.left || 0) + vt[4] + (box.left - PAD) * SCALE
+  const top    = rect.top  - (cont?.top  || 0) + vt[5] + (box.top - PAD) * SCALE
   const width  = (box.width  + PAD * 2) * SCALE
   const height = (box.height + PAD * 2) * SCALE
   el.style.left   = `${left}px`
@@ -1246,6 +1251,7 @@ window.addEventListener('keydown', onKey)
       if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
       window.removeEventListener('scroll', updateOffset)
       window.removeEventListener('resize', updateOffset)
+      container?.removeEventListener('scroll', updateOffset)
       // tidy up crop‑tool listeners
       fc.off('mouse:dblclick', dblHandler);
       window.removeEventListener('keydown', keyCropHandler);
