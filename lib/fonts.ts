@@ -14,3 +14,12 @@ export const recoleta = localFont({
     { path: "../app/fonts/Recoleta-SemiBold.woff", weight: "600", style: "normal" },
   ],
 });
+
+export const ambit = localFont({
+  variable: "--font-ambit",
+  display: "swap",
+  src: [
+    { path: "../app/fonts/Ambit Regular.otf", weight: "400", style: "normal" },
+    { path: "../app/fonts/Ambit SemiBold.otf", weight: "600", style: "normal" },
+  ],
+});
