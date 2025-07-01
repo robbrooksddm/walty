@@ -56,7 +56,7 @@ export class CropTool {
   }
 
   /* ─────────────── public API ──────────────────────────────────── */
-  public begin (img: fabric.Image) {
+  public begin (img: fabric.Image, panIntoView = false) {
     if (this.isActive) return
 
     // ensure a clean slate on every new crop session
@@ -142,7 +142,7 @@ export class CropTool {
     const offsetX = Math.max(0, -br.left) * this.SCALE
     const offsetY = Math.max(0, -br.top)  * this.SCALE
 
-    if (offsetX || offsetY) {
+    if (panIntoView && (offsetX || offsetY)) {
       this.fc.relativePan(new fabric.Point(offsetX, offsetY))
       this.panX = offsetX
       this.panY = offsetY
@@ -150,12 +150,15 @@ export class CropTool {
         wrapper.scrollLeft += offsetX
         wrapper.scrollTop  += offsetY
       }
+    } else {
+      this.panX = 0
+      this.panY = 0
     }
 
-    const needW = Math.max(this.baseW + offsetX,
-                           offsetX + (br.left + br.width) * this.SCALE)
-    const needH = Math.max(this.baseH + offsetY,
-                           offsetY + (br.top + br.height) * this.SCALE)
+    const needW = Math.max(this.baseW + (panIntoView ? offsetX : 0),
+                           (panIntoView ? offsetX : 0) + (br.left + br.width) * this.SCALE)
+    const needH = Math.max(this.baseH + (panIntoView ? offsetY : 0),
+                           (panIntoView ? offsetY : 0) + (br.top + br.height) * this.SCALE)
     if (needW > this.baseW || needH > this.baseH) {
       this.fc.setWidth(needW)
       this.fc.setHeight(needH)
