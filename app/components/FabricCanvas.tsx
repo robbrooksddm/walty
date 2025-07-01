@@ -683,11 +683,15 @@ useEffect(() => {
   const onSelDown = (e: PointerEvent) => {
     const obj = (selEl as any)._object as fabric.Object | null
     if (obj) fc.setActiveObject(obj)
+    selEl.style.zIndex = '41'
+    cropEl.style.zIndex = '40'
     bridge(e)
   }
   const onCropDown = (e: PointerEvent) => {
     const obj = (cropEl as any)._object as fabric.Object | null
     if (obj) fc.setActiveObject(obj)
+    cropEl.style.zIndex = '41'
+    selEl.style.zIndex = '40'
     bridge(e)
   }
   selEl.addEventListener('pointerdown', onSelDown)
@@ -704,6 +708,26 @@ useEffect(() => {
     fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
   selEl.addEventListener('pointermove', relayMove)
   cropEl.addEventListener('pointermove', relayMove)
+
+  const reorderOverlays = (ev: PointerEvent) => {
+    if (!croppingRef.current || !cropDomRef.current || ev.buttons !== 0) return
+    const cEl = cropDomRef.current
+    const sEl = selDomRef.current!
+    const x = ev.clientX
+    const y = ev.clientY
+    const cR = cEl.getBoundingClientRect()
+    const sR = sEl.getBoundingClientRect()
+    const inCrop = x >= cR.left && x <= cR.right && y >= cR.top && y <= cR.bottom
+    const inSel  = x >= sR.left && x <= sR.right && y >= sR.top && y <= sR.bottom
+    if (inCrop && (!inSel || cEl.style.zIndex !== '41')) {
+      cEl.style.zIndex = '41'
+      sEl.style.zIndex = '40'
+    } else if (inSel && (!inCrop || sEl.style.zIndex !== '41')) {
+      sEl.style.zIndex = '41'
+      cEl.style.zIndex = '40'
+    }
+  }
+  document.addEventListener('pointermove', reorderOverlays)
 
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
@@ -1242,6 +1266,7 @@ window.addEventListener('keydown', onKey)
       fc.off('after:render', syncSel);
       selEl.removeEventListener('pointerdown', onSelDown)
       cropEl.removeEventListener('pointerdown', onCropDown)
+      document.removeEventListener('pointermove', reorderOverlays)
       onReady(null)
       cropToolRef.current?.abort()
       isolateCrop(false)
