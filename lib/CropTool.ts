@@ -22,6 +22,15 @@ export class CropTool {
   private ratio: number | null = null
   /** original bitmap state before cropping */
   private orig: { left:number; top:number; cropX:number; cropY:number; width:number; height:number; } | null = null;
+  /** canvas size before cropping */
+  private baseW = 0;
+  private baseH = 0;
+  private panX = 0;
+  private panY = 0;
+  private wrapStyles: { w:string; h:string; mw:string; mh:string; transform:string } | null = null;
+  private wrapper: HTMLElement | null = null;
+  private scrollLeft = 0;
+  private scrollTop = 0;
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
 
@@ -112,6 +121,51 @@ export class CropTool {
       selectable     : true,
       evented        : true,
     }).setCoords()
+
+    /* temporarily enlarge the canvas so the full image stays visible */
+    this.baseW = this.fc.getWidth()
+    this.baseH = this.fc.getHeight()
+    const wrapper = (this.fc as any).wrapperEl as HTMLElement | undefined
+    if (wrapper) {
+      this.wrapper = wrapper
+      this.scrollLeft = wrapper.scrollLeft
+      this.scrollTop = wrapper.scrollTop
+      this.wrapStyles = {
+        w : wrapper.style.width,
+        h : wrapper.style.height,
+        mw: wrapper.style.maxWidth,
+        mh: wrapper.style.maxHeight,
+        transform: wrapper.style.transform,
+      }
+    }
+    const br = img.getBoundingRect(true, true)
+
+    const offsetX = Math.max(0, -br.left) * this.SCALE
+    const offsetY = Math.max(0, -br.top)  * this.SCALE
+
+    if (offsetX || offsetY) {
+      this.fc.relativePan(new fabric.Point(offsetX, offsetY))
+      this.panX = offsetX
+      this.panY = offsetY
+      if (wrapper) {
+        wrapper.style.transform = `translate(${-offsetX}px, ${-offsetY}px)`
+      }
+    }
+
+    const needW = Math.max(this.baseW + offsetX,
+                           offsetX + (br.left + br.width) * this.SCALE)
+    const needH = Math.max(this.baseH + offsetY,
+                           offsetY + (br.top + br.height) * this.SCALE)
+    if (needW > this.baseW || needH > this.baseH) {
+      this.fc.setWidth(needW)
+      this.fc.setHeight(needH)
+      if (wrapper) {
+        wrapper.style.width = `${needW}px`
+        wrapper.style.height = `${needH}px`
+        wrapper.style.maxWidth = `${needW}px`
+        wrapper.style.maxHeight = `${needH}px`
+      }
+    }
     this.cleanup.push(() => {
       img.lockUniScaling  = prevLockUniScaling
       img.centeredScaling = prevCenteredScaling
@@ -686,6 +740,36 @@ export class CropTool {
     this.masks = [];
     if (!keep) this.fc.discardActiveObject()
     this.fc.requestRenderAll()
+    if (this.baseW && this.baseH) {
+      this.fc.setWidth(this.baseW)
+      this.fc.setHeight(this.baseH)
+      const wrap = (this.fc as any).wrapperEl as HTMLElement | undefined
+      if (wrap && this.wrapStyles) {
+        wrap.style.width = this.wrapStyles.w
+        wrap.style.height = this.wrapStyles.h
+        wrap.style.maxWidth = this.wrapStyles.mw
+        wrap.style.maxHeight = this.wrapStyles.mh
+        wrap.style.transform = this.wrapStyles.transform
+      }
+      this.baseW = 0
+      this.baseH = 0
+      this.wrapStyles = null
+    }
+    if (this.panX || this.panY) {
+      this.fc.relativePan(new fabric.Point(-this.panX, -this.panY))
+      if (this.wrapper) {
+        this.wrapper.scrollLeft = this.scrollLeft
+        this.wrapper.scrollTop  = this.scrollTop
+        if (this.wrapStyles) {
+          this.wrapper.style.transform = this.wrapStyles.transform
+        }
+      }
+      this.panX = 0
+      this.panY = 0
+      this.wrapper = null
+      this.scrollLeft = 0
+      this.scrollTop = 0
+    }
     // ensure any leftover overlay is cleared
     const ctx = (this.fc as any).contextTop
     if (ctx) this.fc.clearContext(ctx)

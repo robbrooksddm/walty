@@ -544,6 +544,16 @@ const generateProofURL = async (variantHandle: string): Promise<string | null> =
   const product = products.find(p => p.variantHandle === variantHandle)
   const sku = product?.slug ?? variantHandle
   const showGuides = product?.showProofSafeArea ?? false
+  if (typeof document !== 'undefined') {
+    try {
+      if (document.fonts?.status !== 'loaded') {
+        await document.fonts.ready
+      }
+      await new Promise(r => requestAnimationFrame(() => r(null)))
+    } catch {
+      /* ignore */
+    }
+  }
   const { pages, pageImages } = collectProofData(showGuides)
   const blob = await fetchProofBlob(sku, `${variantHandle}.jpg`, pages, pageImages)
   if (!blob) return null
@@ -580,6 +590,17 @@ const generateProofURLs = async (
 const handleProofAll = async () => {
   if (!products.length) return
   const JSZip = (await import('jszip')).default
+
+  if (typeof document !== 'undefined') {
+    try {
+      if (document.fonts?.status !== 'loaded') {
+        await document.fonts.ready
+      }
+      await new Promise(r => requestAnimationFrame(() => r(null)))
+    } catch {
+      /* ignore */
+    }
+  }
 
   const zip = new JSZip()
   for (const p of products) {
@@ -758,7 +779,11 @@ const handleProofAll = async () => {
         />
       )}
       
-      <div className="flex flex-1 relative bg-[--walty-cream]">
+      <div
+        className={`flex flex-1 relative bg-[--walty-cream] mx-auto ${
+          isCropMode ? '' : 'lg:max-w-6xl'
+        }`}
+      >
         {/* global overlays */}
         <CoachMark
           anchor={anchor}
@@ -785,7 +810,12 @@ const handleProofAll = async () => {
         {!isCropMode && <LayerPanel />}
 
         {/* main */}
-        <div className="flex flex-col flex-1 min-h-0 mx-auto w-full">
+        <div
+          className={`flex flex-col flex-1 min-h-0 mx-auto ${
+            isCropMode ? 'max-w-none' : 'max-w-[868px]'
+          }`}
+        >
+
           {!isCropMode && (activeType === 'text' ? (
             <TextToolbar
               canvas={activeFc}
@@ -812,7 +842,9 @@ const handleProofAll = async () => {
 
                     {/* canvases */}
           <div
-            className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6"
+            className={`flex-1 flex justify-center items-start bg-[--walty-cream] pt-6 gap-6 ${
+              isCropMode ? 'overflow-visible' : 'overflow-auto'
+            }`}
             onMouseDown={e => {
               if (e.target === e.currentTarget && activeFc) {
                 activeFc.discardActiveObject();
@@ -820,6 +852,7 @@ const handleProofAll = async () => {
               }
             }}
           >
+            
             {/* front */}
             <div className={section === 'front' ? box : 'hidden'} style={{ width: boxWidth }}>
               <FabricCanvas
