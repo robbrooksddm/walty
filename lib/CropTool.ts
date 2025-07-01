@@ -122,50 +122,12 @@ export class CropTool {
       evented        : true,
     }).setCoords()
 
-    /* temporarily enlarge the canvas so the full image stays visible */
-    this.baseW = this.fc.getWidth()
-    this.baseH = this.fc.getHeight()
-    const wrapper = (this.fc as any).wrapperEl as HTMLElement | undefined
-    if (wrapper) {
-      this.wrapper = wrapper
-      this.scrollLeft = wrapper.scrollLeft
-      this.scrollTop = wrapper.scrollTop
-      this.wrapStyles = {
-        w : wrapper.style.width,
-        h : wrapper.style.height,
-        mw: wrapper.style.maxWidth,
-        mh: wrapper.style.maxHeight,
-      }
-    }
-    const br = img.getBoundingRect(true, true)
-
-    const offsetX = Math.max(0, -br.left) * this.SCALE
-    const offsetY = Math.max(0, -br.top)  * this.SCALE
-
-    if (offsetX || offsetY) {
-      this.fc.relativePan(new fabric.Point(offsetX, offsetY))
-      this.panX = offsetX
-      this.panY = offsetY
-      if (wrapper) {
-        wrapper.scrollLeft += offsetX
-        wrapper.scrollTop  += offsetY
-      }
-    }
-
-    const needW = Math.max(this.baseW + offsetX,
-                           offsetX + (br.left + br.width) * this.SCALE)
-    const needH = Math.max(this.baseH + offsetY,
-                           offsetY + (br.top + br.height) * this.SCALE)
-    if (needW > this.baseW || needH > this.baseH) {
-      this.fc.setWidth(needW)
-      this.fc.setHeight(needH)
-      if (wrapper) {
-        wrapper.style.width = `${needW}px`
-        wrapper.style.height = `${needH}px`
-        wrapper.style.maxWidth = `${needW}px`
-        wrapper.style.maxHeight = `${needH}px`
-      }
-    }
+    /*
+     * Previously the canvas was temporarily enlarged and repositioned so the
+     * entire image stayed within view when cropping.  With DOM overlays
+     * selection can happen outside the canvas bounds, so keep the canvas size
+     * and position unchanged to avoid a jarring jump when crop mode starts.
+     */
     this.cleanup.push(() => {
       img.lockUniScaling  = prevLockUniScaling
       img.centeredScaling = prevCenteredScaling
