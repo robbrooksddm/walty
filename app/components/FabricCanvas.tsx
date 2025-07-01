@@ -1017,7 +1017,14 @@ fc.on('selection:created', () => {
   window.addEventListener('scroll', scrollHandler, { passive:true })
   window.addEventListener('resize', scrollHandler)
 })
-.on('selection:updated', syncSel)
+.on('selection:updated', () => {
+  syncSel()
+  if (!scrollHandler) {
+    scrollHandler = () => syncSel()
+    window.addEventListener('scroll', scrollHandler, { passive:true })
+    window.addEventListener('resize', scrollHandler)
+  }
+})
 .on('selection:cleared', () => {
   if (scrollHandler) {
     window.removeEventListener('scroll', scrollHandler)
