@@ -27,7 +27,7 @@ export class CropTool {
   private baseH = 0;
   private panX = 0;
   private panY = 0;
-  private wrapStyles: { w:string; h:string; mw:string; mh:string } | null = null;
+  private wrapStyles: { w:string; h:string; mw:string; mh:string; transform:string } | null = null;
   private wrapper: HTMLElement | null = null;
   private scrollLeft = 0;
   private scrollTop = 0;
@@ -135,6 +135,7 @@ export class CropTool {
         h : wrapper.style.height,
         mw: wrapper.style.maxWidth,
         mh: wrapper.style.maxHeight,
+        transform: wrapper.style.transform,
       }
     }
     const br = img.getBoundingRect(true, true)
@@ -147,8 +148,7 @@ export class CropTool {
       this.panX = offsetX
       this.panY = offsetY
       if (wrapper) {
-        wrapper.scrollLeft += offsetX
-        wrapper.scrollTop  += offsetY
+        wrapper.style.transform = `translate(${-offsetX}px, ${-offsetY}px)`
       }
     }
 
@@ -749,6 +749,7 @@ export class CropTool {
         wrap.style.height = this.wrapStyles.h
         wrap.style.maxWidth = this.wrapStyles.mw
         wrap.style.maxHeight = this.wrapStyles.mh
+        wrap.style.transform = this.wrapStyles.transform
       }
       this.baseW = 0
       this.baseH = 0
@@ -759,6 +760,9 @@ export class CropTool {
       if (this.wrapper) {
         this.wrapper.scrollLeft = this.scrollLeft
         this.wrapper.scrollTop  = this.scrollTop
+        if (this.wrapStyles) {
+          this.wrapper.style.transform = this.wrapStyles.transform
+        }
       }
       this.panX = 0
       this.panY = 0
