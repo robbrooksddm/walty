@@ -681,11 +681,13 @@ useEffect(() => {
     e.preventDefault()
   }
   const onSelDown = (e: PointerEvent) => {
+    reorderOverlays(e)
     const obj = (selEl as any)._object as fabric.Object | null
     if (obj) fc.setActiveObject(obj)
     bridge(e)
   }
   const onCropDown = (e: PointerEvent) => {
+    reorderOverlays(e)
     const obj = (cropEl as any)._object as fabric.Object | null
     if (obj) fc.setActiveObject(obj)
     bridge(e)
@@ -705,7 +707,7 @@ useEffect(() => {
   selEl.addEventListener('pointermove', relayMove)
   cropEl.addEventListener('pointermove', relayMove)
 
-  const reorderOverlays = (ev: PointerEvent) => {
+  function reorderOverlays(ev: PointerEvent) {
     if (!croppingRef.current || !cropDomRef.current) return
     const cEl = cropDomRef.current
     const sEl = selDomRef.current!
