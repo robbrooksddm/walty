@@ -142,15 +142,10 @@ export class CropTool {
     const offsetX = Math.max(0, -br.left) * this.SCALE
     const offsetY = Math.max(0, -br.top)  * this.SCALE
 
-    if (offsetX || offsetY) {
-      this.fc.relativePan(new fabric.Point(offsetX, offsetY))
-      this.panX = offsetX
-      this.panY = offsetY
-      if (wrapper) {
-        wrapper.scrollLeft += offsetX
-        wrapper.scrollTop  += offsetY
-      }
-    }
+    // Do not reposition the canvas when cropping begins; overlays keep
+    // everything interactive even outside the original bounds. We still
+    // compute `offsetX`/`offsetY` so the canvas can expand to reveal any
+    // overspill, but the viewport and scroll position remain unchanged.
 
     const needW = Math.max(this.baseW + offsetX,
                            offsetX + (br.left + br.width) * this.SCALE)
@@ -755,11 +750,7 @@ export class CropTool {
       this.wrapStyles = null
     }
     if (this.panX || this.panY) {
-      this.fc.relativePan(new fabric.Point(-this.panX, -this.panY))
-      if (this.wrapper) {
-        this.wrapper.scrollLeft = this.scrollLeft
-        this.wrapper.scrollTop  = this.scrollTop
-      }
+      // No viewport adjustment was made in begin(), so nothing to undo.
       this.panX = 0
       this.panY = 0
       this.wrapper = null
