@@ -477,6 +477,8 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const selDomRef    = useRef<HTMLDivElement | null>(null)
   const cropDomRef   = useRef<HTMLDivElement | null>(null)
 
+  const containerRef = useRef<HTMLElement | null>(null)
+
   const cropToolRef = useRef<CropTool | null>(null)
   const croppingRef = useRef(false)
 
@@ -731,6 +733,7 @@ useEffect(() => {
     container.style.height = `${PREVIEW_H}px`;
     container.style.maxWidth  = `${PREVIEW_W}px`;
     container.style.maxHeight = `${PREVIEW_H}px`;
+    containerRef.current = container;
   }
   addBackdrop(fc);
   // keep the preview scaled to the configured width
@@ -742,6 +745,7 @@ useEffect(() => {
   updateOffset();
   window.addEventListener('scroll', updateOffset, { passive: true });
   window.addEventListener('resize', updateOffset);
+  containerRef.current?.addEventListener('scroll', updateOffset, { passive: true });
 
   const isolateCrop = (active: boolean) => {
     const map = savedInteractivityRef.current
@@ -1016,12 +1020,14 @@ fc.on('selection:created', () => {
   scrollHandler = () => syncSel()
   window.addEventListener('scroll', scrollHandler, { passive:true })
   window.addEventListener('resize', scrollHandler)
+  containerRef.current?.addEventListener('scroll', scrollHandler, { passive:true })
 })
 .on('selection:updated', syncSel)
 .on('selection:cleared', () => {
   if (scrollHandler) {
     window.removeEventListener('scroll', scrollHandler)
     window.removeEventListener('resize', scrollHandler)
+    containerRef.current?.removeEventListener('scroll', scrollHandler)
     scrollHandler = null
   }
   selDomRef.current && (selDomRef.current.style.display = 'none')
@@ -1246,6 +1252,7 @@ window.addEventListener('keydown', onKey)
       if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
       window.removeEventListener('scroll', updateOffset)
       window.removeEventListener('resize', updateOffset)
+      containerRef.current?.removeEventListener('scroll', updateOffset)
       // tidy up crop‑tool listeners
       fc.off('mouse:dblclick', dblHandler);
       window.removeEventListener('keydown', keyCropHandler);
@@ -1267,6 +1274,7 @@ window.addEventListener('keydown', onKey)
       if (scrollHandler) {
         window.removeEventListener('scroll', scrollHandler)
         window.removeEventListener('resize', scrollHandler)
+        containerRef.current?.removeEventListener('scroll', scrollHandler)
       }
     }
 // eslint-disable-next-line react-hooks/exhaustive-deps
