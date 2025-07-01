@@ -1015,12 +1015,14 @@ fc.on('selection:created', () => {
   requestAnimationFrame(syncSel)
   scrollHandler = () => syncSel()
   window.addEventListener('scroll', scrollHandler, { passive:true })
+  document.addEventListener('scroll', scrollHandler, { passive:true, capture:true })
   window.addEventListener('resize', scrollHandler)
 })
 .on('selection:updated', syncSel)
 .on('selection:cleared', () => {
   if (scrollHandler) {
     window.removeEventListener('scroll', scrollHandler)
+    document.removeEventListener('scroll', scrollHandler, true)
     window.removeEventListener('resize', scrollHandler)
     scrollHandler = null
   }
@@ -1243,7 +1245,10 @@ window.addEventListener('keydown', onKey)
     return () => {
       fc.upperCanvasEl.removeEventListener('contextmenu', ctxMenu)
       window.removeEventListener('keydown', onKey)
-      if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
+      if (scrollHandler) {
+        window.removeEventListener('scroll', scrollHandler)
+        document.removeEventListener('scroll', scrollHandler, true)
+      }
       window.removeEventListener('scroll', updateOffset)
       window.removeEventListener('resize', updateOffset)
       // tidy up crop‑tool listeners
@@ -1266,6 +1271,7 @@ window.addEventListener('keydown', onKey)
       cropDomRef.current?.remove()
       if (scrollHandler) {
         window.removeEventListener('scroll', scrollHandler)
+        document.removeEventListener('scroll', scrollHandler, true)
         window.removeEventListener('resize', scrollHandler)
       }
     }
