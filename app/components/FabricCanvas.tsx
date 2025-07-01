@@ -269,10 +269,11 @@ const syncGhost = (
   canvas: HTMLCanvasElement,
 ) => {
   const canvasRect = canvas.getBoundingClientRect()
+  const wrapperRect = wrapRef.current?.getBoundingClientRect() || { left:0, top:0 }
   const { left, top, width, height } = img.getBoundingRect()
 
-  ghost.style.left   = `${canvasRect.left + left   * SCALE}px`
-  ghost.style.top    = `${canvasRect.top  + top    * SCALE}px`
+  ghost.style.left   = `${canvasRect.left - wrapperRect.left + left   * SCALE}px`
+  ghost.style.top    = `${canvasRect.top  - wrapperRect.top  + top    * SCALE}px`
   ghost.style.width  = `${width  * SCALE}px`
   ghost.style.height = `${height * SCALE}px`
 }
@@ -473,6 +474,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const hydrating    = useRef(false)
   const isEditing    = useRef(false)
 
+  const wrapRef      = useRef<HTMLDivElement | null>(null)
   const hoverDomRef  = useRef<HTMLDivElement | null>(null)
   const selDomRef    = useRef<HTMLDivElement | null>(null)
   const cropDomRef   = useRef<HTMLDivElement | null>(null)
@@ -599,23 +601,25 @@ useEffect(() => {
   fc.preserveObjectStacking = true;
 
   /* create DOM overlays for hover & selection */
+  const rootEl = wrapRef.current ?? document.body
+
   const hoverEl = document.createElement('div');
   hoverEl.className = 'sel-overlay';
   hoverEl.style.display = 'none';
-  document.body.appendChild(hoverEl);
+  rootEl.appendChild(hoverEl);
   hoverDomRef.current = hoverEl;
 
   const selEl = document.createElement('div');
   selEl.className = 'sel-overlay interactive';
   selEl.style.display = 'none';
-  document.body.appendChild(selEl);
+  rootEl.appendChild(selEl);
   selDomRef.current = selEl;
   (selEl as any)._object = null;
 
   const cropEl = document.createElement('div');
   cropEl.className = 'sel-overlay interactive';
   cropEl.style.display = 'none';
-  document.body.appendChild(cropEl);
+  rootEl.appendChild(cropEl);
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
@@ -938,10 +942,11 @@ const drawOverlay = (
   el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
 ) => {
   const box  = obj.getBoundingRect(true, true)
-  const rect = canvasRef.current!.getBoundingClientRect()
+  const canvasRect  = canvasRef.current!.getBoundingClientRect()
+  const wrapperRect = wrapRef.current?.getBoundingClientRect() || { left:0, top:0 }
   const vt   = fc.viewportTransform || [1,0,0,1,0,0]
-  const left   = rect.left + vt[4] + (box.left - PAD) * SCALE
-  const top    = rect.top  + vt[5] + (box.top - PAD) * SCALE
+  const left   = canvasRect.left - wrapperRect.left + vt[4] + (box.left - PAD) * SCALE
+  const top    = canvasRect.top  - wrapperRect.top  + vt[5] + (box.top - PAD) * SCALE
   const width  = (box.width  + PAD * 2) * SCALE
   const height = (box.height + PAD * 2) * SCALE
   el.style.left   = `${left}px`
@@ -1046,11 +1051,12 @@ fc.on('mouse:over', e => {
   if (!t || (t as any)._guide || t === hoverHL) return
   if (fc.getActiveObject() === t) return           // skip active selection
   const box = t.getBoundingRect(true, true)
-  const rect = canvasRef.current!.getBoundingClientRect()
+  const canvasRect = canvasRef.current!.getBoundingClientRect()
+  const wrapperRect = wrapRef.current?.getBoundingClientRect() || { left:0, top:0 }
   const vt = fc.viewportTransform || [1,0,0,1,0,0]
   hoverDomRef.current && (() => {
-    hoverDomRef.current.style.left = `${rect.left + vt[4] + (box.left - PAD) * SCALE}px`
-    hoverDomRef.current.style.top = `${rect.top + vt[5] + (box.top - PAD) * SCALE}px`
+    hoverDomRef.current.style.left = `${canvasRect.left - wrapperRect.left + vt[4] + (box.left - PAD) * SCALE}px`
+    hoverDomRef.current.style.top = `${canvasRect.top - wrapperRect.top + vt[5] + (box.top - PAD) * SCALE}px`
     hoverDomRef.current.style.width = `${(box.width + PAD * 2) * SCALE}px`
     hoverDomRef.current.style.height = `${(box.height + PAD * 2) * SCALE}px`
     hoverDomRef.current.style.display = 'block'
@@ -1478,7 +1484,7 @@ img.on('mouseup', () => {
 
   /* ---------- render ----------------------------------------- */
   return (
-    <>
+    <div ref={wrapRef} className="relative">
       <canvas
         ref={canvasRef}
         width={PREVIEW_W}
@@ -1494,6 +1500,6 @@ img.on('mouseup', () => {
           onClose={() => setMenuPos(null)}
         />
       )}
-    </>
+    </div>
   )
 }
