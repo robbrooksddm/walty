@@ -31,15 +31,17 @@ export class CropTool {
   private wrapper: HTMLElement | null = null;
   private scrollLeft = 0;
   private scrollTop = 0;
+  private fitInView: boolean;
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
 
   constructor (fc: fabric.Canvas, scale: number, selColour: string,
-               onChange?: (state: boolean) => void) {
+               onChange?: (state: boolean) => void, fitInView = true) {
     this.fc      = fc
     this.SCALE   = scale
     this.SEL     = selColour
     this.onChange= onChange
+    this.fitInView = fitInView
   }
 
   public setRatio (r: number | null) {
@@ -123,47 +125,50 @@ export class CropTool {
     }).setCoords()
 
     /* temporarily enlarge the canvas so the full image stays visible */
-    this.baseW = this.fc.getWidth()
-    this.baseH = this.fc.getHeight()
     const wrapper = (this.fc as any).wrapperEl as HTMLElement | undefined
-    if (wrapper) {
-      this.wrapper = wrapper
-      this.scrollLeft = wrapper.scrollLeft
-      this.scrollTop = wrapper.scrollTop
-      this.wrapStyles = {
-        w : wrapper.style.width,
-        h : wrapper.style.height,
-        mw: wrapper.style.maxWidth,
-        mh: wrapper.style.maxHeight,
-      }
-    }
     const br = img.getBoundingRect(true, true)
 
-    const offsetX = Math.max(0, -br.left) * this.SCALE
-    const offsetY = Math.max(0, -br.top)  * this.SCALE
-
-    if (offsetX || offsetY) {
-      this.fc.relativePan(new fabric.Point(offsetX, offsetY))
-      this.panX = offsetX
-      this.panY = offsetY
+    if (this.fitInView) {
+      this.baseW = this.fc.getWidth()
+      this.baseH = this.fc.getHeight()
       if (wrapper) {
-        wrapper.scrollLeft += offsetX
-        wrapper.scrollTop  += offsetY
+        this.wrapper = wrapper
+        this.scrollLeft = wrapper.scrollLeft
+        this.scrollTop = wrapper.scrollTop
+        this.wrapStyles = {
+          w : wrapper.style.width,
+          h : wrapper.style.height,
+          mw: wrapper.style.maxWidth,
+          mh: wrapper.style.maxHeight,
+        }
       }
-    }
 
-    const needW = Math.max(this.baseW + offsetX,
-                           offsetX + (br.left + br.width) * this.SCALE)
-    const needH = Math.max(this.baseH + offsetY,
-                           offsetY + (br.top + br.height) * this.SCALE)
-    if (needW > this.baseW || needH > this.baseH) {
-      this.fc.setWidth(needW)
-      this.fc.setHeight(needH)
-      if (wrapper) {
-        wrapper.style.width = `${needW}px`
-        wrapper.style.height = `${needH}px`
-        wrapper.style.maxWidth = `${needW}px`
-        wrapper.style.maxHeight = `${needH}px`
+      const offsetX = Math.max(0, -br.left) * this.SCALE
+      const offsetY = Math.max(0, -br.top)  * this.SCALE
+
+      if (offsetX || offsetY) {
+        this.fc.relativePan(new fabric.Point(offsetX, offsetY))
+        this.panX = offsetX
+        this.panY = offsetY
+        if (wrapper) {
+          wrapper.scrollLeft += offsetX
+          wrapper.scrollTop  += offsetY
+        }
+      }
+
+      const needW = Math.max(this.baseW + offsetX,
+                             offsetX + (br.left + br.width) * this.SCALE)
+      const needH = Math.max(this.baseH + offsetY,
+                             offsetY + (br.top + br.height) * this.SCALE)
+      if (needW > this.baseW || needH > this.baseH) {
+        this.fc.setWidth(needW)
+        this.fc.setHeight(needH)
+        if (wrapper) {
+          wrapper.style.width = `${needW}px`
+          wrapper.style.height = `${needH}px`
+          wrapper.style.maxWidth = `${needW}px`
+          wrapper.style.maxHeight = `${needH}px`
+        }
       }
     }
     this.cleanup.push(() => {
@@ -740,7 +745,7 @@ export class CropTool {
     this.masks = [];
     if (!keep) this.fc.discardActiveObject()
     this.fc.requestRenderAll()
-    if (this.baseW && this.baseH) {
+    if (this.fitInView && this.baseW && this.baseH) {
       this.fc.setWidth(this.baseW)
       this.fc.setHeight(this.baseH)
       const wrap = (this.fc as any).wrapperEl as HTMLElement | undefined
@@ -754,7 +759,7 @@ export class CropTool {
       this.baseH = 0
       this.wrapStyles = null
     }
-    if (this.panX || this.panY) {
+    if (this.fitInView && (this.panX || this.panY)) {
       this.fc.relativePan(new fabric.Point(-this.panX, -this.panY))
       if (this.wrapper) {
         this.wrapper.scrollLeft = this.scrollLeft

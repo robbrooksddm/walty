@@ -780,7 +780,7 @@ useEffect(() => {
     croppingRef.current = state
     isolateCrop(state)
     onCroppingChange?.(state)
-  })
+  }, false)
   cropToolRef.current = crop;
   ;(fc as any)._cropTool = crop;
   (fc as any)._syncLayers = () => syncLayersFromCanvas(fc, pageIdx);
