@@ -143,13 +143,11 @@ export class CropTool {
     const offsetY = Math.max(0, -br.top)  * this.SCALE
 
     if (offsetX || offsetY) {
+      // Keep current scroll position while shifting the viewport
+      // so left/top overspill remains accessible.
       this.fc.relativePan(new fabric.Point(offsetX, offsetY))
       this.panX = offsetX
       this.panY = offsetY
-      if (wrapper) {
-        wrapper.scrollLeft += offsetX
-        wrapper.scrollTop  += offsetY
-      }
     }
 
     const needW = Math.max(this.baseW + offsetX,
