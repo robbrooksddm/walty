@@ -142,16 +142,6 @@ export class CropTool {
     const offsetX = Math.max(0, -br.left) * this.SCALE
     const offsetY = Math.max(0, -br.top)  * this.SCALE
 
-    if (offsetX || offsetY) {
-      this.fc.relativePan(new fabric.Point(offsetX, offsetY))
-      this.panX = offsetX
-      this.panY = offsetY
-      if (wrapper) {
-        wrapper.scrollLeft += offsetX
-        wrapper.scrollTop  += offsetY
-      }
-    }
-
     const needW = Math.max(this.baseW + offsetX,
                            offsetX + (br.left + br.width) * this.SCALE)
     const needH = Math.max(this.baseH + offsetY,
@@ -754,14 +744,9 @@ export class CropTool {
       this.baseH = 0
       this.wrapStyles = null
     }
-    if (this.panX || this.panY) {
-      this.fc.relativePan(new fabric.Point(-this.panX, -this.panY))
-      if (this.wrapper) {
-        this.wrapper.scrollLeft = this.scrollLeft
-        this.wrapper.scrollTop  = this.scrollTop
-      }
-      this.panX = 0
-      this.panY = 0
+    this.panX = 0
+    this.panY = 0
+    if (this.wrapper) {
       this.wrapper = null
       this.scrollLeft = 0
       this.scrollTop = 0
