@@ -742,6 +742,7 @@ useEffect(() => {
   updateOffset();
   window.addEventListener('scroll', updateOffset, { passive: true });
   window.addEventListener('resize', updateOffset);
+  container?.addEventListener('scroll', updateOffset, { passive: true });
 
   const isolateCrop = (active: boolean) => {
     const map = savedInteractivityRef.current
@@ -1016,12 +1017,14 @@ fc.on('selection:created', () => {
   scrollHandler = () => syncSel()
   window.addEventListener('scroll', scrollHandler, { passive:true })
   window.addEventListener('resize', scrollHandler)
+  container?.addEventListener('scroll', scrollHandler, { passive:true })
 })
 .on('selection:updated', syncSel)
 .on('selection:cleared', () => {
   if (scrollHandler) {
     window.removeEventListener('scroll', scrollHandler)
     window.removeEventListener('resize', scrollHandler)
+    container?.removeEventListener('scroll', scrollHandler)
     scrollHandler = null
   }
   selDomRef.current && (selDomRef.current.style.display = 'none')
@@ -1246,6 +1249,7 @@ window.addEventListener('keydown', onKey)
       if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
       window.removeEventListener('scroll', updateOffset)
       window.removeEventListener('resize', updateOffset)
+      container?.removeEventListener('scroll', updateOffset)
       // tidy up crop‑tool listeners
       fc.off('mouse:dblclick', dblHandler);
       window.removeEventListener('keydown', keyCropHandler);
