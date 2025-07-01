@@ -466,6 +466,7 @@ interface Props {
 }
 
 export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, mode = 'customer' }: Props) {
+  const wrapperRef   = useRef<HTMLDivElement>(null)
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const maskRectsRef = useRef<fabric.Rect[]>([]);
@@ -590,7 +591,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
 
 /* ---------- mount once --------------------------------------- */
 useEffect(() => {
-  if (!canvasRef.current) return
+  if (!canvasRef.current || !wrapperRef.current) return
 
   // Create Fabric using the <canvas> element’s own dimensions
   // – we’ll work in full‑size page units and simply scale the viewport.
@@ -602,20 +603,20 @@ useEffect(() => {
   const hoverEl = document.createElement('div');
   hoverEl.className = 'sel-overlay';
   hoverEl.style.display = 'none';
-  document.body.appendChild(hoverEl);
+  wrapperRef.current.appendChild(hoverEl);
   hoverDomRef.current = hoverEl;
 
   const selEl = document.createElement('div');
   selEl.className = 'sel-overlay interactive';
   selEl.style.display = 'none';
-  document.body.appendChild(selEl);
+  wrapperRef.current.appendChild(selEl);
   selDomRef.current = selEl;
   (selEl as any)._object = null;
 
   const cropEl = document.createElement('div');
   cropEl.className = 'sel-overlay interactive';
   cropEl.style.display = 'none';
-  document.body.appendChild(cropEl);
+  wrapperRef.current.appendChild(cropEl);
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
@@ -725,8 +726,9 @@ useEffect(() => {
   };
   fc.upperCanvasEl.addEventListener('contextmenu', ctxMenu);
   /* --- keep Fabric’s wrapper the same size as the visible preview --- */
-  const container = canvasRef.current!.parentElement as HTMLElement | null;
+  const container = wrapperRef.current;
   if (container) {
+    container.style.position = 'relative';
     container.style.width  = `${PREVIEW_W}px`;
     container.style.height = `${PREVIEW_H}px`;
     container.style.maxWidth  = `${PREVIEW_W}px`;
@@ -939,9 +941,12 @@ const drawOverlay = (
 ) => {
   const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
+  const cont = wrapperRef.current?.getBoundingClientRect()
   const vt   = fc.viewportTransform || [1,0,0,1,0,0]
-  const left   = rect.left + vt[4] + (box.left - PAD) * SCALE
-  const top    = rect.top  + vt[5] + (box.top - PAD) * SCALE
+  const offX = cont ? rect.left - cont.left : rect.left
+  const offY = cont ? rect.top  - cont.top  : rect.top
+  const left   = offX + vt[4] + (box.left - PAD) * SCALE
+  const top    = offY + vt[5] + (box.top - PAD) * SCALE
   const width  = (box.width  + PAD * 2) * SCALE
   const height = (box.height + PAD * 2) * SCALE
   el.style.left   = `${left}px`
@@ -1047,10 +1052,13 @@ fc.on('mouse:over', e => {
   if (fc.getActiveObject() === t) return           // skip active selection
   const box = t.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
+  const cont = wrapperRef.current?.getBoundingClientRect()
   const vt = fc.viewportTransform || [1,0,0,1,0,0]
+  const offX = cont ? rect.left - cont.left : rect.left
+  const offY = cont ? rect.top  - cont.top  : rect.top
   hoverDomRef.current && (() => {
-    hoverDomRef.current.style.left = `${rect.left + vt[4] + (box.left - PAD) * SCALE}px`
-    hoverDomRef.current.style.top = `${rect.top + vt[5] + (box.top - PAD) * SCALE}px`
+    hoverDomRef.current.style.left = `${offX + vt[4] + (box.left - PAD) * SCALE}px`
+    hoverDomRef.current.style.top = `${offY + vt[5] + (box.top - PAD) * SCALE}px`
     hoverDomRef.current.style.width = `${(box.width + PAD * 2) * SCALE}px`
     hoverDomRef.current.style.height = `${(box.height + PAD * 2) * SCALE}px`
     hoverDomRef.current.style.display = 'block'
@@ -1478,7 +1486,7 @@ img.on('mouseup', () => {
 
   /* ---------- render ----------------------------------------- */
   return (
-    <>
+    <div ref={wrapperRef} className="relative">
       <canvas
         ref={canvasRef}
         width={PREVIEW_W}
@@ -1494,6 +1502,6 @@ img.on('mouseup', () => {
           onClose={() => setMenuPos(null)}
         />
       )}
-    </>
+    </div>
   )
 }
