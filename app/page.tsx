@@ -32,7 +32,7 @@ export default async function HomePage() {
         <div className="space-y-6 order-2 md:order-1">
           <h1
             /* ③ Headlines now guaranteed to render in Recoleta */
-            className="font-serif text-4xl md:text-5xl font-bold leading-tight"
+            className="text-display-h1"
             style={{ color: teal }}
           >
             Gift a card that<br className="hidden md:block" />
@@ -40,13 +40,13 @@ export default async function HomePage() {
             into frame-worthy art
           </h1>
 
-          <p className="text-lg max-w-md" style={{ color: brown }}>
+          <p className="text-body max-w-md" style={{ color: brown }}>
             Make a card as unique as they are—one they’ll want to frame, not throw away.
           </p>
 
           <Link
             href="/templates"
-            className="inline-block rounded-md px-8 py-3 font-semibold shadow"
+            className="inline-block rounded-md px-8 py-3 text-cta-sm shadow"
             style={{ backgroundColor: orange, color: cream }}
           >
             Design a Card
@@ -79,7 +79,7 @@ export default async function HomePage() {
           ].map(({ icon: Icon, title }) => (
             <div key={title} className="flex items-center gap-4 p-6 md:flex-1">
               <Icon className="w-7 h-7" style={{ color: orange }} />
-              <span className="font-medium" style={{ color: teal }}>{title}</span>
+              <span className="text-sub-head" style={{ color: teal }}>{title}</span>
             </div>
           ))}
         </div>
@@ -87,7 +87,7 @@ export default async function HomePage() {
 
       {/* TEMPLATE GRID */}
       <section id="templates" className="mx-auto max-w-7xl px-6 pb-24">
-        <h2 className="font-serif text-3xl font-bold text-center mb-12" style={{ color: teal }}>
+        <h2 className="text-display-h2 text-center mb-12" style={{ color: teal }}>
           Your Templates
         </h2>
 
@@ -117,20 +117,20 @@ export default async function HomePage() {
           height={80}
           className="mx-auto rounded-full mb-6"
         />
-        <p className="text-xl italic" style={{ color: brown }}>
+        <p className="text-body italic" style={{ color: brown }}>
           “A really unique and personal way to surprise your loved ones! My friend literally called me crying laughing when she got the cat card.”
         </p>
-        <span className="mt-4 block font-semibold" style={{ color: teal }}>— Jess P.</span>
+        <span className="mt-4 block text-sub-head" style={{ color: teal }}>— Jess P.</span>
       </section>
 
       {/* FINAL CTA */}
       <section className="text-center py-20" style={{ backgroundColor: orange, color: cream }}>
-        <h2 className="font-serif text-3xl font-bold mb-6">
+        <h2 className="text-display-h2 mb-6">
           Ready to make something they’ll keep forever?
         </h2>
         <Link
           href="/templates"
-          className="inline-block bg-white text-xl font-semibold px-8 py-4 rounded-md shadow"
+          className="inline-block bg-white px-8 py-4 text-cta-sm rounded-md shadow"
           style={{ color: orange }}
         >
           Get Started

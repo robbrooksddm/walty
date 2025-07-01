@@ -23,13 +23,13 @@ module.exports = {
       /* ——— Fonts (match CSS vars set by next/font) ——— */
       fontFamily: {
         // generic
-        sans:    ["var(--font-inter)", "Inter", "ui-sans-serif", "system-ui"],
-        display: ["var(--font-domine)", "Domine", "serif"],
+        sans:    ["var(--font-ambit)", "AmbitRegular", "ui-sans-serif", "system-ui"],
+        display: ["var(--font-recoleta)", "serif"],
         serif:   ["var(--font-recoleta)", "ui-serif", "serif"],
 
-        // handy shortcuts — use `font-recoleta` or `font-domine` directly
-        domine:   ["var(--font-domine)"],
+        // handy shortcut
         recoleta: ["var(--font-recoleta)"],
+        ambit:    ["var(--font-ambit)"],
       },
 
       /* ——— Custom motion for the Popover ——— */
@@ -41,6 +41,14 @@ module.exports = {
       },
       animation: {
         pop: "pop .15s ease-out forwards",
+      },
+
+      fontSize: {
+        'display-h1': ["3rem", { lineHeight: "1.1", fontWeight: "600", fontFamily: "var(--font-recoleta)" }],
+        'display-h2': ["2rem", { lineHeight: "1.1", fontWeight: "600", fontFamily: "var(--font-recoleta)" }],
+        'sub-head'  : ["1.5rem", { lineHeight: "1.1", fontWeight: "500", fontFamily: "var(--font-recoleta)" }],
+        body       : ["1.125rem", { lineHeight: "1.5", fontWeight: "400", fontFamily: "var(--font-ambit)" }],
+        'cta-sm'   : ["0.875rem", { lineHeight: "1.4", fontWeight: "600", fontFamily: "var(--font-ambit)" }],
       },
 
       /* ——— Extras ——— */
