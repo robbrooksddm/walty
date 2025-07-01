@@ -143,13 +143,22 @@ export class CropTool {
     const offsetY = Math.max(0, -br.top)  * this.SCALE
 
     if (offsetX || offsetY) {
-      this.fc.relativePan(new fabric.Point(offsetX, offsetY))
-      this.panX = offsetX
-      this.panY = offsetY
+      // Pan the viewport to keep any off-screen area visible
+      // but delay rendering until the scroll position is updated
+      const oldRender = (this.fc as any).renderOnAddRemove
+      ;(this.fc as any).renderOnAddRemove = false
+      const vpt = this.fc.viewportTransform.slice()
+      vpt[4] -= offsetX
+      vpt[5] -= offsetY
+      this.fc.setViewportTransform(vpt)
       if (wrapper) {
         wrapper.scrollLeft += offsetX
         wrapper.scrollTop  += offsetY
       }
+      ;(this.fc as any).renderOnAddRemove = oldRender
+      this.fc.requestRenderAll()
+      this.panX = offsetX
+      this.panY = offsetY
     }
 
     const needW = Math.max(this.baseW + offsetX,
