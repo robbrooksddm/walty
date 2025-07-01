@@ -705,6 +705,19 @@ useEffect(() => {
   selEl.addEventListener('pointermove', relayMove)
   cropEl.addEventListener('pointermove', relayMove)
 
+  const raiseSel = () => {
+    if (!croppingRef.current || !cropDomRef.current) return
+    selEl.style.zIndex = '41'
+    cropDomRef.current.style.zIndex = '40'
+  }
+  const raiseCrop = () => {
+    if (!croppingRef.current || !cropDomRef.current) return
+    cropDomRef.current.style.zIndex = '41'
+    selEl.style.zIndex = '40'
+  }
+  selEl.addEventListener('pointerenter', raiseSel)
+  cropEl.addEventListener('pointerenter', raiseCrop)
+
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1242,6 +1255,8 @@ window.addEventListener('keydown', onKey)
       fc.off('after:render', syncSel);
       selEl.removeEventListener('pointerdown', onSelDown)
       cropEl.removeEventListener('pointerdown', onCropDown)
+      selEl.removeEventListener('pointerenter', raiseSel)
+      cropEl.removeEventListener('pointerenter', raiseCrop)
       onReady(null)
       cropToolRef.current?.abort()
       isolateCrop(false)
