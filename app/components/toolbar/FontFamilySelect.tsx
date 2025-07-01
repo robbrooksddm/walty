@@ -15,9 +15,8 @@ const BASE_FONTS: Font[] = [
   { name: "Arial", family: "Arial, Helvetica, sans-serif" },
   { name: "Georgia", family: "Georgia, serif" },
   {
-    name: "Domine",
-    family: "Domine, serif",
-    url: "https://fonts.googleapis.com/css2?family=Domine:wght@400;700&display=swap",
+    name: "AmbitRegular",
+    family: "var(--font-ambit), sans-serif",
   },
   {
     name: "Recoleta",

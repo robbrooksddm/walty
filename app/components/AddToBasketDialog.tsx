@@ -80,7 +80,7 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
           leaveTo="opacity-0 scale-95"
         >
           <Dialog.Panel className="relative z-10 bg-white rounded shadow-lg w-[min(90vw,420px)] p-6 space-y-6">
-            <h2 className="font-domine text-xl text-[--walty-teal]">Choose an option</h2>
+            <h2 className="font-recoleta font-semibold text-xl text-[--walty-teal]">Choose an option</h2>
             <ul className="space-y-2">
               {options.map((opt) => (
                 <li key={opt.handle}>
