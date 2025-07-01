@@ -143,6 +143,10 @@ export class CropTool {
     const offsetY = Math.max(0, -br.top)  * this.SCALE
 
     if (offsetX || offsetY) {
+      // Pan the Fabric viewport so negative edges become visible,
+      // then scroll the wrapper to counteract the visual movement.
+      // This keeps the canvas visually fixed while still expanding
+      // the drawable area in all directions.
       this.fc.relativePan(new fabric.Point(offsetX, offsetY))
       this.panX = offsetX
       this.panY = offsetY
