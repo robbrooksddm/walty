@@ -1097,6 +1097,10 @@ const syncHover = () => {
 
 fc.on('selection:created', () => {
   hoverHL.visible = false
+  if (hoverDomRef.current) {
+    hoverDomRef.current.style.display = 'none'
+    ;(hoverDomRef.current as any)._object = null
+  }
   fc.requestRenderAll()
   selDomRef.current && (selDomRef.current.style.display = 'block')
   if (croppingRef.current && cropDomRef.current) {
@@ -1113,7 +1117,13 @@ fc.on('selection:created', () => {
   window.addEventListener('resize', scrollHandler)
   containerRef.current?.addEventListener('scroll', scrollHandler, { passive: true, capture: true })
 })
-.on('selection:updated', syncSel)
+.on('selection:updated', () => {
+  if (hoverDomRef.current) {
+    hoverDomRef.current.style.display = 'none'
+    ;(hoverDomRef.current as any)._object = null
+  }
+  syncSel()
+})
 .on('selection:cleared', () => {
   if (scrollHandler) {
     window.removeEventListener('scroll', scrollHandler)
