@@ -906,26 +906,74 @@ if (container) {
     if (corner === 'mr' || corner === 'ml') {
       if (corner === 'mr') {
         const maxW = st.startWidth + (st.natW - (st.startCropX + st.startWidth));
-        width = Math.min(newW, maxW);
+        if (newW <= maxW) {
+          width = Math.min(newW, st.natW - st.startCropX);
+        } else {
+          const baseW = st.natW - st.startCropX;
+          const factor = newW / maxW;
+          width  = baseW;
+          scaleX = st.startScaleX * factor;
+          scaleY = st.startScaleY * factor;
+          const bottom = st.startTop + st.startHeight * st.startScaleY;
+          left   = st.startLeft;
+          top    = bottom - st.startHeight * scaleY;
+        }
       } else {
         const maxW = st.startWidth + st.startCropX;
-        const clamped = Math.min(newW, maxW);
-        const diff = st.startWidth - clamped;
-        cropX = st.startCropX + diff;
-        width = clamped;
-        left  = st.startLeft + diff * st.startScaleX;
+        if (newW <= maxW) {
+          const diff = st.startWidth - newW;
+          cropX = st.startCropX + diff;
+          width = newW;
+          left  = st.startLeft + diff * st.startScaleX;
+        } else {
+          const baseW = st.startWidth + st.startCropX;
+          const factor = newW / maxW;
+          const right  = st.startLeft + st.startWidth * st.startScaleX;
+          const bottom = st.startTop + st.startHeight * st.startScaleY;
+          cropX  = 0;
+          width  = baseW;
+          scaleX = st.startScaleX * factor;
+          scaleY = st.startScaleY * factor;
+          left   = right - width * scaleX;
+          top    = bottom - st.startHeight * scaleY;
+        }
       }
     } else if (corner === 'mb' || corner === 'mt') {
       if (corner === 'mb') {
         const maxH = st.startHeight + (st.natH - (st.startCropY + st.startHeight));
-        height = Math.min(newH, maxH);
+        if (newH <= maxH) {
+          height = Math.min(newH, st.natH - st.startCropY);
+        } else {
+          const baseH = st.natH - st.startCropY;
+          const factor = newH / maxH;
+          const center = st.startLeft +
+            (st.startWidth * st.startScaleX) / 2;
+          height = baseH;
+          scaleX = st.startScaleX * factor;
+          scaleY = st.startScaleY * factor;
+          left   = center - (st.startWidth * scaleX) / 2;
+          top    = st.startTop;
+        }
       } else {
         const maxH = st.startHeight + st.startCropY;
-        const clamped = Math.min(newH, maxH);
-        const diff = st.startHeight - clamped;
-        cropY = st.startCropY + diff;
-        height = clamped;
-        top = st.startTop + diff * st.startScaleY;
+        if (newH <= maxH) {
+          const diff = st.startHeight - newH;
+          cropY = st.startCropY + diff;
+          height = newH;
+          top = st.startTop + diff * st.startScaleY;
+        } else {
+          const baseH = st.startHeight + st.startCropY;
+          const factor = newH / maxH;
+          const bottom = st.startTop + st.startHeight * st.startScaleY;
+          const center = st.startLeft +
+            (st.startWidth * st.startScaleX) / 2;
+          cropY  = 0;
+          height = baseH;
+          scaleX = st.startScaleX * factor;
+          scaleY = st.startScaleY * factor;
+          left   = center - (st.startWidth * scaleX) / 2;
+          top    = bottom - height * scaleY;
+        }
       }
     }
 
