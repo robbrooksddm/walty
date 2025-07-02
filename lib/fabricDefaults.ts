@@ -13,8 +13,17 @@ export const HANDLE_BLUR   = 1 / SCALE;
 (fabric.Object.prototype as any).borderScaleFactor = 1;
 (fabric.Object.prototype as any).borderColor       = SEL_COLOR;
 (fabric.Object.prototype as any).borderDashArray   = [];
+(fabric.Object.prototype as any).hasBorders        = false;
 (fabric.Object.prototype as any).cornerStrokeColor = '#fff';
 (fabric.Object.prototype as any).cornerColor       = '#fff';
+(fabric.Object.prototype as any).controls.tl.visible = false;
+(fabric.Object.prototype as any).controls.tr.visible = false;
+(fabric.Object.prototype as any).controls.br.visible = false;
+(fabric.Object.prototype as any).controls.bl.visible = false;
+(fabric.Object.prototype as any).controls.ml.visible = false;
+(fabric.Object.prototype as any).controls.mr.visible = false;
+(fabric.Object.prototype as any).controls.mt.visible = false;
+(fabric.Object.prototype as any).controls.mb.visible = false;
 (fabric.Object.prototype as any).transparentCorners= false;
 (fabric.Object.prototype as any).cornerStyle       = 'circle';
 
