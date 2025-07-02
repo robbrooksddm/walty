@@ -1252,6 +1252,7 @@ addGuides(fc, mode)                           // add guides based on mode
 /* ───────────────── clipboard & keyboard shortcuts ────────────────── */
 
 const onKey = (e: KeyboardEvent) => {
+  if (useEditor.getState().activePage !== pageIdx) return
   const active = fc.getActiveObject() as fabric.Object | undefined
   const cmd    = e.metaKey || e.ctrlKey
 
