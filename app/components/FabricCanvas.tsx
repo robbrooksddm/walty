@@ -75,6 +75,7 @@ function recompute() {
   PREVIEW_H = currentPreview.previewHeightPx
   SCALE = PREVIEW_W / PAGE_W
   PAD = 4 / SCALE
+  ROT = 20 / SCALE
   // compute safe-zone after scaling so rounding happens in preview pixels
   const safeXPreview = safeInsetXIn * currentSpec.dpi * SCALE
   const safeYPreview = safeInsetYIn * currentSpec.dpi * SCALE
@@ -114,6 +115,7 @@ let PAGE_H = 0
 let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
 let PAD = 4
+let ROT = 20
 
 recompute()
 
@@ -607,6 +609,8 @@ useEffect(() => {
   const fc = new fabric.Canvas(canvasRef.current!) as fabric.Canvas & { upperCanvasEl: HTMLCanvasElement };
   fc.backgroundColor = '#fff';
   fc.preserveObjectStacking = true;
+  fc.selectionColor = 'rgba(0,0,0,0)'
+  fc.selectionBorderColor = 'rgba(0,0,0,0)'
 
   /* create DOM overlays for hover & selection */
   const hoverEl = document.createElement('div');
@@ -630,9 +634,10 @@ useEffect(() => {
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
-  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
-  const handleMap: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  const selCorners  = ['tl','tr','br','bl','ml','mr','mt','mb','mtr'] as const
+  const cropCorners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const
+  const handleMap: Record<string, HTMLDivElement> = {}
+  selCorners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
     h.dataset.corner = c;
@@ -642,7 +647,7 @@ useEffect(() => {
   (selEl as any)._handles = handleMap;
 
   const cropHandles: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  cropCorners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
     h.dataset.corner = c;
@@ -682,8 +687,12 @@ useEffect(() => {
     const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const scale = vt[0]
     const offset = PAD * scale
-    const dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
-    const dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+    const dx = corner && corner !== 'mtr'
+      ? corner.includes('l') ? offset : corner.includes('r') ? -offset : 0
+      : 0
+    const dy = corner && corner !== 'mtr'
+      ? corner.includes('t') ? offset : corner.includes('b') ? -offset : 0
+      : 0
 
     const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
@@ -1045,6 +1054,10 @@ const drawOverlay = (
     h.mr.style.left = `${width}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`; h.mt.style.top = '0px'
     h.mb.style.left = `${midX}px`; h.mb.style.top = `${height}px`
+    if (h.mtr) {
+      h.mtr.style.left = `${midX}px`
+      h.mtr.style.top  = `${-ROT * scale}px`
+    }
   }
 }
 
@@ -1055,6 +1068,9 @@ const syncSel = () => {
   const cropEl = cropDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null } | null
 
   const tool = cropToolRef.current as any
+  if (selEl._handles?.mtr) {
+    selEl._handles.mtr.style.display = croppingRef.current ? 'none' : ''
+  }
   if (croppingRef.current && tool?.isActive && tool.img && tool.frame) {
     const img   = tool.img as fabric.Object
     const frame = tool.frame as fabric.Object

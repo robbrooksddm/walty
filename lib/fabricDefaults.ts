@@ -13,6 +13,7 @@ export const HANDLE_BLUR   = 1 / SCALE;
 (fabric.Object.prototype as any).borderScaleFactor = 1;
 (fabric.Object.prototype as any).borderColor       = SEL_COLOR;
 (fabric.Object.prototype as any).borderDashArray   = [];
+(fabric.Object.prototype as any).hasBorders        = false;
 (fabric.Object.prototype as any).cornerStrokeColor = '#fff';
 (fabric.Object.prototype as any).cornerColor       = '#fff';
 (fabric.Object.prototype as any).transparentCorners= false;
