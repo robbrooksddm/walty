@@ -920,8 +920,12 @@ export class CropTool {
       ctx.strokeRect(br.left, br.top, br.width, br.height);
       ctx.restore();
     }
-    if (this.img?.hasControls)   this.img.drawControls(ctx);
-    if (this.frame?.hasControls) this.frame.drawControls(ctx);
+    // Fabric will still recognise control interactions even if we skip
+    // drawing the handles here.  The DOM overlay mirrors the handles and
+    // forwards pointer events, so we avoid double visuals by not rendering
+    // Fabric's built‑in controls.
+    // if (this.img?.hasControls)   this.img.drawControls(ctx);
+    // if (this.frame?.hasControls) this.frame.drawControls(ctx);
     ctx.restore()
   }
 }
