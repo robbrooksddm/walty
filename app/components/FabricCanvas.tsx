@@ -470,9 +470,10 @@ interface Props {
   onCroppingChange?: (state: boolean) => void
   zoom?: number
   mode?: Mode
+  className?: string
 }
 
-export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, zoom = 1, mode = 'customer' }: Props) {
+export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, zoom = 1, mode = 'customer', className = '' }: Props) {
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const maskRectsRef = useRef<fabric.Rect[]>([]);
@@ -1637,7 +1638,7 @@ doSync = () =>
         width={PREVIEW_W * zoom}
         height={PREVIEW_H * zoom}
         style={{ width: PREVIEW_W * zoom, height: PREVIEW_H * zoom }}
-        className="border shadow rounded"
+        className={`border shadow rounded ${className}`}
       />
       {menuPos && (
         <ContextMenu
