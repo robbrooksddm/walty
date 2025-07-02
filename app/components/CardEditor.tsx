@@ -166,6 +166,16 @@ export default function CardEditor({
     activeIdx === 3 ? 'back'  : 'inside'
   useEffect(() => { setActive(activeIdx) }, [activeIdx, setActive])
 
+  const switchPage = useCallback((idx: PageIdx) => {
+    if (idx === activeIdx) return
+    const fc = canvasMap[activeIdx]
+    if (fc) {
+      fc.discardActiveObject()
+      fc.requestRenderAll()
+    }
+    setActiveIdx(idx)
+  }, [activeIdx, canvasMap])
+
   /* 4 ─ Fabric canvases ------------------------------------------ */
   const [canvasMap, setCanvasMap] =
     useState<(fabric.Canvas | null)[]>([null, null, null, null])
@@ -856,7 +866,7 @@ const handleProofAll = async () => {
             <div
               className={section === 'front' ? box : 'hidden'}
               style={{ width: boxWidth }}
-              onClick={() => setActiveIdx(0)}
+              onClick={() => switchPage(0)}
             >
               <FabricCanvas
                 pageIdx={0}
@@ -876,7 +886,7 @@ const handleProofAll = async () => {
               <div
                 className={`${box} mr-[-1px]`}
                 style={{ width: boxWidth }}
-                onClick={() => setActiveIdx(1)}
+                onClick={() => switchPage(1)}
               >
                 <FabricCanvas
                   pageIdx={1}
@@ -895,7 +905,7 @@ const handleProofAll = async () => {
               <div
                 className={box}
                 style={{ width: boxWidth }}
-                onClick={() => setActiveIdx(2)}
+                onClick={() => switchPage(2)}
               >
                 <FabricCanvas
                   pageIdx={2}
@@ -916,7 +926,7 @@ const handleProofAll = async () => {
             <div
               className={section === 'back' ? box : 'hidden'}
               style={{ width: boxWidth }}
-              onClick={() => setActiveIdx(3)}
+              onClick={() => switchPage(3)}
             >
               <FabricCanvas
                 pageIdx={3}
@@ -939,7 +949,7 @@ const handleProofAll = async () => {
               <button
                 key={lbl}
                 className={`thumb ${activeIdx === i ? 'thumb-active' : ''}`}
-                onClick={() => setActiveIdx(i as PageIdx)}
+                onClick={() => switchPage(i as PageIdx)}
               >
                 {thumbs[i] ? (
                   <img
