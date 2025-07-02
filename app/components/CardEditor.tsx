@@ -161,6 +161,14 @@ export default function CardEditor({
 
   /* 3 ─ page selection ------------------------------------------ */
   const [activeIdx, setActiveIdx] = useState<PageIdx>(0)
+
+  const selectPage = useCallback((idx: PageIdx) => {
+    if (activeFc) {
+      activeFc.discardActiveObject()
+      activeFc.requestRenderAll()
+    }
+    setActiveIdx(idx)
+  }, [activeFc])
   const section: Section =
     activeIdx === 0 ? 'front' :
     activeIdx === 3 ? 'back'  : 'inside'
@@ -856,7 +864,7 @@ const handleProofAll = async () => {
             <div
               className={section === 'front' ? box : 'hidden'}
               style={{ width: boxWidth }}
-              onClick={() => setActiveIdx(0)}
+              onClick={() => selectPage(0)}
             >
               <FabricCanvas
                 pageIdx={0}
@@ -876,7 +884,7 @@ const handleProofAll = async () => {
               <div
                 className={`${box} mr-[-1px]`}
                 style={{ width: boxWidth }}
-                onClick={() => setActiveIdx(1)}
+                onClick={() => selectPage(1)}
               >
                 <FabricCanvas
                   pageIdx={1}
@@ -895,7 +903,7 @@ const handleProofAll = async () => {
               <div
                 className={box}
                 style={{ width: boxWidth }}
-                onClick={() => setActiveIdx(2)}
+                onClick={() => selectPage(2)}
               >
                 <FabricCanvas
                   pageIdx={2}
@@ -916,7 +924,7 @@ const handleProofAll = async () => {
             <div
               className={section === 'back' ? box : 'hidden'}
               style={{ width: boxWidth }}
-              onClick={() => setActiveIdx(3)}
+              onClick={() => selectPage(3)}
             >
               <FabricCanvas
                 pageIdx={3}
@@ -939,7 +947,7 @@ const handleProofAll = async () => {
               <button
                 key={lbl}
                 className={`thumb ${activeIdx === i ? 'thumb-active' : ''}`}
-                onClick={() => setActiveIdx(i as PageIdx)}
+                onClick={() => selectPage(i as PageIdx)}
               >
                 {thumbs[i] ? (
                   <img
