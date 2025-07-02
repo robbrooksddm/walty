@@ -161,10 +161,11 @@ export default function CardEditor({
 
   /* 3 ─ visible section ------------------------------------------ */
   const [section, setSection] = useState<Section>('front')
+  const [insidePage, setInsidePage] = useState<'left' | 'right'>('left')
   const activeIdx: PageIdx =
-    section === 'front'  ? 0 :
-    section === 'inside' ? 1 :
-    3                                                        // back
+    section === 'front' ? 0 :
+    section === 'back'  ? 3 :
+    insidePage === 'left' ? 1 : 2
   useEffect(() => { setActive(activeIdx) }, [activeIdx, setActive])
 
   /* 4 ─ Fabric canvases ------------------------------------------ */
@@ -854,7 +855,10 @@ const handleProofAll = async () => {
           >
             
             {/* front */}
-            <div className={section === 'front' ? box : 'hidden'} style={{ width: boxWidth }}>
+            <div
+              className={section === 'front' ? `${box} page-active` : 'hidden'}
+              style={{ width: boxWidth }}
+            >
               <FabricCanvas
                 pageIdx={0}
                 page={pages[0]}
@@ -867,7 +871,11 @@ const handleProofAll = async () => {
             </div>
             {/* inside */}
             <div className={section === 'inside' ? 'flex gap-6' : 'hidden'}>
-              <div className={box} style={{ width: boxWidth }}>
+              <div
+                className={`${box} ${insidePage === 'left' ? 'page-active' : 'page-inactive'}`}
+                style={{ width: boxWidth }}
+                onClick={() => setInsidePage('left')}
+              >
                 <FabricCanvas
                   pageIdx={1}
                   page={pages[1]}
@@ -878,7 +886,11 @@ const handleProofAll = async () => {
                   mode={mode}
                 />
               </div>
-              <div className={box} style={{ width: boxWidth }}>
+              <div
+                className={`${box} ${insidePage === 'right' ? 'page-active' : 'page-inactive'}`}
+                style={{ width: boxWidth }}
+                onClick={() => setInsidePage('right')}
+              >
                 <FabricCanvas
                   pageIdx={2}
                   page={pages[2]}
@@ -891,7 +903,10 @@ const handleProofAll = async () => {
               </div>
             </div>
             {/* back */}
-            <div className={section === 'back' ? box : 'hidden'} style={{ width: boxWidth }}>
+            <div
+              className={section === 'back' ? `${box} page-active` : 'hidden'}
+              style={{ width: boxWidth }}
+            >
               <FabricCanvas
                 pageIdx={3}
                 page={pages[3]}
@@ -909,16 +924,12 @@ const handleProofAll = async () => {
             {(['FRONT', 'INNER-L', 'INNER-R', 'BACK'] as const).map((lbl, i) => (
               <button
                 key={lbl}
-                className={`thumb ${
-                  (section === 'front' && i === 0) ||
-                  (section === 'inside' && (i === 1 || i === 2)) ||
-                  (section === 'back' && i === 3)
-                    ? 'thumb-active'
-                    : ''
-                }`}
-                onClick={() =>
-                  setSection(i === 0 ? 'front' : i === 3 ? 'back' : 'inside')
-                }
+                className={`thumb ${activeIdx === i ? 'thumb-active' : ''}`}
+                onClick={() => {
+                  if (i === 0) { setSection('front'); }
+                  else if (i === 3) { setSection('back'); }
+                  else { setSection('inside'); setInsidePage(i === 1 ? 'left' : 'right'); }
+                }}
               >
                 {thumbs[i] ? (
                   <img

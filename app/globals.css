@@ -79,6 +79,14 @@ html {
   overflow: visible !important;
 }
 
+.page-active {
+  @apply ring-4 ring-blue-600;
+}
+
+.page-inactive {
+  @apply opacity-50;
+}
+
 /* Center icon + helper text */
 .ai-ghost__center {
   display:flex;
