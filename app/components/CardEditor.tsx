@@ -173,6 +173,17 @@ export default function CardEditor({
     setCanvasMap(list => { const next = [...list]; next[idx] = fc; return next })
   const activeFc = canvasMap[activeIdx]
 
+  /* ensure any active selection is cleared before switching pages */
+  const gotoPage = (idx: PageIdx) => {
+    canvasMap.forEach(fc => {
+      if (fc) {
+        fc.discardActiveObject()
+        fc.requestRenderAll()
+      }
+    })
+    setActiveIdx(idx)
+  }
+
   const [thumbs, setThumbs] = useState<string[]>(['', '', '', ''])
 
   const THUMB_MULT = 0.25
@@ -856,7 +867,7 @@ const handleProofAll = async () => {
             <div
               className={section === 'front' ? box : 'hidden'}
               style={{ width: boxWidth }}
-              onClick={() => setActiveIdx(0)}
+              onClick={() => gotoPage(0)}
             >
               <FabricCanvas
                 pageIdx={0}
@@ -876,7 +887,7 @@ const handleProofAll = async () => {
               <div
                 className={`${box} mr-[-1px]`}
                 style={{ width: boxWidth }}
-                onClick={() => setActiveIdx(1)}
+                onClick={() => gotoPage(1)}
               >
                 <FabricCanvas
                   pageIdx={1}
@@ -895,7 +906,7 @@ const handleProofAll = async () => {
               <div
                 className={box}
                 style={{ width: boxWidth }}
-                onClick={() => setActiveIdx(2)}
+                onClick={() => gotoPage(2)}
               >
                 <FabricCanvas
                   pageIdx={2}
@@ -916,7 +927,7 @@ const handleProofAll = async () => {
             <div
               className={section === 'back' ? box : 'hidden'}
               style={{ width: boxWidth }}
-              onClick={() => setActiveIdx(3)}
+              onClick={() => gotoPage(3)}
             >
               <FabricCanvas
                 pageIdx={3}
@@ -939,7 +950,7 @@ const handleProofAll = async () => {
               <button
                 key={lbl}
                 className={`thumb ${activeIdx === i ? 'thumb-active' : ''}`}
-                onClick={() => setActiveIdx(i as PageIdx)}
+                onClick={() => gotoPage(i as PageIdx)}
               >
                 {thumbs[i] ? (
                   <img
