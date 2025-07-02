@@ -195,7 +195,7 @@ export class CropTool {
         fill:'',
         perPixelTargetFind:false,   // relax pixel-perfect hit-testing
         evented:false,
-        stroke:this.SEL, strokeWidth:1/this.SCALE,
+        stroke:'', strokeWidth:0,
         strokeUniform:true }),
     ],{
       left:fx, top:fy, originX:'left', originY:'top',
@@ -246,7 +246,7 @@ export class CropTool {
         cursorStyleHandler: (fabric as any).controlsUtils.scaleCursorStyleHandler,
         actionHandler     : (fabric as any).controlsUtils.scalingEqually,
         actionName        : 'scale',   // ensure Fabric treats this as scaling, not drag
-        render            : (ctx, left, top) => drawL(ctx, left, top, rot),
+        render            : () => {},
       });
 
     // keep only the 4 corner controls; no sides, no rotation
@@ -259,19 +259,9 @@ export class CropTool {
 
     /* ③ add both to canvas and keep z‑order intuitive              */
     this.fc.add(this.frame)
-    /* 2‑b ─ dim everything outside the crop window -------------------- */
-    const mkMask = () => new fabric.Rect({
-      left: 0, top: 0, width: this.fc.width!, height: this.fc.height!,
-      fill: 'rgba(0,0,0,0.4)', selectable: false, evented: false,
-      originX: 'left',
-      originY: 'top',
-      excludeFromExport: true,
-    });
-    this.masks = [mkMask(), mkMask(), mkMask(), mkMask()];
-    this.masks.forEach(r => this.fc.add(r));
-    // make sure crop elements stay on top
+    // DOM overlays handle dimming and outlines
+    this.masks = []
     this.frame.bringToFront();
-    this.updateMasks();
 
     // Enforce minimum scale from the outset
     this.clamp(true);
@@ -375,8 +365,6 @@ export class CropTool {
         this.frame.setCoords();
       }
       this.updateMasks();
-      // keep the mask in front of the photo for consistent dimming
-      this.masks.forEach(m => m.bringToFront?.());
       this.frame?.bringToFront();
       this.fc.requestRenderAll();            // refresh immediately
     };
@@ -468,8 +456,6 @@ export class CropTool {
       this.clamp();                 // keep photo covering the window
       this.img.setCoords();
       this.updateMasks();
-      // keep dim overlay & frame visible over the photo
-      this.masks.forEach(m => m.bringToFront?.());
       this.frame?.bringToFront();
       this.fc.requestRenderAll();
     };
@@ -528,8 +514,6 @@ export class CropTool {
     );
 
     /* ④ dual‑handle rendering + clamping */
-    // draw both control sets every frame
-    this.fc.on('after:render', this.renderBoth)
 
     /* ------------------------------------------------------------------
      *  Whenever the user presses the mouse, ensure that whichever object
@@ -734,7 +718,6 @@ export class CropTool {
     this.cleanup.forEach(fn => fn());
     this.cleanup = [];
 
-    this.fc.off('after:render', this.renderBoth)
     if (this.frame) this.fc.remove(this.frame)
     this.masks.forEach(r => this.fc.remove(r));
     this.masks = [];
@@ -843,7 +826,7 @@ export class CropTool {
   }
 
   private updateMasks = () => {
-    if (!this.frame) return
+    if (!this.frame || this.masks.length === 0) return
 
     const vpt = this.fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const zoom = vpt[0] || 1
@@ -889,39 +872,4 @@ export class CropTool {
       return Math.max(needW / img.width!, needH / img.height!);
     }
 
-  /* draw controls for both objects each frame */
-  private renderBoth = () => {
-    if (!this.img || !this.frame) return
-
-    // Always refresh corner caches before drawing controls so they track
-    // live transforms even after repeated scale gestures.
-    this.img.setCoords();
-    this.frame.setCoords();
-
-        const ctx = (this.fc as any).contextTop
-        if (!ctx) return;            // canvas disposed or not yet initialised
-        /* Fabric doesn’t always wipe contextTop if it draws nothing of its own.
-           Clear it ourselves before redrawing both control sets. */
-        this.fc.clearContext(ctx)
-
-    ctx.save()
-    const vpt = this.fc.viewportTransform;
-    if (vpt) {
-      //          a     b     c     d     e     f
-      ctx.transform(vpt[0], vpt[1], vpt[2], vpt[3], vpt[4], vpt[5]);
-    }      // draw in the same space as Fabric
-    /* ---- Persistent bitmap outline while cropping ---- */
-    if (this.isActive && this.img) {
-      const br = this.img.getBoundingRect(true, true);
-      ctx.save();
-      ctx.strokeStyle = this.SEL;
-      ctx.lineWidth   = 1 / this.SCALE;
-      ctx.setLineDash([]);                 // solid
-      ctx.strokeRect(br.left, br.top, br.width, br.height);
-      ctx.restore();
-    }
-    if (this.img?.hasControls)   this.img.drawControls(ctx);
-    if (this.frame?.hasControls) this.frame.drawControls(ctx);
-    ctx.restore()
-  }
 }
