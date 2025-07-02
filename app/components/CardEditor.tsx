@@ -872,9 +872,9 @@ const handleProofAll = async () => {
               )}
             </div>
             {/* inside */}
-            <div className={section === 'inside' ? 'flex gap-6' : 'hidden'}>
+            <div className={section === 'inside' ? 'flex gap-0' : 'hidden'}>
               <div
-                className={box}
+                className={`${box} mr-[-1px]`}
                 style={{ width: boxWidth }}
                 onClick={() => setActiveIdx(1)}
               >
@@ -886,6 +886,7 @@ const handleProofAll = async () => {
                   onCroppingChange={state => handleCroppingChange(1, state)}
                   zoom={zoom}
                   mode={mode}
+                  className="rounded-r-none border-r-0"
                 />
                 {activeIdx !== 1 && (
                   <div className="absolute inset-0 bg-black/30 cursor-pointer" />
@@ -904,6 +905,7 @@ const handleProofAll = async () => {
                   onCroppingChange={state => handleCroppingChange(2, state)}
                   zoom={zoom}
                   mode={mode}
+                  className="rounded-l-none border-l-0"
                 />
                 {activeIdx !== 2 && (
                   <div className="absolute inset-0 bg-black/30 cursor-pointer" />
