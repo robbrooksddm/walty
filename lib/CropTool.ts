@@ -195,7 +195,7 @@ export class CropTool {
         fill:'',
         perPixelTargetFind:false,   // relax pixel-perfect hit-testing
         evented:false,
-        stroke:this.SEL, strokeWidth:1/this.SCALE,
+        stroke:'transparent', strokeWidth:0,
         strokeUniform:true }),
     ],{
       left:fx, top:fy, originX:'left', originY:'top',
@@ -235,7 +235,7 @@ export class CropTool {
     };
 
     /** corner control factory with proper orientation */
-    const mkCorner = (x: number, y: number, rot: number) =>
+    const mkCorner = (x: number, y: number) =>
       new fabric.Control({
         x, y,
         offsetX: 0, offsetY: 0,
@@ -246,15 +246,15 @@ export class CropTool {
         cursorStyleHandler: (fabric as any).controlsUtils.scaleCursorStyleHandler,
         actionHandler     : (fabric as any).controlsUtils.scalingEqually,
         actionName        : 'scale',   // ensure Fabric treats this as scaling, not drag
-        render            : (ctx, left, top) => drawL(ctx, left, top, rot),
+        render            : () => {},  // hide canvas handles – DOM overlay shows them
       });
 
     // keep only the 4 corner controls; no sides, no rotation
     (this.frame as any).controls = {
-      tl: mkCorner(-0.5, -0.5,  0),                // top‑left
-      tr: mkCorner( 0.5, -0.5,  Math.PI / 2),      // top‑right
-      br: mkCorner( 0.5,  0.5,  Math.PI),          // bottom‑right
-      bl: mkCorner(-0.5,  0.5, -Math.PI / 2),      // bottom‑left
+      tl: mkCorner(-0.5, -0.5),
+      tr: mkCorner( 0.5, -0.5),
+      br: mkCorner( 0.5,  0.5),
+      bl: mkCorner(-0.5,  0.5),
     } as Record<string, fabric.Control>;
 
     /* ③ add both to canvas and keep z‑order intuitive              */
