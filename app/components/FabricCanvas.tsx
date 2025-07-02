@@ -484,6 +484,21 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
 
   const containerRef = useRef<HTMLElement | null>(null)
 
+  const attachAncestorScroll = (handler: () => void) => {
+    const targets: EventTarget[] = []
+    let node = containerRef.current as HTMLElement | null
+    while (node) {
+      node.addEventListener('scroll', handler, { passive: true, capture: true })
+      targets.push(node)
+      node = node.parentElement
+    }
+    window.addEventListener('scroll', handler, { passive: true, capture: true })
+    targets.push(window)
+    return () => {
+      targets.forEach(t => t.removeEventListener('scroll', handler))
+    }
+  }
+
   const cropToolRef = useRef<CropTool | null>(null)
   const croppingRef = useRef(false)
 
@@ -760,9 +775,8 @@ if (container) {
   /* keep event coordinates aligned with any scroll/resize */
   const updateOffset = () => fc.calcOffset();
   updateOffset();
-  window.addEventListener('scroll', updateOffset, { passive: true, capture: true });
+  offsetCleanup = attachAncestorScroll(updateOffset);
   window.addEventListener('resize', updateOffset);
-  containerRef.current?.addEventListener('scroll', updateOffset, { passive: true, capture: true });
 
   const isolateCrop = (active: boolean) => {
     const map = savedInteractivityRef.current
@@ -954,6 +968,9 @@ hoverRef.current = hoverHL
 /* ── 3 ▸ Selection lifecycle (DOM overlay) ─────────── */
 let scrollHandler: (() => void) | null = null
 let hoverScrollHandler: (() => void) | null = null
+let scrollCleanup: (() => void) | null = null
+let hoverScrollCleanup: (() => void) | null = null
+let offsetCleanup: (() => void) | null = null
 
 const drawOverlay = (
   obj: fabric.Object,
@@ -1048,16 +1065,17 @@ fc.on('selection:created', () => {
     syncSel()
     syncHover()
   }
-  window.addEventListener('scroll', scrollHandler, { passive: true, capture: true })
+  scrollCleanup = attachAncestorScroll(scrollHandler)
   window.addEventListener('resize', scrollHandler)
-  containerRef.current?.addEventListener('scroll', scrollHandler, { passive: true, capture: true })
 })
 .on('selection:updated', syncSel)
 .on('selection:cleared', () => {
   if (scrollHandler) {
-    window.removeEventListener('scroll', scrollHandler)
     window.removeEventListener('resize', scrollHandler)
-    containerRef.current?.removeEventListener('scroll', scrollHandler)
+    if (scrollCleanup) {
+      scrollCleanup()
+      scrollCleanup = null
+    }
     scrollHandler = null
   }
   selDomRef.current && (selDomRef.current.style.display = 'none')
@@ -1095,9 +1113,8 @@ fc.on('mouse:over', e => {
       fc.calcOffset()
       syncHover()
     }
-    window.addEventListener('scroll', hoverScrollHandler, { passive: true, capture: true })
+    hoverScrollCleanup = attachAncestorScroll(hoverScrollHandler)
     window.addEventListener('resize', hoverScrollHandler)
-    containerRef.current?.addEventListener('scroll', hoverScrollHandler, { passive: true, capture: true })
   })()
 })
 .on('mouse:out', () => {
@@ -1106,9 +1123,11 @@ fc.on('mouse:over', e => {
     hoverDomRef.current.style.display = 'none'
     ;(hoverDomRef.current as any)._object = null
     if (hoverScrollHandler) {
-      window.removeEventListener('scroll', hoverScrollHandler)
       window.removeEventListener('resize', hoverScrollHandler)
-      containerRef.current?.removeEventListener('scroll', hoverScrollHandler)
+      if (hoverScrollCleanup) {
+        hoverScrollCleanup()
+        hoverScrollCleanup = null
+      }
       hoverScrollHandler = null
     }
   })()
@@ -1297,9 +1316,11 @@ window.addEventListener('keydown', onKey)
       fc.upperCanvasEl.removeEventListener('contextmenu', ctxMenu)
       window.removeEventListener('keydown', onKey)
       if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
-      window.removeEventListener('scroll', updateOffset)
+      if (offsetCleanup) {
+        offsetCleanup()
+        offsetCleanup = null
+      }
       window.removeEventListener('resize', updateOffset)
-      containerRef.current?.removeEventListener('scroll', updateOffset)
       // tidy up crop‑tool listeners
       fc.off('mouse:dblclick', dblHandler);
       window.removeEventListener('keydown', keyCropHandler);
@@ -1319,14 +1340,18 @@ window.addEventListener('keydown', onKey)
       selDomRef.current?.remove()
       cropDomRef.current?.remove()
       if (scrollHandler) {
-        window.removeEventListener('scroll', scrollHandler)
         window.removeEventListener('resize', scrollHandler)
-        containerRef.current?.removeEventListener('scroll', scrollHandler)
+        if (scrollCleanup) {
+          scrollCleanup()
+          scrollCleanup = null
+        }
       }
       if (hoverScrollHandler) {
-        window.removeEventListener('scroll', hoverScrollHandler)
         window.removeEventListener('resize', hoverScrollHandler)
-        containerRef.current?.removeEventListener('scroll', hoverScrollHandler)
+        if (hoverScrollCleanup) {
+          hoverScrollCleanup()
+          hoverScrollCleanup = null
+        }
       }
     }
 // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1444,6 +1469,7 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
 
           /* ---------- AI placeholder extras -------------------------------- */
           let doSync: (() => void) | undefined
+          let ghostCleanup: (() => void) | null = null
           if (raw._type === 'aiLayer') {
             const spec = raw.source
             const locked = !!ly.locked
@@ -1495,7 +1521,7 @@ doSync = () =>
             img.on('moving',   doSync)
                .on('scaling',  doSync)
                .on('rotating', doSync)
-               window.addEventListener('scroll', doSync, { passive: true, capture: true })
+               (ghostCleanup = attachAncestorScroll(doSync))
                window.addEventListener('resize', doSync)
                fc.on('after:render', doSync)
                
@@ -1512,8 +1538,8 @@ doSync = () =>
             })
 
             img.on('removed', () => {
-              window.removeEventListener('scroll', doSync)
               window.removeEventListener('resize', doSync)
+              ghostCleanup && (ghostCleanup(), ghostCleanup = null)
               fc.off('after:render', doSync)
               ghost?.remove()
             })
