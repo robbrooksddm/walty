@@ -1097,6 +1097,16 @@ const syncHover = () => {
 
 fc.on('selection:created', () => {
   hoverHL.visible = false
+  hoverDomRef.current && (() => {
+    hoverDomRef.current!.style.display = 'none'
+    ;(hoverDomRef.current as any)._object = null
+    if (hoverScrollHandler) {
+      window.removeEventListener('scroll', hoverScrollHandler)
+      window.removeEventListener('resize', hoverScrollHandler)
+      containerRef.current?.removeEventListener('scroll', hoverScrollHandler)
+      hoverScrollHandler = null
+    }
+  })()
   fc.requestRenderAll()
   selDomRef.current && (selDomRef.current.style.display = 'block')
   if (croppingRef.current && cropDomRef.current) {
