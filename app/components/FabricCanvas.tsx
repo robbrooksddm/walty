@@ -630,9 +630,10 @@ useEffect(() => {
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
+  const selCorners = ['tl','tr','br','bl','ml','mr','mt','mb','mtr'] as const;
   const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  selCorners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
     h.dataset.corner = c;
@@ -683,7 +684,9 @@ useEffect(() => {
     const scale = vt[0]
     const offset = PAD * scale
     const dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
-    const dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+    const dy = corner && corner !== 'mtr'
+      ? corner.includes('t') ? offset : corner.includes('b') ? -offset : 0
+      : 0
 
     const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
@@ -1006,7 +1009,7 @@ const hoverHL = new fabric.Rect({
   selectable:false, evented:false, visible:false,
   excludeFromExport:true,
 })
-fc.add(hoverHL)
+// fc.add(hoverHL)  // legacy hover outline (temporarily hidden)
 hoverRef.current = hoverHL
 
 /* ── 3 ▸ Selection lifecycle (DOM overlay) ─────────── */
@@ -1045,6 +1048,11 @@ const drawOverlay = (
     h.mr.style.left = `${width}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`; h.mt.style.top = '0px'
     h.mb.style.left = `${midX}px`; h.mb.style.top = `${height}px`
+    if (h.mtr) {
+      const rot = 24 * scale
+      h.mtr.style.left = `${midX}px`
+      h.mtr.style.top = `${-rot}px`
+    }
   }
 }
 
@@ -1620,7 +1628,7 @@ doSync = () =>
     }
 
     addGuides(fc, mode)
-    hoverRef.current?.bringToFront()
+    // hoverRef.current?.bringToFront()   // hide legacy outline
     fc.requestRenderAll();
     hydrating.current = false
     document.dispatchEvent(
