@@ -1095,8 +1095,21 @@ const syncHover = () => {
   drawOverlay(obj, hoverDomRef.current as HTMLDivElement & { _object?: fabric.Object | null })
 }
 
+const hideHover = () => {
+  if (!hoverDomRef.current) return
+  hoverDomRef.current.style.display = 'none'
+  ;(hoverDomRef.current as any)._object = null
+  if (hoverScrollHandler) {
+    window.removeEventListener('scroll', hoverScrollHandler)
+    window.removeEventListener('resize', hoverScrollHandler)
+    containerRef.current?.removeEventListener('scroll', hoverScrollHandler)
+    hoverScrollHandler = null
+  }
+}
+
 fc.on('selection:created', () => {
   hoverHL.visible = false
+  hideHover()
   fc.requestRenderAll()
   selDomRef.current && (selDomRef.current.style.display = 'block')
   if (croppingRef.current && cropDomRef.current) {
@@ -1132,15 +1145,18 @@ const handleAfterRender = () => {
   syncHover()
 }
 
-fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
-  .on('object:scaling',  () => { hoverHL.visible = false; syncSel() })
+fc.on('object:moving',   () => { hideHover(); hoverHL.visible = false; syncSel() })
+  .on('object:scaling',  () => { hideHover(); hoverHL.visible = false; syncSel() })
   .on('object:scaled',   () => {
+    hideHover()
     hoverHL.visible = false
     requestAnimationFrame(() => requestAnimationFrame(syncSel))
   })
-  .on('object:rotating', () => { hoverHL.visible = false; syncSel() })
-  .on('object:modified', () =>
-    requestAnimationFrame(() => requestAnimationFrame(syncSel)))
+  .on('object:rotating', () => { hideHover(); hoverHL.visible = false; syncSel() })
+  .on('object:modified', () => {
+    hideHover()
+    requestAnimationFrame(() => requestAnimationFrame(syncSel))
+  })
   .on('after:render',    handleAfterRender)
 
 /* ── 4 ▸ Hover outline (only when NOT the active object) ─── */
