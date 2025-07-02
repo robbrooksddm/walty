@@ -103,9 +103,12 @@ export class CropTool {
                   h: imgEl.naturalHeight || img.height! }
     const { cropX=0, cropY=0, width=nat.w, height=nat.h } = img
 
-    const prevLockUniScaling = img.lockUniScaling
-    const prevCenteredScaling = img.centeredScaling
-    const prevHasBorders = img.hasBorders
+    const prevLockUniScaling     = img.lockUniScaling
+    const prevCenteredScaling    = img.centeredScaling
+    const prevHasBorders         = img.hasBorders
+    const prevCornerColor        = img.cornerColor
+    const prevCornerStrokeColor  = img.cornerStrokeColor
+    const prevBorderColor        = img.borderColor
     img.set({
       left  : (img.left ?? 0) - cropX * (img.scaleX ?? 1),
       top   : (img.top  ?? 0) - cropY * (img.scaleY ?? 1),
@@ -167,9 +170,12 @@ export class CropTool {
       }
     }
     this.cleanup.push(() => {
-      img.lockUniScaling  = prevLockUniScaling
-      img.centeredScaling = prevCenteredScaling
-      img.hasBorders      = prevHasBorders
+      img.lockUniScaling   = prevLockUniScaling
+      img.centeredScaling  = prevCenteredScaling
+      img.hasBorders       = prevHasBorders
+      img.cornerColor      = prevCornerColor
+      img.cornerStrokeColor= prevCornerStrokeColor
+      img.borderColor      = prevBorderColor
     })
     /* hide the rotate ("mtr") and side controls while cropping */
     img.setControlsVisibility({
@@ -177,9 +183,12 @@ export class CropTool {
       ml : false, mr : false,      // hide middle-left / middle-right
       mt : false, mb : false       // hide middle-top / middle-bottom
     });
-    img.hasBorders  = false
-    img.borderColor = this.SEL          // keep consistent style if shown
-    img.borderDashArray = []           // solid border
+    img.hasBorders       = false
+    img.borderColor      = 'transparent'
+    img.cornerColor      = 'transparent'
+    img.cornerStrokeColor= 'transparent'
+    img.transparentCorners = true
+    img.borderDashArray  = []           // solid border
 
     /* ② persistent crop window */
     const fx = (img.left ?? 0) + cropX * (img.scaleX ?? 1)
@@ -195,7 +204,7 @@ export class CropTool {
         fill:'',
         perPixelTargetFind:false,   // relax pixel-perfect hit-testing
         evented:false,
-        stroke:this.SEL, strokeWidth:1/this.SCALE,
+        stroke:'transparent', strokeWidth:0,
         strokeUniform:true }),
     ],{
       left:fx, top:fy, originX:'left', originY:'top',
@@ -235,7 +244,7 @@ export class CropTool {
     };
 
     /** corner control factory with proper orientation */
-    const mkCorner = (x: number, y: number, rot: number) =>
+    const mkCorner = (x: number, y: number) =>
       new fabric.Control({
         x, y,
         offsetX: 0, offsetY: 0,
@@ -246,15 +255,15 @@ export class CropTool {
         cursorStyleHandler: (fabric as any).controlsUtils.scaleCursorStyleHandler,
         actionHandler     : (fabric as any).controlsUtils.scalingEqually,
         actionName        : 'scale',   // ensure Fabric treats this as scaling, not drag
-        render            : (ctx, left, top) => drawL(ctx, left, top, rot),
+        render            : () => {},  // hide canvas handles – DOM overlay shows them
       });
 
     // keep only the 4 corner controls; no sides, no rotation
     (this.frame as any).controls = {
-      tl: mkCorner(-0.5, -0.5,  0),                // top‑left
-      tr: mkCorner( 0.5, -0.5,  Math.PI / 2),      // top‑right
-      br: mkCorner( 0.5,  0.5,  Math.PI),          // bottom‑right
-      bl: mkCorner(-0.5,  0.5, -Math.PI / 2),      // bottom‑left
+      tl: mkCorner(-0.5, -0.5),
+      tr: mkCorner( 0.5, -0.5),
+      br: mkCorner( 0.5,  0.5),
+      bl: mkCorner(-0.5,  0.5),
     } as Record<string, fabric.Control>;
 
     /* ③ add both to canvas and keep z‑order intuitive              */
@@ -920,7 +929,6 @@ export class CropTool {
       ctx.strokeRect(br.left, br.top, br.width, br.height);
       ctx.restore();
     }
-    if (this.img?.hasControls)   this.img.drawControls(ctx);
     if (this.frame?.hasControls) this.frame.drawControls(ctx);
     ctx.restore()
   }
