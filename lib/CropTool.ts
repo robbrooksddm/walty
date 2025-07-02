@@ -195,7 +195,7 @@ export class CropTool {
         fill:'',
         perPixelTargetFind:false,   // relax pixel-perfect hit-testing
         evented:false,
-        stroke:this.SEL, strokeWidth:1/this.SCALE,
+        stroke:'transparent', strokeWidth:0,
         strokeUniform:true }),
     ],{
       left:fx, top:fy, originX:'left', originY:'top',
@@ -235,7 +235,7 @@ export class CropTool {
     };
 
     /** corner control factory with proper orientation */
-    const mkCorner = (x: number, y: number, rot: number) =>
+    const mkCorner = (x: number, y: number) =>
       new fabric.Control({
         x, y,
         offsetX: 0, offsetY: 0,
@@ -246,15 +246,15 @@ export class CropTool {
         cursorStyleHandler: (fabric as any).controlsUtils.scaleCursorStyleHandler,
         actionHandler     : (fabric as any).controlsUtils.scalingEqually,
         actionName        : 'scale',   // ensure Fabric treats this as scaling, not drag
-        render            : (ctx, left, top) => drawL(ctx, left, top, rot),
+        render            : () => {},  // hide canvas handles – DOM overlay shows them
       });
 
     // keep only the 4 corner controls; no sides, no rotation
     (this.frame as any).controls = {
-      tl: mkCorner(-0.5, -0.5,  0),                // top‑left
-      tr: mkCorner( 0.5, -0.5,  Math.PI / 2),      // top‑right
-      br: mkCorner( 0.5,  0.5,  Math.PI),          // bottom‑right
-      bl: mkCorner(-0.5,  0.5, -Math.PI / 2),      // bottom‑left
+      tl: mkCorner(-0.5, -0.5),
+      tr: mkCorner( 0.5, -0.5),
+      br: mkCorner( 0.5,  0.5),
+      bl: mkCorner(-0.5,  0.5),
     } as Record<string, fabric.Control>;
 
     /* ③ add both to canvas and keep z‑order intuitive              */
@@ -911,15 +911,8 @@ export class CropTool {
       ctx.transform(vpt[0], vpt[1], vpt[2], vpt[3], vpt[4], vpt[5]);
     }      // draw in the same space as Fabric
     /* ---- Persistent bitmap outline while cropping ---- */
-    if (this.isActive && this.img) {
-      const br = this.img.getBoundingRect(true, true);
-      ctx.save();
-      ctx.strokeStyle = this.SEL;
-      ctx.lineWidth   = 1 / this.SCALE;
-      ctx.setLineDash([]);                 // solid
-      ctx.strokeRect(br.left, br.top, br.width, br.height);
-      ctx.restore();
-    }
+    // Only the DOM overlay should show the active border and handles.
+    // Skip drawing Fabric's own outline to avoid duplicate borders.
     if (this.img?.hasControls)   this.img.drawControls(ctx);
     if (this.frame?.hasControls) this.frame.drawControls(ctx);
     ctx.restore()
