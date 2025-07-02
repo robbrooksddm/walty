@@ -1509,7 +1509,7 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
           if (raw._type === 'aiLayer') {
             const spec = raw.source
             const locked = !!ly.locked
-            img.set({ selectable: !locked, evented: !locked, hasControls: !locked })
+            img.set({ selectable: !locked, evented: !locked, hasControls: false })
 
  
             // ─── open the Selfie Drawer on click ─────────────────────────
