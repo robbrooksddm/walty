@@ -951,6 +951,7 @@ hoverRef.current = hoverHL
 
 /* ── 3 ▸ Selection lifecycle (DOM overlay) ─────────── */
 let scrollHandler: (() => void) | null = null
+let hoverScrollHandler: (() => void) | null = null
 
 const drawOverlay = (
   obj: fabric.Object,
@@ -1030,6 +1031,11 @@ const syncHover = () => {
   if (!obj) return
   drawOverlay(obj, hoverDomRef.current as HTMLDivElement & { _object?: fabric.Object | null })
 }
+
+  hoverScrollHandler = () => syncHover()
+  window.addEventListener('scroll', hoverScrollHandler, { passive: true })
+  window.addEventListener('resize', hoverScrollHandler)
+  containerRef.current?.addEventListener('scroll', hoverScrollHandler, { passive: true })
 
 fc.on('selection:created', () => {
   hoverHL.visible = false
@@ -1298,6 +1304,11 @@ window.addEventListener('keydown', onKey)
         window.removeEventListener('scroll', scrollHandler)
         window.removeEventListener('resize', scrollHandler)
         containerRef.current?.removeEventListener('scroll', scrollHandler)
+      }
+      if (hoverScrollHandler) {
+        window.removeEventListener('scroll', hoverScrollHandler)
+        window.removeEventListener('resize', hoverScrollHandler)
+        containerRef.current?.removeEventListener('scroll', hoverScrollHandler)
       }
     }
 // eslint-disable-next-line react-hooks/exhaustive-deps
