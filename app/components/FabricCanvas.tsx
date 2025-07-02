@@ -1186,13 +1186,23 @@ img.on('mouseup', () => {
               img.on('mouseout',  () => { ghost!.style.opacity = '0' })
             }
 
-            const doSync = () => canvasRef.current && ghost && syncGhost(img, ghost, canvasRef.current)
+            const doSync = () =>
+              canvasRef.current && ghost && syncGhost(img, ghost, canvasRef.current)
+
             doSync()
+
+            // keep overlay aligned during object transforms
             img.on('moving',   doSync)
                .on('scaling',  doSync)
                .on('rotating', doSync)
-               window.addEventListener('scroll', doSync, { passive: true })
-               window.addEventListener('resize', doSync)
+
+            // also track page/viewport changes
+            window.addEventListener('scroll', doSync, { passive: true })
+            window.addEventListener('resize', doSync)
+
+            // scrollable editor container
+            const scrollParent = canvasRef.current?.parentElement
+            scrollParent?.addEventListener('scroll', doSync, { passive: true })
                
 
             /* hide overlay when actively selected */
@@ -1209,6 +1219,7 @@ img.on('mouseup', () => {
             img.on('removed', () => {
               window.removeEventListener('scroll', doSync)
               window.removeEventListener('resize', doSync)
+              scrollParent?.removeEventListener('scroll', doSync)
               ghost?.remove()
             })
           }
