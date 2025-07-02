@@ -267,12 +267,12 @@ const syncGhost = (
   img   : fabric.Image,
   ghost : HTMLDivElement,
   canvas: HTMLCanvasElement,
-  zoom  : number,
 ) => {
   const canvasRect = canvas.getBoundingClientRect()
   const { left, top, width, height } = img.getBoundingRect()
-
-  const s = SCALE * zoom
+  const fc = img.canvas as fabric.Canvas | null
+  const vt = fc?.viewportTransform || [SCALE, 0, 0, SCALE, 0, 0]
+  const s = vt[0]
   ghost.style.left   = `${canvasRect.left + left   * s}px`
   ghost.style.top    = `${canvasRect.top  + top    * s}px`
   ghost.style.width  = `${width  * s}px`
@@ -958,10 +958,11 @@ const drawOverlay = (
   const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
   const vt   = fc.viewportTransform || [1,0,0,1,0,0]
-  const left   = rect.left + vt[4] + (box.left - PAD) * SCALE
-  const top    = rect.top  + vt[5] + (box.top - PAD) * SCALE
-  const width  = (box.width  + PAD * 2) * SCALE
-  const height = (box.height + PAD * 2) * SCALE
+  const scale = vt[0]
+  const left   = rect.left + vt[4] + (box.left - PAD) * scale
+  const top    = rect.top  + vt[5] + (box.top - PAD) * scale
+  const width  = (box.width  + PAD * 2) * scale
+  const height = (box.height + PAD * 2) * scale
   el.style.left   = `${left}px`
   el.style.top    = `${top}px`
   el.style.width  = `${width}px`
@@ -1068,11 +1069,12 @@ fc.on('mouse:over', e => {
   const box = t.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
   const vt = fc.viewportTransform || [1,0,0,1,0,0]
+  const scale = vt[0]
   hoverDomRef.current && (() => {
-    hoverDomRef.current.style.left = `${rect.left + vt[4] + (box.left - PAD) * SCALE}px`
-    hoverDomRef.current.style.top = `${rect.top + vt[5] + (box.top - PAD) * SCALE}px`
-    hoverDomRef.current.style.width = `${(box.width + PAD * 2) * SCALE}px`
-    hoverDomRef.current.style.height = `${(box.height + PAD * 2) * SCALE}px`
+    hoverDomRef.current.style.left = `${rect.left + vt[4] + (box.left - PAD) * scale}px`
+    hoverDomRef.current.style.top = `${rect.top + vt[5] + (box.top - PAD) * scale}px`
+    hoverDomRef.current.style.width = `${(box.width + PAD * 2) * scale}px`
+    hoverDomRef.current.style.height = `${(box.height + PAD * 2) * scale}px`
     hoverDomRef.current.style.display = 'block'
   })()
 })
@@ -1449,7 +1451,7 @@ img.on('mouseup', () => {
             }
 
 doSync = () =>
-  canvasRef.current && ghost && syncGhost(img, ghost, canvasRef.current, zoom)
+  canvasRef.current && ghost && syncGhost(img, ghost, canvasRef.current)
             doSync()
             img.on('moving',   doSync)
                .on('scaling',  doSync)
