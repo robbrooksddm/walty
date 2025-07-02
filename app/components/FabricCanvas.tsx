@@ -648,11 +648,11 @@ useEffect(() => {
   });
   (cropEl as any)._handles = cropHandles;
 
-  const forward = (ev: PointerEvent) => ({
-    clientX   : ev.clientX,
-    clientY   : ev.clientY,
+  const forward = (ev: PointerEvent | MouseEvent, dx = 0, dy = 0) => ({
+    clientX   : ev.clientX + dx,
+    clientY   : ev.clientY + dy,
     button    : ev.button,
-    buttons   : ev.buttons,
+    buttons   : 'buttons' in ev ? ev.buttons : 0,
     ctrlKey   : ev.ctrlKey,
     shiftKey  : ev.shiftKey,
     altKey    : ev.altKey,
@@ -675,12 +675,19 @@ useEffect(() => {
   });
 
   const bridge = (e: PointerEvent) => {
-    const down = new MouseEvent('mousedown', forward(e))
+    const corner = (e.target as HTMLElement | null)?.dataset.corner
+    const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
+    const scale = vt[0]
+    const offset = PAD * scale
+    const dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
+    const dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+
+    const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
     const move = (ev: PointerEvent) =>
-      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev, dx, dy)))
     const up = (ev: PointerEvent) => {
-      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev)))
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev, dx, dy)))
       document.removeEventListener('pointermove', move)
       document.removeEventListener('pointerup', up)
     }
