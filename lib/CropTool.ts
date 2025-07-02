@@ -171,11 +171,27 @@ export class CropTool {
       img.centeredScaling = prevCenteredScaling
       img.hasBorders      = prevHasBorders
     })
-    /* hide the rotate ("mtr") and side controls while cropping */
-    img.setControlsVisibility({
-      mtr: false,          // hide rotation
-      ml : false, mr : false,      // hide middle-left / middle-right
-      mt : false, mb : false       // hide middle-top / middle-bottom
+    /* hide the rotate control; keep side handles active for DOM overlays */
+    const sideVis = {
+      ml: img.controls?.ml?.visible ?? true,
+      mr: img.controls?.mr?.visible ?? true,
+      mt: img.controls?.mt?.visible ?? true,
+      mb: img.controls?.mb?.visible ?? true,
+    };
+    img.setControlsVisibility({ mtr: false });
+    if (img.controls) {
+      img.controls.ml && (img.controls.ml.visible = false);
+      img.controls.mr && (img.controls.mr.visible = false);
+      img.controls.mt && (img.controls.mt.visible = false);
+      img.controls.mb && (img.controls.mb.visible = false);
+    }
+    this.cleanup.push(() => {
+      if (img.controls) {
+        img.controls.ml && (img.controls.ml.visible = sideVis.ml);
+        img.controls.mr && (img.controls.mr.visible = sideVis.mr);
+        img.controls.mt && (img.controls.mt.visible = sideVis.mt);
+        img.controls.mb && (img.controls.mb.visible = sideVis.mb);
+      }
     });
     img.hasBorders  = false
     img.borderColor = this.SEL          // keep consistent style if shown
