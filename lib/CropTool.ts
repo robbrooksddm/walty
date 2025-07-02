@@ -171,11 +171,22 @@ export class CropTool {
       img.centeredScaling = prevCenteredScaling
       img.hasBorders      = prevHasBorders
     })
-    /* hide the rotate ("mtr") and side controls while cropping */
-    img.setControlsVisibility({
-      mtr: false,          // hide rotation
-      ml : false, mr : false,      // hide middle-left / middle-right
-      mt : false, mb : false       // hide middle-top / middle-bottom
+    /* hide the rotate ("mtr") while cropping.  Side handles remain active but
+       are rendered via the DOM overlay, so we suppress Fabric's own drawing */
+    img.setControlsVisibility({ mtr: false });
+    const hidden: Array<[string, any]> = [];
+    ['ml','mr','mt','mb'].forEach(c => {
+      const ctrl = (img as any).controls?.[c] as fabric.Control | undefined;
+      if (ctrl) {
+        hidden.push([c, ctrl.render]);
+        ctrl.render = () => {};
+      }
+    });
+    this.cleanup.push(() => {
+      hidden.forEach(([c, render]) => {
+        const ctrl = (img as any).controls?.[c];
+        if (ctrl) ctrl.render = render;
+      });
     });
     img.hasBorders  = false
     img.borderColor = this.SEL          // keep consistent style if shown
