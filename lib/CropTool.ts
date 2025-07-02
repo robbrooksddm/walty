@@ -195,7 +195,7 @@ export class CropTool {
         fill:'',
         perPixelTargetFind:false,   // relax pixel-perfect hit-testing
         evented:false,
-        stroke:this.SEL, strokeWidth:1/this.SCALE,
+        stroke:'transparent', strokeWidth:1/this.SCALE,
         strokeUniform:true }),
     ],{
       left:fx, top:fy, originX:'left', originY:'top',
@@ -920,8 +920,8 @@ export class CropTool {
       ctx.strokeRect(br.left, br.top, br.width, br.height);
       ctx.restore();
     }
-    if (this.img?.hasControls)   this.img.drawControls(ctx);
-    if (this.frame?.hasControls) this.frame.drawControls(ctx);
+    // DOM overlays handle visible controls; avoid duplicate canvas handles
+    // by skipping Fabric's built‑in renderers here.
     ctx.restore()
   }
 }
