@@ -159,12 +159,11 @@ export default function CardEditor({
   const redo = useEditor(s => s.redo)
 
 
-  /* 3 ─ visible section ------------------------------------------ */
-  const [section, setSection] = useState<Section>('front')
-  const activeIdx: PageIdx =
-    section === 'front'  ? 0 :
-    section === 'inside' ? 1 :
-    3                                                        // back
+  /* 3 ─ active page ---------------------------------------------- */
+  const [activeIdx, setActiveIdx] = useState<PageIdx>(0)
+  const section: Section =
+    activeIdx === 0 ? 'front' :
+    activeIdx === 3 ? 'back'  : 'inside'
   useEffect(() => { setActive(activeIdx) }, [activeIdx, setActive])
 
   /* 4 ─ Fabric canvases ------------------------------------------ */
@@ -854,7 +853,11 @@ const handleProofAll = async () => {
           >
             
             {/* front */}
-            <div className={section === 'front' ? box : 'hidden'} style={{ width: boxWidth }}>
+            <div
+              className={section === 'front' ? box : 'hidden'}
+              style={{ width: boxWidth }}
+              onClick={() => setActiveIdx(0)}
+            >
               <FabricCanvas
                 pageIdx={0}
                 page={pages[0]}
@@ -867,7 +870,11 @@ const handleProofAll = async () => {
             </div>
             {/* inside */}
             <div className={section === 'inside' ? 'flex gap-6' : 'hidden'}>
-              <div className={box} style={{ width: boxWidth }}>
+              <div
+                className={`${box} ${activeIdx === 1 ? '' : 'opacity-50'} relative`}
+                style={{ width: boxWidth }}
+                onClick={() => setActiveIdx(1)}
+              >
                 <FabricCanvas
                   pageIdx={1}
                   page={pages[1]}
@@ -878,7 +885,11 @@ const handleProofAll = async () => {
                   mode={mode}
                 />
               </div>
-              <div className={box} style={{ width: boxWidth }}>
+              <div
+                className={`${box} ${activeIdx === 2 ? '' : 'opacity-50'} relative`}
+                style={{ width: boxWidth }}
+                onClick={() => setActiveIdx(2)}
+              >
                 <FabricCanvas
                   pageIdx={2}
                   page={pages[2]}
@@ -891,7 +902,11 @@ const handleProofAll = async () => {
               </div>
             </div>
             {/* back */}
-            <div className={section === 'back' ? box : 'hidden'} style={{ width: boxWidth }}>
+            <div
+              className={section === 'back' ? box : 'hidden'}
+              style={{ width: boxWidth }}
+              onClick={() => setActiveIdx(3)}
+            >
               <FabricCanvas
                 pageIdx={3}
                 page={pages[3]}
@@ -909,16 +924,8 @@ const handleProofAll = async () => {
             {(['FRONT', 'INNER-L', 'INNER-R', 'BACK'] as const).map((lbl, i) => (
               <button
                 key={lbl}
-                className={`thumb ${
-                  (section === 'front' && i === 0) ||
-                  (section === 'inside' && (i === 1 || i === 2)) ||
-                  (section === 'back' && i === 3)
-                    ? 'thumb-active'
-                    : ''
-                }`}
-                onClick={() =>
-                  setSection(i === 0 ? 'front' : i === 3 ? 'back' : 'inside')
-                }
+                className={`thumb ${activeIdx === i ? 'thumb-active' : ''}`}
+                onClick={() => setActiveIdx(i as PageIdx)}
               >
                 {thumbs[i] ? (
                   <img
