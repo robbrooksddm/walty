@@ -483,6 +483,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const cropDomRef   = useRef<HTMLDivElement | null>(null)
 
   const containerRef = useRef<HTMLElement | null>(null)
+  const scrollParentsRef = useRef<EventTarget[]>([])
 
   const cropToolRef = useRef<CropTool | null>(null)
   const croppingRef = useRef(false)
@@ -747,7 +748,14 @@ if (container) {
   container.style.overflow  = 'visible';
 
   // keep the ref so scroll listeners work
-  containerRef.current = container;
+  containerRef.current = container
+  scrollParentsRef.current = []
+  let p: HTMLElement | null = container
+  while (p) {
+    scrollParentsRef.current.push(p)
+    p = p.parentElement
+  }
+  scrollParentsRef.current.push(window)
 }
   
   fc.setWidth(PREVIEW_W * zoom)
@@ -760,9 +768,9 @@ if (container) {
   /* keep event coordinates aligned with any scroll/resize */
   const updateOffset = () => fc.calcOffset();
   updateOffset();
-  window.addEventListener('scroll', updateOffset, { passive: true, capture: true });
-  window.addEventListener('resize', updateOffset);
-  containerRef.current?.addEventListener('scroll', updateOffset, { passive: true, capture: true });
+  window.addEventListener('resize', updateOffset)
+  scrollParentsRef.current.forEach(el =>
+    el.addEventListener('scroll', updateOffset, { passive: true, capture: true }))
 
   const isolateCrop = (active: boolean) => {
     const map = savedInteractivityRef.current
@@ -1047,16 +1055,16 @@ fc.on('selection:created', () => {
     syncSel()
     syncHover()
   }
-  window.addEventListener('scroll', scrollHandler, { passive: true, capture: true })
   window.addEventListener('resize', scrollHandler)
-  containerRef.current?.addEventListener('scroll', scrollHandler, { passive: true, capture: true })
+  scrollParentsRef.current.forEach(el =>
+    el.addEventListener('scroll', scrollHandler, { passive: true, capture: true }))
 })
 .on('selection:updated', syncSel)
 .on('selection:cleared', () => {
   if (scrollHandler) {
-    window.removeEventListener('scroll', scrollHandler)
     window.removeEventListener('resize', scrollHandler)
-    containerRef.current?.removeEventListener('scroll', scrollHandler)
+    scrollParentsRef.current.forEach(el =>
+      el.removeEventListener('scroll', scrollHandler))
     scrollHandler = null
   }
   selDomRef.current && (selDomRef.current.style.display = 'none')
@@ -1087,9 +1095,9 @@ fc.on('mouse:over', e => {
     ;(hoverDomRef.current as any)._object = t
     hoverDomRef.current.style.display = 'block'
     hoverScrollHandler = () => syncHover()
-    window.addEventListener('scroll', hoverScrollHandler, { passive: true, capture: true })
     window.addEventListener('resize', hoverScrollHandler)
-    containerRef.current?.addEventListener('scroll', hoverScrollHandler, { passive: true, capture: true })
+    scrollParentsRef.current.forEach(el =>
+      el.addEventListener('scroll', hoverScrollHandler, { passive: true, capture: true }))
   })()
 })
 .on('mouse:out', () => {
@@ -1098,9 +1106,9 @@ fc.on('mouse:over', e => {
     hoverDomRef.current.style.display = 'none'
     ;(hoverDomRef.current as any)._object = null
     if (hoverScrollHandler) {
-      window.removeEventListener('scroll', hoverScrollHandler)
       window.removeEventListener('resize', hoverScrollHandler)
-      containerRef.current?.removeEventListener('scroll', hoverScrollHandler)
+      scrollParentsRef.current.forEach(el =>
+        el.removeEventListener('scroll', hoverScrollHandler))
       hoverScrollHandler = null
     }
   })()
@@ -1288,10 +1296,14 @@ window.addEventListener('keydown', onKey)
     return () => {
       fc.upperCanvasEl.removeEventListener('contextmenu', ctxMenu)
       window.removeEventListener('keydown', onKey)
-      if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
-      window.removeEventListener('scroll', updateOffset)
+      if (scrollHandler) {
+        window.removeEventListener('resize', scrollHandler)
+        scrollParentsRef.current.forEach(el =>
+          el.removeEventListener('scroll', scrollHandler))
+      }
       window.removeEventListener('resize', updateOffset)
-      containerRef.current?.removeEventListener('scroll', updateOffset)
+      scrollParentsRef.current.forEach(el =>
+        el.removeEventListener('scroll', updateOffset))
       // tidy up crop‑tool listeners
       fc.off('mouse:dblclick', dblHandler);
       window.removeEventListener('keydown', keyCropHandler);
@@ -1311,14 +1323,14 @@ window.addEventListener('keydown', onKey)
       selDomRef.current?.remove()
       cropDomRef.current?.remove()
       if (scrollHandler) {
-        window.removeEventListener('scroll', scrollHandler)
         window.removeEventListener('resize', scrollHandler)
-        containerRef.current?.removeEventListener('scroll', scrollHandler)
+        scrollParentsRef.current.forEach(el =>
+          el.removeEventListener('scroll', scrollHandler))
       }
       if (hoverScrollHandler) {
-        window.removeEventListener('scroll', hoverScrollHandler)
         window.removeEventListener('resize', hoverScrollHandler)
-        containerRef.current?.removeEventListener('scroll', hoverScrollHandler)
+        scrollParentsRef.current.forEach(el =>
+          el.removeEventListener('scroll', hoverScrollHandler))
       }
     }
 // eslint-disable-next-line react-hooks/exhaustive-deps
