@@ -267,12 +267,12 @@ const syncGhost = (
   img   : fabric.Image,
   ghost : HTMLDivElement,
   canvas: HTMLCanvasElement,
-  zoom  : number,
 ) => {
   const canvasRect = canvas.getBoundingClientRect()
   const { left, top, width, height } = img.getBoundingRect()
-
-  const s = SCALE * zoom
+  const fc = img.canvas as fabric.Canvas | null
+  const vt = fc?.viewportTransform || [SCALE, 0, 0, SCALE, 0, 0]
+  const s = vt[0]
   ghost.style.left   = `${canvasRect.left + left   * s}px`
   ghost.style.top    = `${canvasRect.top  + top    * s}px`
   ghost.style.width  = `${width  * s}px`
@@ -609,6 +609,7 @@ useEffect(() => {
   hoverEl.style.display = 'none';
   document.body.appendChild(hoverEl);
   hoverDomRef.current = hoverEl;
+  (hoverEl as any)._object = null;
 
   const selEl = document.createElement('div');
   selEl.className = 'sel-overlay interactive';
@@ -958,10 +959,11 @@ const drawOverlay = (
   const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
   const vt   = fc.viewportTransform || [1,0,0,1,0,0]
-  const left   = rect.left + vt[4] + (box.left - PAD) * SCALE
-  const top    = rect.top  + vt[5] + (box.top - PAD) * SCALE
-  const width  = (box.width  + PAD * 2) * SCALE
-  const height = (box.height + PAD * 2) * SCALE
+  const scale = vt[0]
+  const left   = rect.left + vt[4] + (box.left - PAD) * scale
+  const top    = rect.top  + vt[5] + (box.top - PAD) * scale
+  const width  = (box.width  + PAD * 2) * scale
+  const height = (box.height + PAD * 2) * scale
   el.style.left   = `${left}px`
   el.style.top    = `${top}px`
   el.style.width  = `${width}px`
@@ -1022,6 +1024,13 @@ const syncSel = () => {
   selEl._object = obj
 }
 
+const syncHover = () => {
+  if (!hoverDomRef.current || !canvasRef.current) return
+  const obj = (hoverDomRef.current as any)._object as fabric.Object | null
+  if (!obj) return
+  drawOverlay(obj, hoverDomRef.current as HTMLDivElement & { _object?: fabric.Object | null })
+}
+
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
@@ -1049,6 +1058,8 @@ fc.on('selection:created', () => {
 })
 
 /* also hide hover during any transform of the active object */
+const handleAfterRender = () => { syncSel(); syncHover() }
+
 fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
   .on('object:scaling',  () => { hoverHL.visible = false; syncSel() })
   .on('object:scaled',   () => {
@@ -1058,27 +1069,25 @@ fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
   .on('object:rotating', () => { hoverHL.visible = false; syncSel() })
   .on('object:modified', () =>
     requestAnimationFrame(() => requestAnimationFrame(syncSel)))
-  .on('after:render',    syncSel)
+  .on('after:render',    handleAfterRender)
 
 /* ── 4 ▸ Hover outline (only when NOT the active object) ─── */
 fc.on('mouse:over', e => {
   const t = e.target as fabric.Object | undefined
   if (!t || (t as any)._guide || t === hoverHL) return
   if (fc.getActiveObject() === t) return           // skip active selection
-  const box = t.getBoundingRect(true, true)
-  const rect = canvasRef.current!.getBoundingClientRect()
-  const vt = fc.viewportTransform || [1,0,0,1,0,0]
   hoverDomRef.current && (() => {
-    hoverDomRef.current.style.left = `${rect.left + vt[4] + (box.left - PAD) * SCALE}px`
-    hoverDomRef.current.style.top = `${rect.top + vt[5] + (box.top - PAD) * SCALE}px`
-    hoverDomRef.current.style.width = `${(box.width + PAD * 2) * SCALE}px`
-    hoverDomRef.current.style.height = `${(box.height + PAD * 2) * SCALE}px`
+    drawOverlay(t, hoverDomRef.current as HTMLDivElement & { _object?: fabric.Object | null })
+    ;(hoverDomRef.current as any)._object = t
     hoverDomRef.current.style.display = 'block'
   })()
 })
 .on('mouse:out', () => {
   hoverHL.visible = false
-  hoverDomRef.current && (hoverDomRef.current.style.display = 'none')
+  hoverDomRef.current && (() => {
+    hoverDomRef.current.style.display = 'none'
+    ;(hoverDomRef.current as any)._object = null
+  })()
   fc.requestRenderAll()
 })
 
@@ -1273,7 +1282,7 @@ window.addEventListener('keydown', onKey)
       fc.off('before:transform', startCrop);
       fc.off('object:scaling', duringCrop);
       fc.off('object:scaled', endCrop);
-      fc.off('after:render', syncSel);
+      fc.off('after:render', handleAfterRender);
       selEl.removeEventListener('pointerdown', onSelDown)
       cropEl.removeEventListener('pointerdown', onCropDown)
       selEl.removeEventListener('pointerenter', raiseSel)
@@ -1449,7 +1458,7 @@ img.on('mouseup', () => {
             }
 
 doSync = () =>
-  canvasRef.current && ghost && syncGhost(img, ghost, canvasRef.current, zoom)
+  canvasRef.current && ghost && syncGhost(img, ghost, canvasRef.current)
             doSync()
             img.on('moving',   doSync)
                .on('scaling',  doSync)
