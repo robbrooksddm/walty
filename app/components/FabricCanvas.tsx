@@ -1048,6 +1048,7 @@ fc.on('selection:created', () => {
     syncHover()
   }
   window.addEventListener('scroll', scrollHandler, { passive:true })
+  document.addEventListener('scroll', scrollHandler, { passive:true })
   window.addEventListener('resize', scrollHandler)
   containerRef.current?.addEventListener('scroll', scrollHandler, { passive:true })
 })
@@ -1055,6 +1056,7 @@ fc.on('selection:created', () => {
 .on('selection:cleared', () => {
   if (scrollHandler) {
     window.removeEventListener('scroll', scrollHandler)
+    document.removeEventListener('scroll', scrollHandler)
     window.removeEventListener('resize', scrollHandler)
     containerRef.current?.removeEventListener('scroll', scrollHandler)
     scrollHandler = null
@@ -1088,6 +1090,7 @@ fc.on('mouse:over', e => {
     hoverDomRef.current.style.display = 'block'
     hoverScrollHandler = () => syncHover()
     window.addEventListener('scroll', hoverScrollHandler, { passive: true })
+    document.addEventListener('scroll', hoverScrollHandler, { passive: true })
     window.addEventListener('resize', hoverScrollHandler)
     containerRef.current?.addEventListener('scroll', hoverScrollHandler, { passive: true })
   })()
@@ -1099,6 +1102,7 @@ fc.on('mouse:over', e => {
     ;(hoverDomRef.current as any)._object = null
     if (hoverScrollHandler) {
       window.removeEventListener('scroll', hoverScrollHandler)
+      document.removeEventListener('scroll', hoverScrollHandler)
       window.removeEventListener('resize', hoverScrollHandler)
       containerRef.current?.removeEventListener('scroll', hoverScrollHandler)
       hoverScrollHandler = null
@@ -1312,11 +1316,13 @@ window.addEventListener('keydown', onKey)
       cropDomRef.current?.remove()
       if (scrollHandler) {
         window.removeEventListener('scroll', scrollHandler)
+        document.removeEventListener('scroll', scrollHandler)
         window.removeEventListener('resize', scrollHandler)
         containerRef.current?.removeEventListener('scroll', scrollHandler)
       }
       if (hoverScrollHandler) {
         window.removeEventListener('scroll', hoverScrollHandler)
+        document.removeEventListener('scroll', hoverScrollHandler)
         window.removeEventListener('resize', hoverScrollHandler)
         containerRef.current?.removeEventListener('scroll', hoverScrollHandler)
       }
