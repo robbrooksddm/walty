@@ -968,25 +968,28 @@ const drawOverlay = (
   const scrollY = (c?.scrollTop  ?? 0)
   const left   = window.scrollX + scrollX + rect.left + vt[4] + (box.left - PAD) * scale
   const top    = window.scrollY + scrollY + rect.top  + vt[5] + (box.top - PAD) * scale
-  const width  = (box.width  + PAD * 2) * scale
-  const height = (box.height + PAD * 2) * scale
+  const scaledPAD = PAD * scale
+  const w = box.width * scale
+  const h = box.height * scale
+  const width  = w + scaledPAD * 2
+  const height = h + scaledPAD * 2
   el.style.left   = `${left}px`
   el.style.top    = `${top}px`
   el.style.width  = `${width}px`
   el.style.height = `${height}px`
   el._object = obj
   if (el._handles) {
-    const h = el._handles
-    const midX = width / 2
-    const midY = height / 2
-    h.tl.style.left = '0px';      h.tl.style.top = '0px'
-    h.tr.style.left = `${width}px`; h.tr.style.top = '0px'
-    h.br.style.left = `${width}px`; h.br.style.top = `${height}px`
-    h.bl.style.left = '0px';      h.bl.style.top = `${height}px`
-    h.ml.style.left = '0px';      h.ml.style.top = `${midY}px`
-    h.mr.style.left = `${width}px`; h.mr.style.top = `${midY}px`
-    h.mt.style.left = `${midX}px`; h.mt.style.top = '0px'
-    h.mb.style.left = `${midX}px`; h.mb.style.top = `${height}px`
+    const hnd = el._handles
+    const midX = scaledPAD + w / 2
+    const midY = scaledPAD + h / 2
+    hnd.tl.style.left = '0px';          hnd.tl.style.top = '0px'
+    hnd.tr.style.left = `${width}px`;   hnd.tr.style.top = '0px'
+    hnd.br.style.left = `${width}px`;   hnd.br.style.top = `${height}px`
+    hnd.bl.style.left = '0px';          hnd.bl.style.top = `${height}px`
+    hnd.ml.style.left = `${scaledPAD}px`;      hnd.ml.style.top = `${midY}px`
+    hnd.mr.style.left = `${scaledPAD + w}px`; hnd.mr.style.top = `${midY}px`
+    hnd.mt.style.left = `${midX}px`;    hnd.mt.style.top = `${scaledPAD}px`
+    hnd.mb.style.left = `${midX}px`;    hnd.mb.style.top = `${scaledPAD + h}px`
   }
 }
 
