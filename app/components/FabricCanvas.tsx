@@ -74,7 +74,7 @@ function recompute() {
   PREVIEW_W = currentPreview.previewWidthPx
   PREVIEW_H = currentPreview.previewHeightPx
   SCALE = PREVIEW_W / PAGE_W
-  PAD = 4 / SCALE
+  PAD = 0
   // compute safe-zone after scaling so rounding happens in preview pixels
   const safeXPreview = safeInsetXIn * currentSpec.dpi * SCALE
   const safeYPreview = safeInsetYIn * currentSpec.dpi * SCALE
@@ -113,7 +113,7 @@ let PAGE_W = 0
 let PAGE_H = 0
 let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
-let PAD = 4
+let PAD = 0
 
 recompute()
 
