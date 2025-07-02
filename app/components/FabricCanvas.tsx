@@ -630,7 +630,7 @@ useEffect(() => {
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
-  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const corners = ['tl','tr','br','bl','ml','mr','mt','mb','mtr'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
   corners.forEach(c => {
     const h = document.createElement('div');
@@ -641,8 +641,9 @@ useEffect(() => {
   });
   (selEl as any)._handles = handleMap;
 
+  const cropCorners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
   const cropHandles: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  cropCorners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
     h.dataset.corner = c;
@@ -682,8 +683,12 @@ useEffect(() => {
     const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const scale = vt[0]
     const offset = PAD * scale
-    const dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
-    const dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+    const dx = corner && corner !== 'mtr'
+      ? corner.includes('l') ? offset : corner.includes('r') ? -offset : 0
+      : 0
+    const dy = corner && corner !== 'mtr'
+      ? corner.includes('t') ? offset : corner.includes('b') ? -offset : 0
+      : 0
 
     const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
@@ -1045,6 +1050,12 @@ const drawOverlay = (
     h.mr.style.left = `${width}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`; h.mt.style.top = '0px'
     h.mb.style.left = `${midX}px`; h.mb.style.top = `${height}px`
+    if (h.mtr) {
+      const off = (obj as any).rotatingPointOffset ?? 40
+      h.mtr.style.left = `${midX}px`
+      h.mtr.style.top  = `${-off * scale}px`
+      h.mtr.style.display = croppingRef.current ? 'none' : 'block'
+    }
   }
 }
 

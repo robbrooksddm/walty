@@ -17,6 +17,8 @@ export const HANDLE_BLUR   = 1 / SCALE;
 (fabric.Object.prototype as any).cornerColor       = '#fff';
 (fabric.Object.prototype as any).transparentCorners= false;
 (fabric.Object.prototype as any).cornerStyle       = 'circle';
+(fabric.Object.prototype as any).hasBorders       = false;  // hide default outline
+(fabric.Object.prototype as any).borderColor      = 'transparent';
 
 /* ───────────────── helpers ──────────────────────────────── */
 
