@@ -484,6 +484,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
 
   const cropToolRef = useRef<CropTool | null>(null)
   const croppingRef = useRef(false)
+  const zoomRef = useRef(zoom)
 
   const savedInteractivityRef = useRef(
     new WeakMap<fabric.Object, { sel: boolean; evt: boolean }>()
@@ -958,10 +959,12 @@ const drawOverlay = (
   const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
   const vt   = fc.viewportTransform || [1,0,0,1,0,0]
-  const left   = rect.left + vt[4] + (box.left - PAD) * SCALE
-  const top    = rect.top  + vt[5] + (box.top - PAD) * SCALE
-  const width  = (box.width  + PAD * 2) * SCALE
-  const height = (box.height + PAD * 2) * SCALE
+  const zoomScale = fc.getZoom()
+  const pad = 4 / zoomScale
+  const left   = rect.left + vt[4] + (box.left - pad) * zoomScale
+  const top    = rect.top  + vt[5] + (box.top - pad) * zoomScale
+  const width  = (box.width  + pad * 2) * zoomScale
+  const height = (box.height + pad * 2) * zoomScale
   el.style.left   = `${left}px`
   el.style.top    = `${top}px`
   el.style.width  = `${width}px`
@@ -1069,10 +1072,12 @@ fc.on('mouse:over', e => {
   const rect = canvasRef.current!.getBoundingClientRect()
   const vt = fc.viewportTransform || [1,0,0,1,0,0]
   hoverDomRef.current && (() => {
-    hoverDomRef.current.style.left = `${rect.left + vt[4] + (box.left - PAD) * SCALE}px`
-    hoverDomRef.current.style.top = `${rect.top + vt[5] + (box.top - PAD) * SCALE}px`
-    hoverDomRef.current.style.width = `${(box.width + PAD * 2) * SCALE}px`
-    hoverDomRef.current.style.height = `${(box.height + PAD * 2) * SCALE}px`
+    const zoomScale = fc.getZoom()
+    const pad = 4 / zoomScale
+    hoverDomRef.current.style.left = `${rect.left + vt[4] + (box.left - pad) * zoomScale}px`
+    hoverDomRef.current.style.top = `${rect.top + vt[5] + (box.top - pad) * zoomScale}px`
+    hoverDomRef.current.style.width = `${(box.width + pad * 2) * zoomScale}px`
+    hoverDomRef.current.style.height = `${(box.height + pad * 2) * zoomScale}px`
     hoverDomRef.current.style.display = 'block'
   })()
 })
@@ -1301,6 +1306,8 @@ window.addEventListener('keydown', onKey)
     const canvas = canvasRef.current
     if (!fc || !canvas) return
 
+    zoomRef.current = zoom
+
     const container = canvas.parentElement as HTMLElement | null
     if (container) {
       const pad = 4 * zoom
@@ -1320,6 +1327,13 @@ window.addEventListener('keydown', onKey)
     fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
     if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
     fc.requestRenderAll()
+
+    fc.getObjects().forEach(o => {
+      const ghost = (o as any)._ghost as HTMLDivElement | undefined
+      if (ghost && o.type === 'image') {
+        syncGhost(o as fabric.Image, ghost, canvas, SCALE * zoom)
+      }
+    })
   }, [zoom])
 
   /* ---------- crop mode toggle ------------------------------ */
@@ -1449,7 +1463,9 @@ img.on('mouseup', () => {
             }
 
 doSync = () =>
-  canvasRef.current && ghost && syncGhost(img, ghost, canvasRef.current, zoom)
+  canvasRef.current &&
+  ghost &&
+  syncGhost(img, ghost, canvasRef.current, SCALE * zoomRef.current)
             doSync()
             img.on('moving',   doSync)
                .on('scaling',  doSync)
