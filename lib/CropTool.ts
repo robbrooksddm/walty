@@ -528,8 +528,7 @@ export class CropTool {
     );
 
     /* ④ dual‑handle rendering + clamping */
-    // draw both control sets every frame
-    this.fc.on('after:render', this.renderBoth)
+    // DOM overlays already draw both handle sets
 
     /* ------------------------------------------------------------------
      *  Whenever the user presses the mouse, ensure that whichever object
@@ -734,7 +733,6 @@ export class CropTool {
     this.cleanup.forEach(fn => fn());
     this.cleanup = [];
 
-    this.fc.off('after:render', this.renderBoth)
     if (this.frame) this.fc.remove(this.frame)
     this.masks.forEach(r => this.fc.remove(r));
     this.masks = [];
@@ -889,39 +887,4 @@ export class CropTool {
       return Math.max(needW / img.width!, needH / img.height!);
     }
 
-  /* draw controls for both objects each frame */
-  private renderBoth = () => {
-    if (!this.img || !this.frame) return
-
-    // Always refresh corner caches before drawing controls so they track
-    // live transforms even after repeated scale gestures.
-    this.img.setCoords();
-    this.frame.setCoords();
-
-        const ctx = (this.fc as any).contextTop
-        if (!ctx) return;            // canvas disposed or not yet initialised
-        /* Fabric doesn’t always wipe contextTop if it draws nothing of its own.
-           Clear it ourselves before redrawing both control sets. */
-        this.fc.clearContext(ctx)
-
-    ctx.save()
-    const vpt = this.fc.viewportTransform;
-    if (vpt) {
-      //          a     b     c     d     e     f
-      ctx.transform(vpt[0], vpt[1], vpt[2], vpt[3], vpt[4], vpt[5]);
-    }      // draw in the same space as Fabric
-    /* ---- Persistent bitmap outline while cropping ---- */
-    if (this.isActive && this.img) {
-      const br = this.img.getBoundingRect(true, true);
-      ctx.save();
-      ctx.strokeStyle = this.SEL;
-      ctx.lineWidth   = 1 / this.SCALE;
-      ctx.setLineDash([]);                 // solid
-      ctx.strokeRect(br.left, br.top, br.width, br.height);
-      ctx.restore();
-    }
-    if (this.img?.hasControls)   this.img.drawControls(ctx);
-    if (this.frame?.hasControls) this.frame.drawControls(ctx);
-    ctx.restore()
-  }
 }
