@@ -477,7 +477,6 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const maskRectsRef = useRef<fabric.Rect[]>([]);
-  const hoverRef     = useRef<fabric.Rect | null>(null)
   const hydrating    = useRef(false)
   const isEditing    = useRef(false)
 
@@ -993,22 +992,6 @@ if (container) {
   fc.on('before:transform', startCrop);
   fc.on('object:scaling', duringCrop);
   fc.on('object:scaled', endCrop);
-
- 
-
-/* ── 2 ▸ Hover overlay only ─────────────────────────────── */
-const hoverHL = new fabric.Rect({
-  originX:'left', originY:'top', strokeUniform:true,
-  fill:'transparent',
-  stroke:SEL_COLOR,
-  strokeWidth:1 / SCALE,
-  strokeDashArray:[],
-  selectable:false, evented:false, visible:false,
-  excludeFromExport:true,
-})
-fc.add(hoverHL)
-hoverRef.current = hoverHL
-
 /* ── 3 ▸ Selection lifecycle (DOM overlay) ─────────── */
 let scrollHandler: (() => void) | null = null
 let hoverScrollHandler: (() => void) | null = null
@@ -1096,7 +1079,6 @@ const syncHover = () => {
 }
 
 fc.on('selection:created', () => {
-  hoverHL.visible = false
   fc.requestRenderAll()
   selDomRef.current && (selDomRef.current.style.display = 'block')
   if (croppingRef.current && cropDomRef.current) {
@@ -1132,13 +1114,12 @@ const handleAfterRender = () => {
   syncHover()
 }
 
-fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
-  .on('object:scaling',  () => { hoverHL.visible = false; syncSel() })
+fc.on('object:moving',   () => { syncSel() })
+  .on('object:scaling',  () => { syncSel() })
   .on('object:scaled',   () => {
-    hoverHL.visible = false
     requestAnimationFrame(() => requestAnimationFrame(syncSel))
   })
-  .on('object:rotating', () => { hoverHL.visible = false; syncSel() })
+  .on('object:rotating', () => { syncSel() })
   .on('object:modified', () =>
     requestAnimationFrame(() => requestAnimationFrame(syncSel)))
   .on('after:render',    handleAfterRender)
@@ -1146,7 +1127,7 @@ fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
 /* ── 4 ▸ Hover outline (only when NOT the active object) ─── */
 fc.on('mouse:over', e => {
   const t = e.target as fabric.Object | undefined
-  if (!t || (t as any)._guide || t === hoverHL) return
+  if (!t || (t as any)._guide) return
   if (fc.getActiveObject() === t) return           // skip active selection
   hoverDomRef.current && (() => {
     drawOverlay(t, hoverDomRef.current as HTMLDivElement & { _object?: fabric.Object | null })
@@ -1161,9 +1142,7 @@ fc.on('mouse:over', e => {
     containerRef.current?.addEventListener('scroll', hoverScrollHandler, { passive: true, capture: true })
   })()
 })
-.on('mouse:out', () => {
-  hoverHL.visible = false
-  hoverDomRef.current && (() => {
+.on('mouse:out', () => {  hoverDomRef.current && (() => {
     hoverDomRef.current.style.display = 'none'
     ;(hoverDomRef.current as any)._object = null
     if (hoverScrollHandler) {
@@ -1447,7 +1426,6 @@ window.addEventListener('keydown', onKey)
     hydrating.current = true
     fc.clear();
     fc.setBackgroundColor('#fff', fc.renderAll.bind(fc));
-    hoverRef.current && fc.add(hoverRef.current)
 
     /* bottom ➜ top keeps original z-order */
     for (let idx = 0; idx < page.layers.length; idx++) {
@@ -1621,7 +1599,6 @@ doSync = () =>
     }
 
     addGuides(fc, mode)
-    hoverRef.current?.bringToFront()
     fc.requestRenderAll();
     hydrating.current = false
     document.dispatchEvent(

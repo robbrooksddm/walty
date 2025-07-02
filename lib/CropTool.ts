@@ -195,7 +195,7 @@ export class CropTool {
         fill:'',
         perPixelTargetFind:false,   // relax pixel-perfect hit-testing
         evented:false,
-        stroke:this.SEL, strokeWidth:1/this.SCALE,
+        stroke:"", strokeWidth:1/this.SCALE,
         strokeUniform:true }),
     ],{
       left:fx, top:fy, originX:'left', originY:'top',
@@ -207,58 +207,6 @@ export class CropTool {
       transparentCorners:false,
       subTargetCheck: true,          // let clicks inside the rectangle fall through
     })
-    // ---- replace default controls with 4 small white “L” handles ----
-    // slightly larger "L" handles for easier grabbing
-    const sizePx = 4 / this.SCALE;
-
-    /** Draw a single L‑shape, rotated for each corner */
-    const drawL = (
-      ctx : CanvasRenderingContext2D,
-      left: number,
-      top : number,
-      rot : number,                                  // radians
-    ) => {
-      ctx.save();
-      ctx.translate(left, top);
-      ctx.rotate(rot);
-      ctx.lineWidth   = 0.5 / this.SCALE;
-      ctx.strokeStyle = '#ffffff';
-      ctx.shadowColor = 'rgba(0,0,0,0.35)';          // subtle outline
-      ctx.shadowBlur  = 3 / this.SCALE;
-      ctx.beginPath();
-      ctx.moveTo(0,  0);
-      ctx.lineTo(0,  sizePx * 0.8);    // vertical down from origin
-      ctx.moveTo(0,  0);
-      ctx.lineTo(sizePx * 0.8, 0);     // horizontal right
-      ctx.stroke();
-      ctx.restore();
-    };
-
-    /** corner control factory with proper orientation */
-    const mkCorner = (x: number, y: number, rot: number) =>
-      new fabric.Control({
-        x, y,
-        offsetX: 0, offsetY: 0,
-        // enlarge hit‑box for easier grabbing
-        sizeX: 12 / this.SCALE,
-        sizeY: 12 / this.SCALE,
-        // use Fabric helpers (cast to `any` to silence TS)
-        cursorStyleHandler: (fabric as any).controlsUtils.scaleCursorStyleHandler,
-        actionHandler     : (fabric as any).controlsUtils.scalingEqually,
-        actionName        : 'scale',   // ensure Fabric treats this as scaling, not drag
-        render            : (ctx, left, top) => drawL(ctx, left, top, rot),
-      });
-
-    // keep only the 4 corner controls; no sides, no rotation
-    (this.frame as any).controls = {
-      tl: mkCorner(-0.5, -0.5,  0),                // top‑left
-      tr: mkCorner( 0.5, -0.5,  Math.PI / 2),      // top‑right
-      br: mkCorner( 0.5,  0.5,  Math.PI),          // bottom‑right
-      bl: mkCorner(-0.5,  0.5, -Math.PI / 2),      // bottom‑left
-    } as Record<string, fabric.Control>;
-
-    /* ③ add both to canvas and keep z‑order intuitive              */
-    this.fc.add(this.frame)
     /* 2‑b ─ dim everything outside the crop window -------------------- */
     const mkMask = () => new fabric.Rect({
       left: 0, top: 0, width: this.fc.width!, height: this.fc.height!,
@@ -527,9 +475,6 @@ export class CropTool {
       this.fc.off('object:modified', modifiedHandler)
     );
 
-    /* ④ dual‑handle rendering + clamping */
-    // draw both control sets every frame
-    this.fc.on('after:render', this.renderBoth)
 
     /* ------------------------------------------------------------------
      *  Whenever the user presses the mouse, ensure that whichever object
@@ -734,7 +679,6 @@ export class CropTool {
     this.cleanup.forEach(fn => fn());
     this.cleanup = [];
 
-    this.fc.off('after:render', this.renderBoth)
     if (this.frame) this.fc.remove(this.frame)
     this.masks.forEach(r => this.fc.remove(r));
     this.masks = [];
@@ -889,39 +833,4 @@ export class CropTool {
       return Math.max(needW / img.width!, needH / img.height!);
     }
 
-  /* draw controls for both objects each frame */
-  private renderBoth = () => {
-    if (!this.img || !this.frame) return
-
-    // Always refresh corner caches before drawing controls so they track
-    // live transforms even after repeated scale gestures.
-    this.img.setCoords();
-    this.frame.setCoords();
-
-        const ctx = (this.fc as any).contextTop
-        if (!ctx) return;            // canvas disposed or not yet initialised
-        /* Fabric doesn’t always wipe contextTop if it draws nothing of its own.
-           Clear it ourselves before redrawing both control sets. */
-        this.fc.clearContext(ctx)
-
-    ctx.save()
-    const vpt = this.fc.viewportTransform;
-    if (vpt) {
-      //          a     b     c     d     e     f
-      ctx.transform(vpt[0], vpt[1], vpt[2], vpt[3], vpt[4], vpt[5]);
-    }      // draw in the same space as Fabric
-    /* ---- Persistent bitmap outline while cropping ---- */
-    if (this.isActive && this.img) {
-      const br = this.img.getBoundingRect(true, true);
-      ctx.save();
-      ctx.strokeStyle = this.SEL;
-      ctx.lineWidth   = 1 / this.SCALE;
-      ctx.setLineDash([]);                 // solid
-      ctx.strokeRect(br.left, br.top, br.width, br.height);
-      ctx.restore();
-    }
-    if (this.img?.hasControls)   this.img.drawControls(ctx);
-    if (this.frame?.hasControls) this.frame.drawControls(ctx);
-    ctx.restore()
-  }
 }
