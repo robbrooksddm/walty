@@ -648,11 +648,11 @@ useEffect(() => {
   });
   (cropEl as any)._handles = cropHandles;
 
-  const forward = (ev: PointerEvent) => ({
-    clientX   : ev.clientX,
-    clientY   : ev.clientY,
+  const forward = (ev: PointerEvent | MouseEvent, dx = 0, dy = 0) => ({
+    clientX   : ev.clientX + dx,
+    clientY   : ev.clientY + dy,
     button    : ev.button,
-    buttons   : ev.buttons,
+    buttons   : 'buttons' in ev ? ev.buttons : 0,
     ctrlKey   : ev.ctrlKey,
     shiftKey  : ev.shiftKey,
     altKey    : ev.altKey,
@@ -675,12 +675,19 @@ useEffect(() => {
   });
 
   const bridge = (e: PointerEvent) => {
-    const down = new MouseEvent('mousedown', forward(e))
+    const corner = (e.target as HTMLElement | null)?.dataset.corner
+    const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
+    const scale = vt[0]
+    const offset = PAD * scale
+    const dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
+    const dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+
+    const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
     const move = (ev: PointerEvent) =>
-      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev, dx, dy)))
     const up = (ev: PointerEvent) => {
-      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev)))
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev, dx, dy)))
       document.removeEventListener('pointermove', move)
       document.removeEventListener('pointerup', up)
     }
@@ -899,26 +906,68 @@ if (container) {
     if (corner === 'mr' || corner === 'ml') {
       if (corner === 'mr') {
         const maxW = st.startWidth + (st.natW - (st.startCropX + st.startWidth));
-        width = Math.min(newW, maxW);
+        if (newW <= maxW) {
+          width = Math.min(newW, st.natW - st.startCropX);
+        } else {
+          const baseW = st.natW - st.startCropX;
+          const factor = newW / maxW;
+          width  = baseW;
+          scaleX = st.startScaleX * factor;
+          scaleY = st.startScaleY * factor;
+          const bottom = st.startTop + st.startHeight * st.startScaleY;
+          left   = st.startLeft;
+          top    = bottom - st.startHeight * scaleY;
+        }
       } else {
         const maxW = st.startWidth + st.startCropX;
-        const clamped = Math.min(newW, maxW);
-        const diff = st.startWidth - clamped;
-        cropX = st.startCropX + diff;
-        width = clamped;
-        left  = st.startLeft + diff * st.startScaleX;
+        if (newW <= maxW) {
+          const diff = st.startWidth - newW;
+          cropX = st.startCropX + diff;
+          width = newW;
+          left  = st.startLeft + diff * st.startScaleX;
+        } else {
+          const baseW = st.startWidth + st.startCropX;
+          const factor = newW / maxW;
+          const right  = st.startLeft + st.startWidth * st.startScaleX;
+          const bottom = st.startTop + st.startHeight * st.startScaleY;
+          cropX  = 0;
+          width  = baseW;
+          scaleX = st.startScaleX * factor;
+          scaleY = st.startScaleY * factor;
+          left   = right - width * scaleX;
+          top    = bottom - st.startHeight * scaleY;
+        }
       }
     } else if (corner === 'mb' || corner === 'mt') {
       if (corner === 'mb') {
         const maxH = st.startHeight + (st.natH - (st.startCropY + st.startHeight));
-        height = Math.min(newH, maxH);
+        if (newH <= maxH) {
+          height = Math.min(newH, st.natH - st.startCropY);
+        } else {
+          const baseH = st.natH - st.startCropY;
+          const factor = newH / maxH;
+          height = baseH;
+          scaleX = st.startScaleX * factor;
+          scaleY = st.startScaleY * factor;
+          top    = st.startTop;
+        }
       } else {
         const maxH = st.startHeight + st.startCropY;
-        const clamped = Math.min(newH, maxH);
-        const diff = st.startHeight - clamped;
-        cropY = st.startCropY + diff;
-        height = clamped;
-        top = st.startTop + diff * st.startScaleY;
+        if (newH <= maxH) {
+          const diff = st.startHeight - newH;
+          cropY = st.startCropY + diff;
+          height = newH;
+          top = st.startTop + diff * st.startScaleY;
+        } else {
+          const baseH = st.startHeight + st.startCropY;
+          const factor = newH / maxH;
+          const bottom = st.startTop + st.startHeight * st.startScaleY;
+          cropY  = 0;
+          height = baseH;
+          scaleX = st.startScaleX * factor;
+          scaleY = st.startScaleY * factor;
+          top    = bottom - height * scaleY;
+        }
       }
     }
 
