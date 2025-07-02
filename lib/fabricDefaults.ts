@@ -17,6 +17,7 @@ export const HANDLE_BLUR   = 1 / SCALE;
 (fabric.Object.prototype as any).cornerColor       = '#fff';
 (fabric.Object.prototype as any).transparentCorners= false;
 (fabric.Object.prototype as any).cornerStyle       = 'circle';
+(fabric.Object.prototype as any).hasBorders        = false;
 
 /* ───────────────── helpers ──────────────────────────────── */
 
@@ -81,24 +82,8 @@ const pillControlV: fabric.Control['render'] = function (
 
 const utils = (fabric as any).controlsUtils;   // hidden Fabric helpers
 
-// top & bottom – horizontal pill
-['mt','mb'].forEach(pos => {
-  (fabric.Object.prototype as any).controls[pos].render =
-    withShadow(pillControl);
-});
-
-// left & right – 90° pill
-['ml','mr'].forEach(pos => {
-  (fabric.Object.prototype as any).controls[pos].render =
-    withShadow(pillControlV);
-});
-
-// rotation handle
-(fabric.Object.prototype as any).controls.mtr.render =
-  withShadow(utils.renderCircleControl);
-
-// corner circles
-['tl','tr','bl','br'].forEach(pos => {
-  (fabric.Object.prototype as any).controls[pos].render =
-    withShadow(utils.renderCircleControl);
+// Hide Fabric's native outlines (DOM overlays will replace them)
+const hide: fabric.Control['render'] = () => {};
+['mt','mb','ml','mr','mtr','tl','tr','bl','br'].forEach(pos => {
+  (fabric.Object.prototype as any).controls[pos].render = hide;
 });

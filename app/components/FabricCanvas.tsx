@@ -630,9 +630,11 @@ useEffect(() => {
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
-  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const selCorners = ['tl','tr','br','bl','ml','mr','mt','mb','mtr'] as const;
+  const cropCorners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+
   const handleMap: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  selCorners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
     h.dataset.corner = c;
@@ -642,7 +644,7 @@ useEffect(() => {
   (selEl as any)._handles = handleMap;
 
   const cropHandles: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  cropCorners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
     h.dataset.corner = c;
@@ -1006,7 +1008,7 @@ const hoverHL = new fabric.Rect({
   selectable:false, evented:false, visible:false,
   excludeFromExport:true,
 })
-fc.add(hoverHL)
+//fc.add(hoverHL) // temporarily hide canvas hover outline
 hoverRef.current = hoverHL
 
 /* ── 3 ▸ Selection lifecycle (DOM overlay) ─────────── */
@@ -1045,6 +1047,11 @@ const drawOverlay = (
     h.mr.style.left = `${width}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`; h.mt.style.top = '0px'
     h.mb.style.left = `${midX}px`; h.mb.style.top = `${height}px`
+    if (h.mtr) {
+      const rotOff = ((obj.rotatingPointOffset ?? 40) + PAD) * scale
+      h.mtr.style.left = `${midX}px`
+      h.mtr.style.top  = `${-rotOff}px`
+    }
   }
 }
 
