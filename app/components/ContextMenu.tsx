@@ -49,14 +49,21 @@ export default function ContextMenu({ pos, onAction, onClose }: Props) {
     };
   }, [onClose]);
 
-  const Item = ({ Icon, label, action }: { Icon: any; label: string; action: MenuAction }) => (
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+
+  const Item = ({ Icon, label, action, shortcut }: { Icon: any; label: string; action: MenuAction; shortcut?: string }) => (
     <button
       type="button"
       onClick={() => onAction(action)}
-      className="flex items-center gap-2 px-3 py-1 text-[--walty-teal] hover:bg-[--walty-orange]/10"
+      className="flex items-center gap-2 px-4 py-2 text-[--walty-teal] hover:bg-[--walty-orange]/10"
     >
-      <Icon className="w-4 h-4" />
-      <span className="text-sm">{label}</span>
+      <Icon className="w-5 h-5" />
+      <span className="text-base flex-1 text-left">{label}</span>
+      {shortcut && (
+        <span className="ml-auto text-xs text-gray-500">
+          {isMac ? shortcut.replace('Ctrl', '⌘') : shortcut}
+        </span>
+      )}
     </button>
   );
 
@@ -70,14 +77,14 @@ export default function ContextMenu({ pos, onAction, onClose }: Props) {
   return createPortal(
     <div
       style={{ top: pos.y, left: pos.x }}
-      className="fixed z-50 bg-white border border-[rgba(0,91,85,.2)] rounded-xl shadow-lg pointer-events-auto min-w-44"
+      className="fixed z-50 bg-white border border-[rgba(0,91,85,.2)] rounded-xl shadow-lg pointer-events-auto min-w-56"
     >
-      <div className="flex flex-col py-1">
+      <div className="flex flex-col py-2">
         {/* group 1 */}
-        <Item Icon={Scissors}      label="Cut"        action="cut" />
-        <Item Icon={Copy}          label="Copy"       action="copy" />
-        <Item Icon={ClipboardPaste} label="Paste"      action="paste" />
-        <Item Icon={CopyPlus}      label="Duplicate"  action="duplicate" />
+        <Item Icon={Scissors}      label="Cut"        action="cut"       shortcut="Ctrl+X" />
+        <Item Icon={Copy}          label="Copy"       action="copy"      shortcut="Ctrl+C" />
+        <Item Icon={ClipboardPaste} label="Paste"      action="paste"     shortcut="Ctrl+V" />
+        <Item Icon={CopyPlus}      label="Duplicate"  action="duplicate" shortcut="Ctrl+D" />
 
         <Divider />
 
@@ -87,10 +94,10 @@ export default function ContextMenu({ pos, onAction, onClose }: Props) {
             ref={layerRef}
             type="button"
             onClick={() => setLayerOpen(o => !o)}
-            className="flex w-full items-center gap-2 px-3 py-1 text-[--walty-teal] hover:bg-[--walty-orange]/10"
+            className="flex w-full items-center gap-2 px-4 py-2 text-[--walty-teal] hover:bg-[--walty-orange]/10"
           >
-            <Layers className="w-4 h-4" />
-            <span className="text-sm">Layer</span>
+            <Layers className="w-5 h-5" />
+            <span className="text-base">Layer</span>
           </button>
           <Popover anchor={layerRef.current} open={layerOpen} onClose={() => setLayerOpen(false)}>
             <Item Icon={ArrowUpToLine}   label="Bring forward"  action="bring-forward" />
@@ -105,7 +112,7 @@ export default function ContextMenu({ pos, onAction, onClose }: Props) {
 
         {/* group 3 */}
         <Item Icon={Crop}          label="Crop"       action="crop" />
-        <Item Icon={Trash2}        label="Delete"     action="delete" />
+        <Item Icon={Trash2}        label="Delete"     action="delete"     shortcut="Del" />
       </div>
     </div>,
     document.body,

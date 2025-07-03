@@ -53,7 +53,7 @@ export default function Popover({ anchor, open, onClose, children }: Props) {
     <div
       ref={ref}
       style={style}
-      className="min-w-40 rounded-xl bg-white
+      className="min-w-48 rounded-xl bg-white
                  px-3 py-2 shadow-lg ring-1 ring-walty-brown/15
                  animate-pop"
     >
