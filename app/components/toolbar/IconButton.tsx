@@ -12,6 +12,7 @@ interface IconBtnProps {
   disabled?   : boolean
   hideCaption?: boolean
   size?       : 'lg' | 'sm'        // ← NEW (default "lg")
+  className?  : string
 }
 
 const IconButton = forwardRef<HTMLButtonElement, IconBtnProps>(
@@ -25,6 +26,7 @@ const IconButton = forwardRef<HTMLButtonElement, IconBtnProps>(
       disabled    = false,
       hideCaption = false,
       size        = 'lg',
+      className   = '',
     },
     ref,
   ) => {
@@ -45,9 +47,10 @@ const IconButton = forwardRef<HTMLButtonElement, IconBtnProps>(
           flex flex-col items-center justify-center gap-0.5
           ${btnCls} rounded-lg transition
           ${active ? 'bg-[--walty-orange]/10 text-[--walty-orange]' : 'text-[--walty-teal]'}
-          enabled:hover:bg-[--walty-orange]/10 enabled:hover:text-[--walty-orange]    
+          enabled:hover:bg-[--walty-orange]/10 enabled:hover:text-[--walty-orange]
           disabled:opacity-40
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50
+          ${className}
         `}
       >
         <Icon className={`${icnCls} stroke-[2] ${active ? 'stroke-[--walty-orange]' : 'enabled:hover:stroke-[--walty-orange]'}`} />
