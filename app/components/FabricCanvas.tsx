@@ -484,6 +484,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const hoverDomRef  = useRef<HTMLDivElement | null>(null)
   const selDomRef    = useRef<HTMLDivElement | null>(null)
   const cropDomRef   = useRef<HTMLDivElement | null>(null)
+  const bubbleRef    = useRef<HTMLDivElement | null>(null)
 
   const containerRef = useRef<HTMLElement | null>(null)
 
@@ -637,6 +638,13 @@ useEffect(() => {
   document.body.appendChild(hoverEl);
   hoverDomRef.current = hoverEl;
   (hoverEl as any)._object = null;
+
+  /* size bubble */
+  const bubble = document.createElement('div');
+  bubble.className = 'dim-bubble';
+  bubble.style.display = 'none';
+  document.body.appendChild(bubble);
+  bubbleRef.current = bubble;
 
   const selEl = document.createElement('div');
   selEl.className = 'sel-overlay interactive';
@@ -1149,6 +1157,7 @@ fc.on('selection:created', () => {
   }
   selDomRef.current && (selDomRef.current.style.display = 'none')
   cropDomRef.current && (cropDomRef.current.style.display = 'none')
+  bubbleRef.current && (bubbleRef.current.style.display = 'none')
 })
 
 /* also hide hover during any transform of the active object */
@@ -1158,13 +1167,35 @@ const handleAfterRender = () => {
   syncHover()
 }
 
-fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
-  .on('object:scaling',  () => { hoverHL.visible = false; syncSel() })
-  .on('object:scaled',   () => {
-    hoverHL.visible = false
-    requestAnimationFrame(() => requestAnimationFrame(syncSel))
-  })
-  .on('object:rotating', () => { hoverHL.visible = false; syncSel() })
+  fc.on('object:moving',   () => { hoverHL.visible = false; syncSel(); bubbleRef.current && (bubbleRef.current.style.display = 'none') })
+    .on('object:scaling',  e => {
+      hoverHL.visible = false
+      syncSel()
+      const obj = e.target as fabric.Object | undefined
+      if (obj && bubbleRef.current) {
+        const box  = obj.getBoundingRect(true, true)
+        const rect = canvasRef.current!.getBoundingClientRect()
+        const vt   = fc.viewportTransform || [1,0,0,1,0,0]
+        const scale = vt[0]
+        const c = containerRef.current
+        const scrollX = (c?.scrollLeft ?? 0)
+        const scrollY = (c?.scrollTop  ?? 0)
+        const left   = window.scrollX + scrollX + rect.left + vt[4] + (box.left + box.width + PAD) * scale
+        const top    = window.scrollY + scrollY + rect.top  + vt[5] + (box.top + box.height) * scale
+        const w = Math.round(obj.getScaledWidth())
+        const h = Math.round(obj.getScaledHeight())
+        bubbleRef.current.textContent = `w:${w} h:${h}`
+        bubbleRef.current.style.left = `${left + 8}px`
+        bubbleRef.current.style.top  = `${top + 8}px`
+        bubbleRef.current.style.display = 'block'
+      }
+    })
+    .on('object:scaled',   () => {
+      if (bubbleRef.current) bubbleRef.current.style.display = 'none'
+      hoverHL.visible = false
+      requestAnimationFrame(() => requestAnimationFrame(syncSel))
+    })
+  .on('object:rotating', () => { hoverHL.visible = false; syncSel(); bubbleRef.current && (bubbleRef.current.style.display = 'none') })
   .on('object:modified', () =>
     requestAnimationFrame(() => requestAnimationFrame(syncSel)))
   .on('after:render',    handleAfterRender)
@@ -1406,6 +1437,7 @@ window.addEventListener('keydown', onKey)
       hoverDomRef.current?.remove()
       selDomRef.current?.remove()
       cropDomRef.current?.remove()
+      bubbleRef.current?.remove()
       if (scrollHandler) {
         window.removeEventListener('scroll', scrollHandler)
         window.removeEventListener('resize', scrollHandler)
