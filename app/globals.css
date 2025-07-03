@@ -103,18 +103,19 @@ html {
 @layer utilities {
   .sel-overlay {
     @apply absolute pointer-events-none box-border z-40;
-    border:1px dashed #2EC4B6; /* SEL_COLOR */
+    border:2px solid #2EC4B6; /* SEL_COLOR */
   }
   .sel-overlay.interactive {
     @apply pointer-events-auto;
   }
   .sel-overlay .handle {
     position:absolute;
-    width:8px;
-    height:8px;
+    width:12px;
+    height:12px;
     background:#fff;
-    border:1px solid #2EC4B6;
+    border:1px solid rgba(128,128,128,0.5);
     border-radius:50%;
+    box-shadow:0 0 2px rgba(0,0,0,0.25);
     transform:translate(-50%,-50%);
     pointer-events:auto;
   }
