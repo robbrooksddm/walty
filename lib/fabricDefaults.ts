@@ -94,9 +94,64 @@ const utils = (fabric as any).controlsUtils;   // hidden Fabric helpers
     withShadow(pillControlV);
 });
 
-// rotation handle
+// rotation handle at top
 (fabric.Object.prototype as any).controls.mtr.render =
   withShadow(utils.renderCircleControl);
+
+// bottom rotation handle with icon
+const rotateIcon: fabric.Control['render'] = function (
+  this: fabric.Control,
+  ctx,
+  left,
+  top,
+  style: any,
+  obj,
+) {
+  style = style || {};
+  const s = this.sizeX || style.cornerSize || obj.cornerSize;
+  const r = s / 2;
+
+  ctx.save();
+  ctx.translate(left, top);
+  ctx.rotate(fabric.util.degreesToRadians(obj.angle ?? 0));
+  ctx.fillStyle = style.cornerColor || obj.cornerColor;
+  ctx.strokeStyle = style.cornerStrokeColor || obj.cornerStrokeColor;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  (ctx as any)[obj.transparentCorners ? 'stroke' : 'fill']();
+  if (!obj.transparentCorners) ctx.stroke();
+
+  ctx.strokeStyle = '#666';
+  ctx.lineWidth = 1.5 / SCALE;
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.6, Math.PI * 0.25, Math.PI * 1.25);
+  ctx.stroke();
+  const ax = r * 0.6 * Math.cos(Math.PI * 1.25);
+  const ay = r * 0.6 * Math.sin(Math.PI * 1.25);
+  ctx.beginPath();
+  ctx.moveTo(ax, ay);
+  ctx.lineTo(ax - 2 / SCALE, ay - 4 / SCALE);
+  ctx.lineTo(ax + 2 / SCALE, ay - 4 / SCALE);
+  ctx.fillStyle = '#666';
+  ctx.fill();
+  ctx.restore();
+};
+
+const mbr = new fabric.Control({
+  x: 0,
+  y: 0.5,
+  offsetY: 40,
+  withConnection: true,
+  actionHandler: utils.rotationWithSnapping,
+  cursorStyleHandler: utils.rotationStyleHandler,
+  actionName: 'rotate',
+  render: withShadow(rotateIcon),
+});
+(fabric.Object.prototype as any).controls.mbr = mbr;
+if ((fabric as any).Textbox) {
+  (fabric.Textbox.prototype as any).controls.mbr = mbr;
+}
 
 // corner circles
 ['tl','tr','bl','br'].forEach(pos => {
