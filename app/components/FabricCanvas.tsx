@@ -719,8 +719,24 @@ useEffect(() => {
     fc.upperCanvasEl.dispatchEvent(new MouseEvent('dblclick', forwardMouse(e)))
   })
 
-  const relayMove = (ev: PointerEvent) =>
+  const nearCropHandle = (x: number, y: number) => {
+    if (!cropDomRef.current) return false
+    const r = cropDomRef.current.getBoundingClientRect()
+    const m = 12
+    if (x < r.left - m || x > r.right + m || y < r.top - m || y > r.bottom + m)
+      return false
+    return (
+      x <= r.left + m || x >= r.right - m || y <= r.top + m || y >= r.bottom - m
+    )
+  }
+
+  const relayMove = (ev: PointerEvent) => {
+    if (croppingRef.current) {
+      if (nearCropHandle(ev.clientX, ev.clientY)) raiseCrop()
+      else raiseSel()
+    }
     fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
+  }
   selEl.addEventListener('pointermove', relayMove)
   cropEl.addEventListener('pointermove', relayMove)
 

@@ -365,7 +365,7 @@ const PickerPlaceholder = () => (
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeWidth={2}
+        strokeWidth={4}
         d="M3 7h3l2-3h6l2 3h3a2 2 0 012 2v9a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z"
       />
       <circle cx="12" cy="13" r="4" />
