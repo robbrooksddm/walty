@@ -140,6 +140,17 @@ html {
   .sel-overlay .handle.mt,
   .sel-overlay .handle.mb { cursor:ns-resize; }
 
+  .sel-overlay .handle.rot {
+    cursor:grab;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:10px;
+  }
+  .sel-overlay .handle.rot::before {
+    content:'\21bb';
+  }
+
   /* crop window corner "L" handles */
   .sel-overlay.crop-window .handle.corner {
     width:17px;

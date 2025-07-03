@@ -13,7 +13,7 @@ import { fabric }            from 'fabric'
 import { useEditor }         from './EditorStore'
 import { fromSanity }        from '@/app/library/layerAdapters'
 import '@/lib/fabricDefaults'
-import { SEL_COLOR } from '@/lib/fabricDefaults';
+import { SEL_COLOR, ROT_HANDLE_OFFSET } from '@/lib/fabricDefaults';
 import { CropTool } from '@/lib/CropTool'
 import { enableSnapGuides } from '@/lib/useSnapGuides'
 import ContextMenu from './ContextMenu'
@@ -631,19 +631,20 @@ useEffect(() => {
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
-  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const corners = ['tl','tr','br','bl','ml','mr','mt','mb','mtr'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
   corners.forEach(c => {
     const h = document.createElement('div');
-    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
-    h.dataset.corner = c;
+    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : c==='mtr' ? 'rot' : 'corner'} ${c}`;
+    h.dataset.corner = c === 'mtr' ? 'rot' : c;
     selEl.appendChild(h);
     handleMap[c] = h;
   });
   (selEl as any)._handles = handleMap;
 
+  const cropCorners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
   const cropHandles: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  cropCorners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c;
@@ -679,12 +680,14 @@ useEffect(() => {
   });
 
   const bridge = (e: PointerEvent) => {
-    const corner = (e.target as HTMLElement | null)?.dataset.corner
+    let corner = (e.target as HTMLElement | null)?.dataset.corner
+    const offsetCorner = corner === 'rot' ? 'mb' : corner
+    if (corner === 'rot') corner = 'mtr'
     const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const scale = vt[0]
     const offset = PAD * scale
-    const dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
-    const dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+    const dx = offsetCorner?.includes('l') ? offset : offsetCorner?.includes('r') ? -offset : 0
+    const dy = offsetCorner?.includes('t') ? offset : offsetCorner?.includes('b') ? -offset : 0
 
     const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
@@ -1043,6 +1046,7 @@ const drawOverlay = (
     const rightX = Math.round(width - half)
     const topY   = Math.round(half)
     const botY   = Math.round(height - half)
+    const rotY   = Math.round(height + ROT_HANDLE_OFFSET * scale)
     h.tl.style.left = `${leftX}px`;  h.tl.style.top = `${topY}px`
     h.tr.style.left = `${rightX}px`; h.tr.style.top = `${topY}px`
     h.br.style.left = `${rightX}px`; h.br.style.top = `${botY}px`
@@ -1051,6 +1055,10 @@ const drawOverlay = (
     h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
     h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+    if (h.mtr) {
+      h.mtr.style.left = `${midX}px`
+      h.mtr.style.top  = `${rotY}px`
+    }
   }
 }
 
@@ -1089,7 +1097,7 @@ const syncSel = () => {
       }
     }
     if (selEl._handles)
-      ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'none')
+      ['ml','mr','mt','mb','mtr'].forEach(k => selEl._handles![k].style.display = 'none')
     if (cropEl && cropEl._handles)
       ['ml','mr','mt','mb'].forEach(k => cropEl._handles![k].style.display = 'none')
     selEl.style.display = 'block'
@@ -1104,7 +1112,7 @@ const syncSel = () => {
   drawOverlay(obj, selEl)
   selEl._object = obj
   if (selEl._handles)
-    ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'block')
+    ['ml','mr','mt','mb','mtr'].forEach(k => selEl._handles![k].style.display = 'block')
 }
 
 const syncHover = () => {
