@@ -484,6 +484,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const hoverDomRef  = useRef<HTMLDivElement | null>(null)
   const selDomRef    = useRef<HTMLDivElement | null>(null)
   const cropDomRef   = useRef<HTMLDivElement | null>(null)
+  const sizeBubbleRef = useRef<HTMLDivElement | null>(null)
 
   const containerRef = useRef<HTMLElement | null>(null)
 
@@ -662,6 +663,12 @@ useEffect(() => {
     handleMap[c] = h;
   });
   (selEl as any)._handles = handleMap;
+
+  const sizeBubble = document.createElement('div');
+  sizeBubble.className = 'size-bubble';
+  sizeBubble.style.display = 'none';
+  document.body.appendChild(sizeBubble);
+  sizeBubbleRef.current = sizeBubble;
 
   const cropHandles: Record<string, HTMLDivElement> = {};
   corners.forEach(c => {
@@ -1121,6 +1128,20 @@ const syncHover = () => {
   drawOverlay(obj, hoverDomRef.current as HTMLDivElement & { _object?: fabric.Object | null })
 }
 
+const showSizeBubble = (obj: fabric.Object | undefined, ev?: MouseEvent | PointerEvent) => {
+  if (!obj || !sizeBubbleRef.current || !ev) return
+  const bubble = sizeBubbleRef.current
+  bubble.textContent = `w:${Math.round(obj.getScaledWidth())} h:${Math.round(obj.getScaledHeight())}`
+  bubble.style.left = `${ev.clientX + 30}px`
+  bubble.style.top  = `${ev.clientY + 30}px`
+  bubble.style.display = 'block'
+}
+
+const hideSizeBubble = () => {
+  const bubble = sizeBubbleRef.current
+  if (bubble) bubble.style.display = 'none'
+}
+
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
@@ -1149,6 +1170,7 @@ fc.on('selection:created', () => {
   }
   selDomRef.current && (selDomRef.current.style.display = 'none')
   cropDomRef.current && (cropDomRef.current.style.display = 'none')
+  hideSizeBubble()
 })
 
 /* also hide hover during any transform of the active object */
@@ -1158,10 +1180,11 @@ const handleAfterRender = () => {
   syncHover()
 }
 
-fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
-  .on('object:scaling',  () => { hoverHL.visible = false; syncSel() })
-  .on('object:scaled',   () => {
+fc.on('object:moving',   () => { hoverHL.visible = false; syncSel(); hideSizeBubble() })
+  .on('object:scaling',  e => { hoverHL.visible = false; syncSel(); showSizeBubble(e.target as fabric.Object, (e as any).e) })
+  .on('object:scaled',   e => {
     hoverHL.visible = false
+    hideSizeBubble()
     requestAnimationFrame(() => requestAnimationFrame(syncSel))
   })
   .on('object:rotating', () => { hoverHL.visible = false; syncSel() })
@@ -1406,6 +1429,7 @@ window.addEventListener('keydown', onKey)
       hoverDomRef.current?.remove()
       selDomRef.current?.remove()
       cropDomRef.current?.remove()
+      sizeBubbleRef.current?.remove()
       if (scrollHandler) {
         window.removeEventListener('scroll', scrollHandler)
         window.removeEventListener('resize', scrollHandler)
