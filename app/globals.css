@@ -131,4 +131,8 @@ html {
   .sel-overlay .handle.mr { cursor:ew-resize; }
   .sel-overlay .handle.mt,
   .sel-overlay .handle.mb { cursor:ns-resize; }
+
+  .size-bubble {
+    @apply absolute text-white text-xs px-2 py-1 rounded-md bg-neutral-800/90 whitespace-nowrap pointer-events-none;
+  }
 }
