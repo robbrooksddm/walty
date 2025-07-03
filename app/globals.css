@@ -139,6 +139,19 @@ html {
   .sel-overlay .handle.mr { cursor:ew-resize; }
   .sel-overlay .handle.mt,
   .sel-overlay .handle.mb { cursor:ns-resize; }
+  .sel-overlay .handle.rotate {
+    width:18px;
+    height:18px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:grab;
+  }
+  .sel-overlay .handle.rotate svg {
+    width:12px;
+    height:12px;
+    pointer-events:none;
+  }
 
   /* crop window corner "L" handles */
   .sel-overlay.crop-window .handle.corner {

@@ -640,6 +640,12 @@ useEffect(() => {
     selEl.appendChild(h);
     handleMap[c] = h;
   });
+  const rot = document.createElement('div');
+  rot.className = 'handle rotate';
+  rot.dataset.corner = 'mtr';
+  rot.innerHTML = '<svg viewBox="0 0 24 24" stroke="currentColor" fill="none"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>';
+  selEl.appendChild(rot);
+  handleMap.rot = rot;
   (selEl as any)._handles = handleMap;
 
   const cropHandles: Record<string, HTMLDivElement> = {};
@@ -683,8 +689,13 @@ useEffect(() => {
     const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const scale = vt[0]
     const offset = PAD * scale
-    const dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
-    const dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+    const noOff = corner === 'mtr'
+    const dx = noOff ? 0
+      : corner?.includes('l') ? offset
+      : corner?.includes('r') ? -offset : 0
+    const dy = noOff ? 0
+      : corner?.includes('t') ? offset
+      : corner?.includes('b') ? -offset : 0
 
     const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
@@ -1051,6 +1062,11 @@ const drawOverlay = (
     h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
     h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+    if (h.rot) {
+      const off = ((fabric.Object.prototype as any).controls.mtr.offsetY ?? 40) * scale;
+      h.rot.style.left = `${midX}px`;
+      h.rot.style.top  = `${botY + off}px`;
+    }
   }
 }
 
@@ -1089,7 +1105,7 @@ const syncSel = () => {
       }
     }
     if (selEl._handles)
-      ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'none')
+      ['ml','mr','mt','mb','rot'].forEach(k => selEl._handles![k].style.display = 'none')
     if (cropEl && cropEl._handles)
       ['ml','mr','mt','mb'].forEach(k => cropEl._handles![k].style.display = 'none')
     selEl.style.display = 'block'
@@ -1104,7 +1120,7 @@ const syncSel = () => {
   drawOverlay(obj, selEl)
   selEl._object = obj
   if (selEl._handles)
-    ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'block')
+    ['ml','mr','mt','mb','rot'].forEach(k => selEl._handles![k].style.display = 'block')
 }
 
 const syncHover = () => {
