@@ -114,7 +114,7 @@ let PAGE_H = 0
 let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
 let PAD = 0
-const SEL_BORDER = 2
+const SEL_BORDER = 3
 
 recompute()
 
@@ -1036,13 +1036,12 @@ const drawOverlay = (
   el._object = obj
   if (el._handles) {
     const h = el._handles
-    const half  = SEL_BORDER / 2
     const midX  = Math.round(width  / 2)
     const midY  = Math.round(height / 2)
-    const leftX = Math.round(half)
-    const rightX = Math.round(width - half)
-    const topY   = Math.round(half)
-    const botY   = Math.round(height - half)
+    const leftX = 0
+    const rightX = Math.round(width)
+    const topY   = 0
+    const botY   = Math.round(height)
     h.tl.style.left = `${leftX}px`;  h.tl.style.top = `${topY}px`
     h.tr.style.left = `${rightX}px`; h.tr.style.top = `${topY}px`
     h.br.style.left = `${rightX}px`; h.br.style.top = `${botY}px`

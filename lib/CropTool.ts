@@ -240,8 +240,8 @@ export class CropTool {
         x, y,
         offsetX: 0, offsetY: 0,
         // enlarge hit‑box for easier grabbing
-        sizeX: 12 / this.SCALE,
-        sizeY: 12 / this.SCALE,
+        sizeX: 16 / this.SCALE,
+        sizeY: 16 / this.SCALE,
         // use Fabric helpers (cast to `any` to silence TS)
         cursorStyleHandler: (fabric as any).controlsUtils.scaleCursorStyleHandler,
         actionHandler     : (fabric as any).controlsUtils.scalingEqually,
