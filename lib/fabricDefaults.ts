@@ -6,6 +6,7 @@ export const SCALE        = 420 / 1772;        // or the real SCALE you compute
 export const SEL_COLOR    = '#2EC4B6';         // brand teal – shared everywhere
 export const HANDLE_SHADOW = 'rgba(0,0,0,0.15)';
 export const HANDLE_BLUR   = 1 / SCALE;
+export const ROT_HANDLE_OFFSET = 54;
 
 /* ————— global Fabric defaults ————— */
 (fabric.Object.prototype as any).cornerSize        = Math.round(3 / SCALE);
@@ -97,6 +98,8 @@ const utils = (fabric as any).controlsUtils;   // hidden Fabric helpers
 // rotation handle
 (fabric.Object.prototype as any).controls.mtr.render =
   withShadow(utils.renderCircleControl);
+(fabric.Object.prototype as any).controls.mtr.y = 0.5;
+(fabric.Object.prototype as any).controls.mtr.offsetY = ROT_HANDLE_OFFSET;
 
 // corner circles
 ['tl','tr','bl','br'].forEach(pos => {
