@@ -807,6 +807,8 @@ if (container) {
     croppingRef.current = state
     isolateCrop(state)
     onCroppingChange?.(state)
+    selEl.classList.toggle('cropping', state)
+    cropEl.classList.toggle('cropping', state)
   })
   cropToolRef.current = crop;
   ;(fc as any)._cropTool = crop;
@@ -1037,14 +1039,19 @@ const drawOverlay = (
     const h = el._handles
     const midX = width / 2
     const midY = height / 2
-    h.tl.style.left = '0px';      h.tl.style.top = '0px'
+    const bw = parseFloat(getComputedStyle(el).borderLeftWidth || '0')
+    const sideW = parseFloat(getComputedStyle(h.ml).width || '0')
+    const sideOffset = sideW / 2 - bw / 2
+    const sideH = parseFloat(getComputedStyle(h.mt).height || '0')
+    const topOffset = sideH / 2 - bw / 2
+    h.tl.style.left = '0px';       h.tl.style.top = '0px'
     h.tr.style.left = `${width}px`; h.tr.style.top = '0px'
     h.br.style.left = `${width}px`; h.br.style.top = `${height}px`
-    h.bl.style.left = '0px';      h.bl.style.top = `${height}px`
-    h.ml.style.left = '0px';      h.ml.style.top = `${midY}px`
-    h.mr.style.left = `${width}px`; h.mr.style.top = `${midY}px`
-    h.mt.style.left = `${midX}px`; h.mt.style.top = '0px'
-    h.mb.style.left = `${midX}px`; h.mb.style.top = `${height}px`
+    h.bl.style.left = '0px';       h.bl.style.top = `${height}px`
+    h.ml.style.left = `${sideOffset}px`;     h.ml.style.top = `${midY}px`
+    h.mr.style.left = `${width + sideOffset}px`; h.mr.style.top = `${midY}px`
+    h.mt.style.left = `${midX}px`; h.mt.style.top = `${topOffset}px`
+    h.mb.style.left = `${midX}px`; h.mb.style.top = `${height + topOffset}px`
   }
 }
 
