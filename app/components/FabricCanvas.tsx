@@ -506,9 +506,6 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
     if (!fc) return
     const active = fc.getActiveObject() as fabric.Object | undefined
     switch (a) {
-      case 'add':
-        useEditor.getState().addText()
-        break
       case 'cut':
         if (active) {
           clip.json = [active.toJSON(PROPS)]
@@ -570,6 +567,46 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
           }, '')
         }
         break
+      case 'bring-forward':
+        if (active) {
+          fc.bringForward(active)
+          fc.requestRenderAll()
+          syncLayersFromCanvas(fc, pageIdx)
+        }
+        break
+      case 'send-backward':
+        if (active) {
+          fc.sendBackwards(active)
+          fc.requestRenderAll()
+          syncLayersFromCanvas(fc, pageIdx)
+        }
+        break
+      case 'bring-to-front':
+        if (active) {
+          fc.bringToFront(active)
+          fc.requestRenderAll()
+          syncLayersFromCanvas(fc, pageIdx)
+        }
+        break
+      case 'send-to-back':
+        if (active) {
+          fc.sendToBack(active)
+          fc.requestRenderAll()
+          syncLayersFromCanvas(fc, pageIdx)
+        }
+        break
+      case 'align':
+        if (active) {
+          const zoom = fc.viewportTransform?.[0] ?? 1
+          const fcH = (fc.getHeight() ?? 0) / zoom
+          const fcW = (fc.getWidth()  ?? 0) / zoom
+          const { width, height } = active.getBoundingRect(true, true)
+          active.set({ left: fcW / 2 - width / 2, top: fcH / 2 - height / 2 })
+          active.setCoords()
+          fc.requestRenderAll()
+          syncLayersFromCanvas(fc, pageIdx)
+        }
+        break
       case 'delete':
         if (active) {
           allObjs(active).forEach(o => fc.remove(o))
@@ -578,21 +615,6 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
         break
       case 'crop':
         document.dispatchEvent(new Event('start-crop'))
-        break
-      case 'lock':
-        if (active) {
-          const next = !(active as any).locked
-          ;(active as any).locked = next
-          active.set({
-            lockMovementX: next,
-            lockMovementY: next,
-            lockScalingX : next,
-            lockScalingY : next,
-            lockRotation : next,
-          })
-          fc.requestRenderAll()
-          updateLayer(pageIdx, (active as any).layerIdx, { locked: next })
-        }
         break
     }
     setMenuPos(null)
@@ -1644,7 +1666,6 @@ doSync = () =>
       {menuPos && (
         <ContextMenu
           pos={menuPos}
-          locked={!!(fcRef.current?.getActiveObject() as any)?.locked}
           onAction={handleMenuAction}
           onClose={() => setMenuPos(null)}
         />
