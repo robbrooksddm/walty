@@ -114,6 +114,7 @@ let PAGE_H = 0
 let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
 let PAD = 0
+const SEL_BORDER = 2
 
 recompute()
 
@@ -624,7 +625,7 @@ useEffect(() => {
   (selEl as any)._object = null;
 
   const cropEl = document.createElement('div');
-  cropEl.className = 'sel-overlay interactive';
+  cropEl.className = 'sel-overlay crop interactive';
   cropEl.style.display = 'none';
   document.body.appendChild(cropEl);
   cropDomRef.current = cropEl;
@@ -1035,16 +1036,21 @@ const drawOverlay = (
   el._object = obj
   if (el._handles) {
     const h = el._handles
-    const midX = width / 2
-    const midY = height / 2
-    h.tl.style.left = '0px';      h.tl.style.top = '0px'
-    h.tr.style.left = `${width}px`; h.tr.style.top = '0px'
-    h.br.style.left = `${width}px`; h.br.style.top = `${height}px`
-    h.bl.style.left = '0px';      h.bl.style.top = `${height}px`
-    h.ml.style.left = '0px';      h.ml.style.top = `${midY}px`
-    h.mr.style.left = `${width}px`; h.mr.style.top = `${midY}px`
-    h.mt.style.left = `${midX}px`; h.mt.style.top = '0px'
-    h.mb.style.left = `${midX}px`; h.mb.style.top = `${height}px`
+    const half  = SEL_BORDER / 2
+    const midX  = Math.round(width  / 2)
+    const midY  = Math.round(height / 2)
+    const leftX = Math.round(half)
+    const rightX = Math.round(width - half)
+    const topY   = Math.round(half)
+    const botY   = Math.round(height - half)
+    h.tl.style.left = `${leftX}px`;  h.tl.style.top = `${topY}px`
+    h.tr.style.left = `${rightX}px`; h.tr.style.top = `${topY}px`
+    h.br.style.left = `${rightX}px`; h.br.style.top = `${botY}px`
+    h.bl.style.left = `${leftX}px`;  h.bl.style.top = `${botY}px`
+    h.ml.style.left = `${leftX}px`;  h.ml.style.top = `${midY}px`
+    h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
+    h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
+    h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
   }
 }
 
@@ -1078,6 +1084,10 @@ const syncSel = () => {
         cropEl._object = frame
       }
     }
+    if (selEl._handles)
+      ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'none')
+    if (cropEl && cropEl._handles)
+      ['ml','mr','mt','mb'].forEach(k => cropEl._handles![k].style.display = 'none')
     selEl.style.display = 'block'
     return
   }
@@ -1086,6 +1096,8 @@ const syncSel = () => {
   if (!obj) return
   drawOverlay(obj, selEl)
   selEl._object = obj
+  if (selEl._handles)
+    ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'block')
 }
 
 const syncHover = () => {
