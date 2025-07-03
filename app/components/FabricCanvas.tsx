@@ -691,7 +691,9 @@ useEffect(() => {
     const move = (ev: PointerEvent) =>
       fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev, dx, dy)))
     const up = (ev: PointerEvent) => {
-      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev, dx, dy)))
+      // send the final mouseup without the corner offset so Fabric
+      // doesn't treat the release as happening outside the target
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev)))
       document.removeEventListener('pointermove', move)
       document.removeEventListener('pointerup', up)
     }
