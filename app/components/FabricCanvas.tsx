@@ -1035,8 +1035,8 @@ const drawOverlay = (
   el._object = obj
   if (el._handles) {
     const h = el._handles
-    const midX = width / 2
-    const midY = height / 2
+    const midX = Math.round(width / 2)
+    const midY = Math.round(height / 2)
     h.tl.style.left = '0px';      h.tl.style.top = '0px'
     h.tr.style.left = `${width}px`; h.tr.style.top = '0px'
     h.br.style.left = `${width}px`; h.br.style.top = `${height}px`
@@ -1045,6 +1045,10 @@ const drawOverlay = (
     h.mr.style.left = `${width}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`; h.mt.style.top = '0px'
     h.mb.style.left = `${midX}px`; h.mb.style.top = `${height}px`
+    const showSides = !croppingRef.current
+    ;['ml','mr','mt','mb'].forEach(k => {
+      h[k].style.display = showSides ? 'block' : 'none'
+    })
   }
 }
 
