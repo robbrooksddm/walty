@@ -737,6 +737,19 @@ useEffect(() => {
   selEl.addEventListener('pointerenter', raiseSel)
   cropEl.addEventListener('pointerenter', raiseCrop)
 
+  /* ensure whichever overlay the pointer is inside stays on top */
+  const hoverToggle = (e: PointerEvent) => {
+    if (!croppingRef.current || !cropDomRef.current) return
+    const rect = cropDomRef.current.getBoundingClientRect()
+    if (e.clientX >= rect.left && e.clientX <= rect.right &&
+        e.clientY >= rect.top  && e.clientY <= rect.bottom) {
+      raiseCrop()
+    } else {
+      raiseSel()
+    }
+  }
+  document.addEventListener('pointermove', hoverToggle)
+
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1392,6 +1405,7 @@ window.addEventListener('keydown', onKey)
       cropEl.removeEventListener('pointerdown', onCropDown)
       selEl.removeEventListener('pointerenter', raiseSel)
       cropEl.removeEventListener('pointerenter', raiseCrop)
+      document.removeEventListener('pointermove', hoverToggle)
       onReady(null)
       cropToolRef.current?.abort()
       isolateCrop(false)
