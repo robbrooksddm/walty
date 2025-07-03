@@ -221,7 +221,7 @@ export class CropTool {
       ctx.save();
       ctx.translate(left, top);
       ctx.rotate(rot);
-      ctx.lineWidth   = 0.5 / this.SCALE;
+      ctx.lineWidth   = 1 / this.SCALE;
       ctx.strokeStyle = '#ffffff';
       ctx.shadowColor = 'rgba(0,0,0,0.35)';          // subtle outline
       ctx.shadowBlur  = 3 / this.SCALE;
