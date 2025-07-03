@@ -120,6 +120,32 @@ html {
     transform:translate(-50%,-50%);
     pointer-events:auto;
   }
+  .crop-window .handle {
+    border-radius:0;
+    background:transparent;
+  }
+  .crop-window .handle::before {
+    content:'';
+    position:absolute;
+    left:2px;
+    top:2px;
+    width:8px;
+    height:8px;
+    border-top:2px solid #fff;
+    border-left:2px solid #fff;
+  }
+  .crop-window .handle.tr::before {
+    transform:rotate(90deg);
+    transform-origin:0 0;
+  }
+  .crop-window .handle.br::before {
+    transform:rotate(180deg);
+    transform-origin:0 0;
+  }
+  .crop-window .handle.bl::before {
+    transform:rotate(270deg);
+    transform-origin:0 0;
+  }
   .sel-overlay .handle.side {
     width:7px;
     height:21px;
