@@ -131,6 +131,13 @@ html {
     height:7px;
     border-radius:3px;
   }
+  .sel-overlay .handle.mtr {
+    background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http://www.w3.org/2000/svg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27%23333%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M15%204v5h5%27/%3E%3Cpath%20d%3D%27M4.3%207.3a9%209%200%201%200%202.7-2.6L4%209%27/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:center;
+    background-size:12px 12px;
+    cursor:grab;
+  }
   .sel-overlay .handle.tl,
   .sel-overlay .handle.br { cursor:nwse-resize; }
   .sel-overlay .handle.tr,
