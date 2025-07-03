@@ -17,6 +17,7 @@ import { SEL_COLOR } from '@/lib/fabricDefaults';
 import { CropTool } from '@/lib/CropTool'
 import { enableSnapGuides } from '@/lib/useSnapGuides'
 import ContextMenu from './ContextMenu'
+import QuickActions from './QuickActions'
 
 /* ---------- print spec ----------------------------------------- */
 export interface PrintSpec {
@@ -495,6 +496,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   )
 
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
+  const [quickRect, setQuickRect] = useState<DOMRect | null>(null)
 
 
 
@@ -1105,6 +1107,7 @@ const syncSel = () => {
       }
     }
     selEl.style.display = 'block'
+    setQuickRect(null)
     return
   }
 
@@ -1112,6 +1115,7 @@ const syncSel = () => {
   if (!obj) return
   drawOverlay(obj, selEl)
   selEl._object = obj
+  setQuickRect(selEl.getBoundingClientRect())
 }
 
 const syncHover = () => {
@@ -1149,6 +1153,7 @@ fc.on('selection:created', () => {
   }
   selDomRef.current && (selDomRef.current.style.display = 'none')
   cropDomRef.current && (cropDomRef.current.style.display = 'none')
+  setQuickRect(null)
 })
 
 /* also hide hover during any transform of the active object */
@@ -1156,6 +1161,9 @@ const handleAfterRender = () => {
   fc.calcOffset()
   syncSel()
   syncHover()
+  if (selDomRef.current && fc.getActiveObject()) {
+    setQuickRect(selDomRef.current.getBoundingClientRect())
+  }
 }
 
 fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
@@ -1674,6 +1682,11 @@ doSync = () =>
           onClose={() => setMenuPos(null)}
         />
       )}
+      <QuickActions
+        anchor={quickRect}
+        onAction={handleMenuAction}
+        onMore={p => setMenuPos(p)}
+      />
     </>
   )
 }
