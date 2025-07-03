@@ -103,7 +103,7 @@ html {
 @layer utilities {
   .sel-overlay {
     @apply absolute pointer-events-none box-border z-40;
-    border:2px solid #2EC4B6; /* SEL_COLOR */
+    border:3px solid #2EC4B6; /* SEL_COLOR */
   }
   .sel-overlay.interactive {
     @apply pointer-events-auto;
@@ -142,8 +142,8 @@ html {
 
   /* crop window corner "L" handles */
   .sel-overlay.crop-window .handle.corner {
-    width:16px;
-    height:16px;
+    width:20px;
+    height:20px;
     background:#fff;
     border:1px solid rgba(128,128,128,0.5);
     border-radius:3px;
