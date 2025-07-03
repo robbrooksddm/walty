@@ -8,8 +8,8 @@ export const HANDLE_SHADOW = 'rgba(0,0,0,0.15)';
 export const HANDLE_BLUR   = 1 / SCALE;
 
 /* ————— global Fabric defaults ————— */
-(fabric.Object.prototype as any).cornerSize        = Math.round(3 / SCALE);
-(fabric.Object.prototype as any).touchCornerSize   = Math.round(3 / SCALE);
+(fabric.Object.prototype as any).cornerSize        = Math.round(5 / SCALE);
+(fabric.Object.prototype as any).touchCornerSize   = Math.round(5 / SCALE);
 (fabric.Object.prototype as any).borderScaleFactor = 1;
 (fabric.Object.prototype as any).borderColor       = 'transparent';
 (fabric.Object.prototype as any).borderDashArray   = [];
