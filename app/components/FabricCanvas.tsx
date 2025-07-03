@@ -1037,12 +1037,12 @@ const drawOverlay = (
   if (el._handles) {
     const h = el._handles
     const half  = SEL_BORDER / 2
-    const midX  = Math.round(width  / 2)
-    const midY  = Math.round(height / 2)
-    const leftX = Math.round(half)
-    const rightX = Math.round(width - half)
-    const topY   = Math.round(half)
-    const botY   = Math.round(height - half)
+    const midX  = width / 2
+    const midY  = height / 2
+    const leftX = half
+    const rightX = width - half
+    const topY   = half
+    const botY   = height - half
     h.tl.style.left = `${leftX}px`;  h.tl.style.top = `${topY}px`
     h.tr.style.left = `${rightX}px`; h.tr.style.top = `${topY}px`
     h.br.style.left = `${rightX}px`; h.br.style.top = `${botY}px`
