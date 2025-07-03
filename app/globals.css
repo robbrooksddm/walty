@@ -140,6 +140,13 @@ html {
   .sel-overlay .handle.mt,
   .sel-overlay .handle.mb { cursor:ns-resize; }
 
+  /* rotation handle */
+  .sel-overlay .handle.rot {
+    background:url('/icons/rotate.svg') center/14px 14px no-repeat,#fff;
+    cursor:grab;
+  }
+  .sel-overlay .handle.rot:active { cursor:grabbing; }
+
   /* crop window corner "L" handles */
   .sel-overlay.crop-window .handle.corner {
     width:17px;
