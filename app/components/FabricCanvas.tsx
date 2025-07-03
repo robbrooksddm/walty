@@ -484,6 +484,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const hoverDomRef  = useRef<HTMLDivElement | null>(null)
   const selDomRef    = useRef<HTMLDivElement | null>(null)
   const cropDomRef   = useRef<HTMLDivElement | null>(null)
+  const dimDomRef    = useRef<HTMLDivElement | null>(null)
 
   const containerRef = useRef<HTMLElement | null>(null)
 
@@ -651,6 +652,12 @@ useEffect(() => {
   document.body.appendChild(cropEl);
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
+
+  const dimEl = document.createElement('div');
+  dimEl.className = 'dim-popup';
+  dimEl.style.display = 'none';
+  document.body.appendChild(dimEl);
+  dimDomRef.current = dimEl;
 
   const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
@@ -1158,9 +1165,32 @@ const handleAfterRender = () => {
   syncHover()
 }
 
+  const showDims = (e: fabric.IEvent) => {
+    const obj = e.target as fabric.Object | undefined
+    const dimEl = dimDomRef.current
+    if (!obj || !dimEl || !canvasRef.current) return
+    fc.calcOffset()
+    const rect = obj.getBoundingRect()
+    const vt = fc.viewportTransform || [1,0,0,1,0,0]
+    const scale = vt[0]
+    const canvasRect = canvasRef.current.getBoundingClientRect()
+    const x = window.scrollX + canvasRect.left + vt[4] + (rect.left + rect.width) * scale + 8
+    const y = window.scrollY + canvasRect.top + vt[5] + rect.top * scale - 24
+    dimEl.style.left = `${x}px`
+    dimEl.style.top = `${y}px`
+    dimEl.textContent = `w:${Math.round(rect.width * scale)} h:${Math.round(rect.height * scale)}`
+    dimEl.style.display = 'block'
+  }
+
+  const hideDims = () => {
+    const dimEl = dimDomRef.current
+    if (dimEl) dimEl.style.display = 'none'
+  }
+
 fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
-  .on('object:scaling',  () => { hoverHL.visible = false; syncSel() })
+  .on('object:scaling',  e => { hoverHL.visible = false; showDims(e); syncSel() })
   .on('object:scaled',   () => {
+    hideDims()
     hoverHL.visible = false
     requestAnimationFrame(() => requestAnimationFrame(syncSel))
   })
@@ -1394,6 +1424,8 @@ window.addEventListener('keydown', onKey)
       fc.off('before:transform', startCrop);
       fc.off('object:scaling', duringCrop);
       fc.off('object:scaled', endCrop);
+      fc.off('object:scaling', showDims);
+      fc.off('object:scaled', hideDims);
       fc.off('after:render', handleAfterRender);
       selEl.removeEventListener('pointerdown', onSelDown)
       cropEl.removeEventListener('pointerdown', onCropDown)
@@ -1406,6 +1438,7 @@ window.addEventListener('keydown', onKey)
       hoverDomRef.current?.remove()
       selDomRef.current?.remove()
       cropDomRef.current?.remove()
+      dimDomRef.current?.remove()
       if (scrollHandler) {
         window.removeEventListener('scroll', scrollHandler)
         window.removeEventListener('resize', scrollHandler)

@@ -132,3 +132,10 @@ html {
   .sel-overlay .handle.mt,
   .sel-overlay .handle.mb { cursor:ns-resize; }
 }
+
+@layer utilities {
+  .dim-popup {
+    @apply fixed z-50 bg-gray-800 text-white text-xs rounded px-2 py-1 pointer-events-none;
+    transform: translate(-50%, -100%);
+  }
+}
