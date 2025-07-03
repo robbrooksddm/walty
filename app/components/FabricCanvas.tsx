@@ -640,6 +640,13 @@ useEffect(() => {
     selEl.appendChild(h);
     handleMap[c] = h;
   });
+  {
+    const h = document.createElement('div');
+    h.className = 'handle rotate rot';
+    h.dataset.corner = 'rot';
+    selEl.appendChild(h);
+    handleMap.rot = h;
+  }
   (selEl as any)._handles = handleMap;
 
   const cropHandles: Record<string, HTMLDivElement> = {};
@@ -1018,39 +1025,50 @@ const drawOverlay = (
   obj: fabric.Object,
   el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
 ) => {
-  const box  = obj.getBoundingRect(true, true)
+  obj.setCoords()
+  const tl = obj.oCoords.tl
+  const tr = obj.oCoords.tr
+  const bl = obj.oCoords.bl
   const rect = canvasRef.current!.getBoundingClientRect()
   const vt   = fc.viewportTransform || [1,0,0,1,0,0]
   const scale = vt[0]
   const c = containerRef.current
   const scrollX = (c?.scrollLeft ?? 0)
   const scrollY = (c?.scrollTop  ?? 0)
-  const left   = window.scrollX + scrollX + rect.left + vt[4] + (box.left - PAD) * scale
-  const top    = window.scrollY + scrollY + rect.top  + vt[5] + (box.top - PAD) * scale
-  const width  = (box.width  + PAD * 2) * scale
-  const height = (box.height + PAD * 2) * scale
+  const width  = Math.hypot(tr.x - tl.x, tr.y - tl.y)
+  const height = Math.hypot(bl.x - tl.x, bl.y - tl.y)
+  const left   = window.scrollX + scrollX + rect.left + vt[4] + (tl.x - PAD) * scale
+  const top    = window.scrollY + scrollY + rect.top  + vt[5] + (tl.y - PAD) * scale
+  el.style.transform = `rotate(${obj.angle || 0}deg)`
+  el.style.transformOrigin = `${PAD * scale}px ${PAD * scale}px`
+  const w = (width  + PAD * 2) * scale
+  const h = (height + PAD * 2) * scale
   el.style.left   = `${left}px`
   el.style.top    = `${top}px`
-  el.style.width  = `${width}px`
-  el.style.height = `${height}px`
+  el.style.width  = `${w}px`
+  el.style.height = `${h}px`
   el._object = obj
   if (el._handles) {
-    const h = el._handles
+    const hdl = el._handles
     const half  = SEL_BORDER / 2
-    const midX  = Math.round(width  / 2)
-    const midY  = Math.round(height / 2)
+    const midX  = Math.round(w  / 2)
+    const midY  = Math.round(h / 2)
     const leftX = Math.round(half)
-    const rightX = Math.round(width - half)
+    const rightX = Math.round(w - half)
     const topY   = Math.round(half)
-    const botY   = Math.round(height - half)
-    h.tl.style.left = `${leftX}px`;  h.tl.style.top = `${topY}px`
-    h.tr.style.left = `${rightX}px`; h.tr.style.top = `${topY}px`
-    h.br.style.left = `${rightX}px`; h.br.style.top = `${botY}px`
-    h.bl.style.left = `${leftX}px`;  h.bl.style.top = `${botY}px`
-    h.ml.style.left = `${leftX}px`;  h.ml.style.top = `${midY}px`
-    h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
-    h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
-    h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+    const botY   = Math.round(h - half)
+    hdl.tl.style.left = `${leftX}px`;  hdl.tl.style.top = `${topY}px`
+    hdl.tr.style.left = `${rightX}px`; hdl.tr.style.top = `${topY}px`
+    hdl.br.style.left = `${rightX}px`; hdl.br.style.top = `${botY}px`
+    hdl.bl.style.left = `${leftX}px`;  hdl.bl.style.top = `${botY}px`
+    hdl.ml.style.left = `${leftX}px`;  hdl.ml.style.top = `${midY}px`
+    hdl.mr.style.left = `${rightX}px`; hdl.mr.style.top = `${midY}px`
+    hdl.mt.style.left = `${midX}px`;   hdl.mt.style.top = `${topY}px`
+    hdl.mb.style.left = `${midX}px`;   hdl.mb.style.top = `${botY}px`
+    if (hdl.rot) {
+      hdl.rot.style.left = `${midX}px`
+      hdl.rot.style.top  = `${botY + 30}px`
+    }
   }
 }
 
