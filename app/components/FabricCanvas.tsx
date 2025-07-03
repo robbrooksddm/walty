@@ -114,7 +114,7 @@ let PAGE_H = 0
 let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
 let PAD = 0
-const SEL_BORDER = 2
+const SEL_BORDER = 3
 
 recompute()
 
@@ -700,12 +700,26 @@ useEffect(() => {
     e.preventDefault()
   }
   const onSelDown = (e: PointerEvent) => {
-    const obj = (selEl as any)._object as fabric.Object | null
+    let obj = (selEl as any)._object as fabric.Object | null
+    if (croppingRef.current && cropDomRef.current) {
+      selEl.style.pointerEvents = 'none'
+      const under = document.elementFromPoint(e.clientX, e.clientY)
+      selEl.style.pointerEvents = 'auto'
+      if (under && cropDomRef.current.contains(under))
+        obj = (cropDomRef.current as any)._object as fabric.Object | null
+    }
     if (obj) fc.setActiveObject(obj)
     bridge(e)
   }
   const onCropDown = (e: PointerEvent) => {
-    const obj = (cropEl as any)._object as fabric.Object | null
+    let obj = (cropEl as any)._object as fabric.Object | null
+    if (croppingRef.current && selDomRef.current) {
+      cropEl.style.pointerEvents = 'none'
+      const under = document.elementFromPoint(e.clientX, e.clientY)
+      cropEl.style.pointerEvents = 'auto'
+      if (under && selDomRef.current.contains(under))
+        obj = (selDomRef.current as any)._object as fabric.Object | null
+    }
     if (obj) fc.setActiveObject(obj)
     bridge(e)
   }
@@ -1002,7 +1016,7 @@ const hoverHL = new fabric.Rect({
   originX:'left', originY:'top', strokeUniform:true,
   fill:'transparent',
   stroke:SEL_COLOR,
-  strokeWidth:1 / SCALE,
+  strokeWidth:(SEL_BORDER / 2) / SCALE,
   strokeDashArray:[],
   selectable:false, evented:false, visible:false,
   excludeFromExport:true,
@@ -1037,12 +1051,12 @@ const drawOverlay = (
   if (el._handles) {
     const h = el._handles
     const half  = SEL_BORDER / 2
-    const midX  = Math.round(width  / 2)
-    const midY  = Math.round(height / 2)
-    const leftX = Math.round(half)
-    const rightX = Math.round(width - half)
-    const topY   = Math.round(half)
-    const botY   = Math.round(height - half)
+    const midX  = width  / 2
+    const midY  = height / 2
+    const leftX = half
+    const rightX = width - half
+    const topY   = half
+    const botY   = height - half
     h.tl.style.left = `${leftX}px`;  h.tl.style.top = `${topY}px`
     h.tr.style.left = `${rightX}px`; h.tr.style.top = `${topY}px`
     h.br.style.left = `${rightX}px`; h.br.style.top = `${botY}px`
