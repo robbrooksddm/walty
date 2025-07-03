@@ -631,7 +631,7 @@ useEffect(() => {
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
-  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const corners = ['tl','tr','br','bl','ml','mr','mt','mb','rot'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
   corners.forEach(c => {
     const h = document.createElement('div');
@@ -643,7 +643,7 @@ useEffect(() => {
   (selEl as any)._handles = handleMap;
 
   const cropHandles: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  corners.filter(c => c !== 'rot').forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c;
@@ -655,6 +655,19 @@ useEffect(() => {
   const forward = (ev: PointerEvent | MouseEvent, dx = 0, dy = 0) => ({
     clientX   : ev.clientX + dx,
     clientY   : ev.clientY + dy,
+    button    : ev.button,
+    buttons   : 'buttons' in ev ? ev.buttons : 0,
+    ctrlKey   : ev.ctrlKey,
+    shiftKey  : ev.shiftKey,
+    altKey    : ev.altKey,
+    metaKey   : ev.metaKey,
+    bubbles   : true,
+    cancelable: true,
+  });
+
+  const mimic = (ev: PointerEvent | MouseEvent, x: number, y: number) => ({
+    clientX   : x,
+    clientY   : y,
     button    : ev.button,
     buttons   : 'buttons' in ev ? ev.buttons : 0,
     ctrlKey   : ev.ctrlKey,
@@ -680,6 +693,35 @@ useEffect(() => {
 
   const bridge = (e: PointerEvent) => {
     const corner = (e.target as HTMLElement | null)?.dataset.corner
+    if (corner === 'rot' && fc.getActiveObject()) {
+      const obj = fc.getActiveObject() as fabric.Object
+      obj.setCoords()
+      const mtr = obj.oCoords!.mtr
+      const rect = fc.upperCanvasEl.getBoundingClientRect()
+      const startX = e.clientX
+      const startY = e.clientY
+      const baseX = rect.left + mtr.x
+      const baseY = rect.top  + mtr.y
+      const down = new MouseEvent('mousedown', mimic(e, baseX, baseY))
+      fc.upperCanvasEl.dispatchEvent(down)
+      const move = (ev: PointerEvent) => {
+        const x = baseX - (ev.clientX - startX)
+        const y = baseY - (ev.clientY - startY)
+        fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', mimic(ev, x, y)))
+      }
+      const up = (ev: PointerEvent) => {
+        const x = baseX - (ev.clientX - startX)
+        const y = baseY - (ev.clientY - startY)
+        fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', mimic(ev, x, y)))
+        document.removeEventListener('pointermove', move)
+        document.removeEventListener('pointerup', up)
+      }
+      document.addEventListener('pointermove', move)
+      document.addEventListener('pointerup', up)
+      e.preventDefault()
+      return
+    }
+
     const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const scale = vt[0]
     const offset = PAD * scale
@@ -1018,21 +1060,27 @@ const drawOverlay = (
   obj: fabric.Object,
   el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
 ) => {
-  const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
   const vt   = fc.viewportTransform || [1,0,0,1,0,0]
   const scale = vt[0]
   const c = containerRef.current
-  const scrollX = (c?.scrollLeft ?? 0)
-  const scrollY = (c?.scrollTop  ?? 0)
-  const left   = window.scrollX + scrollX + rect.left + vt[4] + (box.left - PAD) * scale
-  const top    = window.scrollY + scrollY + rect.top  + vt[5] + (box.top - PAD) * scale
-  const width  = (box.width  + PAD * 2) * scale
-  const height = (box.height + PAD * 2) * scale
+  const scrollX = c?.scrollLeft ?? 0
+  const scrollY = c?.scrollTop  ?? 0
+  const left   = window.scrollX + scrollX + rect.left + vt[4] + (obj.left - PAD) * scale
+  const top    = window.scrollY + scrollY + rect.top  + vt[5] + (obj.top  - PAD) * scale
+  const width  = (obj.getScaledWidth()  + PAD * 2) * scale
+  const height = (obj.getScaledHeight() + PAD * 2) * scale
   el.style.left   = `${left}px`
   el.style.top    = `${top}px`
   el.style.width  = `${width}px`
   el.style.height = `${height}px`
+  el.style.transformOrigin = '0 0'
+  const rot = obj.angle || 0
+  const parts = [] as string[]
+  if (obj.flipX) parts.push('scaleX(-1)')
+  if (obj.flipY) parts.push('scaleY(-1)')
+  if (rot) parts.push(`rotate(${rot}deg)`)
+  el.style.transform = parts.join(' ')
   el._object = obj
   if (el._handles) {
     const h = el._handles
@@ -1043,6 +1091,7 @@ const drawOverlay = (
     const rightX = Math.round(width - half)
     const topY   = Math.round(half)
     const botY   = Math.round(height - half)
+    const rotY   = Math.round(height + 60 * scale)
     h.tl.style.left = `${leftX}px`;  h.tl.style.top = `${topY}px`
     h.tr.style.left = `${rightX}px`; h.tr.style.top = `${topY}px`
     h.br.style.left = `${rightX}px`; h.br.style.top = `${botY}px`
@@ -1051,6 +1100,7 @@ const drawOverlay = (
     h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
     h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+    if (h.rot) { h.rot.style.left = `${midX}px`; h.rot.style.top = `${rotY}px` }
   }
 }
 
@@ -1089,9 +1139,9 @@ const syncSel = () => {
       }
     }
     if (selEl._handles)
-      ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'none')
+      ['ml','mr','mt','mb','rot'].forEach(k => selEl._handles![k].style.display = 'none')
     if (cropEl && cropEl._handles)
-      ['ml','mr','mt','mb'].forEach(k => cropEl._handles![k].style.display = 'none')
+      ['ml','mr','mt','mb','rot'].forEach(k => cropEl._handles![k].style.display = 'none')
     selEl.style.display = 'block'
     return
   }
@@ -1104,7 +1154,7 @@ const syncSel = () => {
   drawOverlay(obj, selEl)
   selEl._object = obj
   if (selEl._handles)
-    ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'block')
+    ['ml','mr','mt','mb','rot'].forEach(k => selEl._handles![k].style.display = 'block')
 }
 
 const syncHover = () => {
