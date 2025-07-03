@@ -131,6 +131,16 @@ html {
     height:7px;
     border-radius:3px;
   }
+  .sel-overlay .handle.rotate {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .sel-overlay .handle.rotate svg {
+    width:12px;
+    height:12px;
+    stroke:#555;
+  }
   .sel-overlay .handle.tl,
   .sel-overlay .handle.br { cursor:nwse-resize; }
   .sel-overlay .handle.tr,
@@ -139,6 +149,7 @@ html {
   .sel-overlay .handle.mr { cursor:ew-resize; }
   .sel-overlay .handle.mt,
   .sel-overlay .handle.mb { cursor:ns-resize; }
+  .sel-overlay .handle.mtr { cursor:grab; }
 
   /* crop window corner "L" handles */
   .sel-overlay.crop-window .handle.corner {
