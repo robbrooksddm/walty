@@ -14,7 +14,7 @@ export default function QuickActionBar({ pos, onAction, onMenu }: Props) {
   const openMenu = () => onMenu(pos)
   return (
     <div
-      className="fixed z-50 pointer-events-auto flex items-center gap-0.5 bg-white border border-[rgba(0,91,85,.2)] shadow-lg rounded-full px-0.5 py-0"
+      className="fixed z-50 pointer-events-auto flex items-center gap-px bg-white border border-[rgba(0,91,85,.2)] shadow-lg rounded-full px-0.5 py-0"
       style={{ top: pos.y, left: pos.x, transform: 'translate(-50%, -100%)' }}
     >
       <IconButton Icon={Scissors} label="Cut" hideCaption size="sm" onClick={() => onAction('cut')} />
