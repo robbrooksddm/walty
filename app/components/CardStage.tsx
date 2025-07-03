@@ -203,7 +203,7 @@ export default function CardStage({
               height: undefined,
             }}
             stroke="deepskyblue"
-            strokeWidth={2}
+            strokeWidth={4}
             listening={false}
           />
           <Transformer

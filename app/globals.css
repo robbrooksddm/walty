@@ -103,7 +103,7 @@ html {
 @layer utilities {
   .sel-overlay {
     @apply absolute pointer-events-none box-border z-40;
-    border:2px solid #2EC4B6; /* SEL_COLOR */
+    border:4px solid #2EC4B6; /* SEL_COLOR */
   }
   .sel-overlay.interactive {
     @apply pointer-events-auto;
@@ -118,6 +118,7 @@ html {
     border-radius:50%;
     box-shadow:0 1px 2px rgba(0,0,0,0.25);
     transform:translate(-50%,-50%);
+    z-index:50;
     pointer-events:auto;
   }
   .sel-overlay .handle.side {
@@ -151,6 +152,7 @@ html {
     transform-origin:4px 4px;
     clip-path:polygon(0 0,100% 0,100% 4px,4px 4px,4px 100%,0 100%);
     transform:translate(-4px,-4px);
+    z-index:50;
   }
   .sel-overlay.crop-window .handle.tr { transform:translate(-4px,-4px) rotate(90deg); }
   .sel-overlay.crop-window .handle.br { transform:translate(-4px,-4px) rotate(180deg); }
