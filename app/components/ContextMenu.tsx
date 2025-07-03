@@ -47,8 +47,12 @@ interface Props {
 }
 
 export default function ContextMenu({ pos, onAction, onClose }: Props) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    const close = () => onClose();
+    const close = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) onClose();
+    };
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('mousedown', close);
     window.addEventListener('keydown', esc);
@@ -81,6 +85,7 @@ export default function ContextMenu({ pos, onAction, onClose }: Props) {
 
   return createPortal(
     <div
+      ref={menuRef}
       style={{ top: pos.y, left: pos.x }}
       className="fixed z-50 bg-white border border-[rgba(0,91,85,.2)] rounded-xl shadow-lg pointer-events-auto min-w-[14rem]"
     >
