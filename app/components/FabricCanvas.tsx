@@ -638,7 +638,7 @@ useEffect(() => {
   selCorners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
-    h.dataset.corner = c === 'rot' ? 'mtr' : c;
+    h.dataset.corner = c;
     if (c === 'rot') {
       h.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>';
     }
@@ -688,8 +688,12 @@ useEffect(() => {
     const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const scale = vt[0]
     const offset = PAD * scale
-    const dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
-    const dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+    const dx = corner && corner !== 'rot'
+      ? corner.includes('l') ? offset : corner.includes('r') ? -offset : 0
+      : 0
+    const dy = corner && corner !== 'rot'
+      ? corner.includes('t') ? offset : corner.includes('b') ? -offset : 0
+      : 0
 
     const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
