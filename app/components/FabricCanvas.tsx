@@ -500,6 +500,9 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
 
   const setPageLayers = useEditor(s => s.setPageLayers)
   const updateLayer   = useEditor(s => s.updateLayer)
+  const reorder       = useEditor(s => s.reorder)
+  const activePage    = useEditor(s => s.activePage)
+  const layerCount    = useEditor(s => s.pages[s.activePage]?.layers.length || 0)
 
   const handleMenuAction = (a: import('./ContextMenu').MenuAction) => {
     const fc = fcRef.current
@@ -566,8 +569,32 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
               fc.setActiveObject(root)
             }
             fc.requestRenderAll()
-            syncLayersFromCanvas(fc, pageIdx)
-          }, '')
+          syncLayersFromCanvas(fc, pageIdx)
+        }, '')
+      }
+        break
+      case 'bringForward':
+        if (active) {
+          const idx = (active as any).layerIdx ?? 0
+          if (idx > 0 && idx <= layerCount - 1) reorder(idx, idx - 1)
+        }
+        break
+      case 'sendBackward':
+        if (active) {
+          const idx = (active as any).layerIdx ?? 0
+          if (idx < layerCount - 1) reorder(idx, idx + 1)
+        }
+        break
+      case 'align':
+        if (active) {
+          const zoom = fc.viewportTransform?.[0] ?? 1
+          const fcH  = (fc.getHeight() ?? 0) / zoom
+          const fcW  = (fc.getWidth()  ?? 0) / zoom
+          const { width, height } = active.getBoundingRect(true, true)
+          active.set({ left: fcW / 2 - width / 2, top: fcH / 2 - height / 2 })
+          active.setCoords()
+          fc.requestRenderAll()
+          syncLayersFromCanvas(fc, pageIdx)
         }
         break
       case 'delete':
