@@ -618,14 +618,14 @@ useEffect(() => {
   (hoverEl as any)._object = null;
 
   const selEl = document.createElement('div');
-  selEl.className = 'sel-overlay interactive';
+  selEl.className = 'sel-overlay';
   selEl.style.display = 'none';
   document.body.appendChild(selEl);
   selDomRef.current = selEl;
   (selEl as any)._object = null;
 
   const cropEl = document.createElement('div');
-  cropEl.className = 'sel-overlay interactive';
+  cropEl.className = 'sel-overlay';
   cropEl.style.display = 'none';
   document.body.appendChild(cropEl);
   cropDomRef.current = cropEl;
@@ -639,6 +639,15 @@ useEffect(() => {
     h.dataset.corner = c;
     selEl.appendChild(h);
     handleMap[c] = h;
+    h.addEventListener('pointerdown', e => {
+      const obj = (selEl as any)._object as fabric.Object | null
+      if (obj) fc.setActiveObject(obj)
+      bridge(e)
+    })
+    h.addEventListener('pointerenter', raiseSel)
+    h.addEventListener('dblclick', e => {
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('dblclick', forwardMouse(e)))
+    })
   });
   (selEl as any)._handles = handleMap;
 
@@ -649,6 +658,15 @@ useEffect(() => {
     h.dataset.corner = c;
     cropEl.appendChild(h);
     cropHandles[c] = h;
+    h.addEventListener('pointerdown', e => {
+      const obj = (cropEl as any)._object as fabric.Object | null
+      if (obj) fc.setActiveObject(obj)
+      bridge(e)
+    })
+    h.addEventListener('pointerenter', raiseCrop)
+    h.addEventListener('dblclick', e => {
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('dblclick', forwardMouse(e)))
+    })
   });
   (cropEl as any)._handles = cropHandles;
 
@@ -699,31 +717,6 @@ useEffect(() => {
     document.addEventListener('pointerup', up)
     e.preventDefault()
   }
-  const onSelDown = (e: PointerEvent) => {
-    const obj = (selEl as any)._object as fabric.Object | null
-    if (obj) fc.setActiveObject(obj)
-    bridge(e)
-  }
-  const onCropDown = (e: PointerEvent) => {
-    const obj = (cropEl as any)._object as fabric.Object | null
-    if (obj) fc.setActiveObject(obj)
-    bridge(e)
-  }
-  selEl.addEventListener('pointerdown', onSelDown)
-  cropEl.addEventListener('pointerdown', onCropDown)
-
-  selEl.addEventListener('dblclick', e => {
-    fc.upperCanvasEl.dispatchEvent(new MouseEvent('dblclick', forwardMouse(e)))
-  })
-  cropEl.addEventListener('dblclick', e => {
-    fc.upperCanvasEl.dispatchEvent(new MouseEvent('dblclick', forwardMouse(e)))
-  })
-
-  const relayMove = (ev: PointerEvent) =>
-    fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
-  selEl.addEventListener('pointermove', relayMove)
-  cropEl.addEventListener('pointermove', relayMove)
-
   const raiseSel = () => {
     if (!croppingRef.current || !cropDomRef.current) return
     selEl.style.zIndex = '41'
@@ -734,8 +727,6 @@ useEffect(() => {
     cropDomRef.current.style.zIndex = '41'
     selEl.style.zIndex = '40'
   }
-  selEl.addEventListener('pointerenter', raiseSel)
-  cropEl.addEventListener('pointerenter', raiseCrop)
 
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
@@ -1388,10 +1379,6 @@ window.addEventListener('keydown', onKey)
       fc.off('object:scaling', duringCrop);
       fc.off('object:scaled', endCrop);
       fc.off('after:render', handleAfterRender);
-      selEl.removeEventListener('pointerdown', onSelDown)
-      cropEl.removeEventListener('pointerdown', onCropDown)
-      selEl.removeEventListener('pointerenter', raiseSel)
-      cropEl.removeEventListener('pointerenter', raiseCrop)
       onReady(null)
       cropToolRef.current?.abort()
       isolateCrop(false)
