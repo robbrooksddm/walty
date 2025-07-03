@@ -174,6 +174,7 @@ export class CropTool {
     /* hide the rotate ("mtr") and side controls while cropping */
     img.setControlsVisibility({
       mtr: false,          // hide rotation
+      mbr: false,
       ml : false, mr : false,      // hide middle-left / middle-right
       mt : false, mb : false       // hide middle-top / middle-bottom
     });
