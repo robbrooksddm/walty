@@ -1202,18 +1202,30 @@ fc.on('object:moving',   () => {
     requestAnimationFrame(() => requestAnimationFrame(syncSel))
   })
   .on('object:modified', () => {
-    transformingRef.current = false
-    setActionPos(null)
-    if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
-    actionTimerRef.current = window.setTimeout(() => {
-      requestAnimationFrame(() => requestAnimationFrame(syncSel))
-    }, 600)
+    if (transformingRef.current) {
+      transformingRef.current = false
+      setActionPos(null)
+      if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+      actionTimerRef.current = window.setTimeout(() => {
+        requestAnimationFrame(() => requestAnimationFrame(syncSel))
+      }, 250)
+    } else {
+      syncSel()
+    }
   })
   .on('mouse:up', () => {
-    transformingRef.current = false
-    setActionPos(null)
-    if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
-    actionTimerRef.current = window.setTimeout(syncSel, 600)
+    if (transformingRef.current) {
+      transformingRef.current = false
+      setActionPos(null)
+      if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+      actionTimerRef.current = window.setTimeout(syncSel, 250)
+    } else {
+      if (actionTimerRef.current) {
+        clearTimeout(actionTimerRef.current)
+        actionTimerRef.current = null
+      }
+      syncSel()
+    }
   })
   .on('after:render',    handleAfterRender)
 
