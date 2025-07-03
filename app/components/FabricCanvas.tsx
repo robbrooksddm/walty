@@ -609,6 +609,13 @@ useEffect(() => {
   fc.backgroundColor = '#fff';
   fc.preserveObjectStacking = true;
 
+  // ensure objects remain selected after click
+  const keepSelection = (e: fabric.IEvent) => {
+    const t = e.target as fabric.Object | undefined
+    if (t) fc.setActiveObject(t)
+  }
+  fc.on('mouse:down', keepSelection)
+
   /* create DOM overlays for hover & selection */
   const hoverEl = document.createElement('div');
   hoverEl.className = 'sel-overlay';
@@ -1392,6 +1399,7 @@ window.addEventListener('keydown', onKey)
       cropEl.removeEventListener('pointerdown', onCropDown)
       selEl.removeEventListener('pointerenter', raiseSel)
       cropEl.removeEventListener('pointerenter', raiseCrop)
+      fc.off('mouse:down', keepSelection)
       onReady(null)
       cropToolRef.current?.abort()
       isolateCrop(false)
