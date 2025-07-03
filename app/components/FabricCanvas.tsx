@@ -1002,7 +1002,7 @@ const hoverHL = new fabric.Rect({
   originX:'left', originY:'top', strokeUniform:true,
   fill:'transparent',
   stroke:SEL_COLOR,
-  strokeWidth:1 / SCALE,
+  strokeWidth:2 / SCALE,
   strokeDashArray:[],
   selectable:false, evented:false, visible:false,
   excludeFromExport:true,

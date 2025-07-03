@@ -187,7 +187,7 @@ export class CropTool {
     const fw =  width    * (img.scaleX ?? 1)
     const fh =  height   * (img.scaleY ?? 1)
 
-    const grid = { stroke:'#ffffff22', strokeWidth:1/this.SCALE,
+    const grid = { stroke:'#ffffff22', strokeWidth:2/this.SCALE,
                    selectable:false, evented:false }
 
     this.frame = new fabric.Group([
@@ -221,7 +221,7 @@ export class CropTool {
       ctx.save();
       ctx.translate(left, top);
       ctx.rotate(rot);
-      ctx.lineWidth   = 0.5 / this.SCALE;
+      ctx.lineWidth   = 1 / this.SCALE;
       ctx.strokeStyle = '#ffffff';
       ctx.shadowColor = 'rgba(0,0,0,0.35)';          // subtle outline
       ctx.shadowBlur  = 3 / this.SCALE;
@@ -277,6 +277,19 @@ export class CropTool {
     this.clamp(true);
 
     this.fc.setActiveObject(this.frame)
+
+    // ensure whichever element the user clicks becomes active
+    const earlyActivate = (ev: PointerEvent) => {
+      if (!this.isActive) return
+      const tgt = this.fc.findTarget(ev as any, false) as fabric.Object | null
+      if (tgt && (tgt === this.img || tgt === this.frame)) {
+        if (this.fc.getActiveObject() !== tgt) this.fc.setActiveObject(tgt)
+      }
+    }
+    this.fc.upperCanvasEl.addEventListener('pointerdown', earlyActivate, true)
+    this.cleanup.push(() =>
+      this.fc.upperCanvasEl.removeEventListener('pointerdown', earlyActivate, true)
+    )
 
     /* ------------------------------------------------------------------
      *  DOM‑level pointer capture – runs *before* Fabric's own handler.
