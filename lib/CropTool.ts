@@ -187,7 +187,7 @@ export class CropTool {
     const fw =  width    * (img.scaleX ?? 1)
     const fh =  height   * (img.scaleY ?? 1)
 
-    const grid = { stroke:'#ffffff22', strokeWidth:1/this.SCALE,
+    const grid = { stroke:'#ffffff22', strokeWidth:2/this.SCALE,
                    selectable:false, evented:false }
 
     this.frame = new fabric.Group([
@@ -221,7 +221,7 @@ export class CropTool {
       ctx.save();
       ctx.translate(left, top);
       ctx.rotate(rot);
-      ctx.lineWidth   = 0.5 / this.SCALE;
+      ctx.lineWidth   = 1 / this.SCALE;
       ctx.strokeStyle = '#ffffff';
       ctx.shadowColor = 'rgba(0,0,0,0.35)';          // subtle outline
       ctx.shadowBlur  = 3 / this.SCALE;

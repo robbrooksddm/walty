@@ -726,13 +726,13 @@ useEffect(() => {
 
   const raiseSel = () => {
     if (!croppingRef.current || !cropDomRef.current) return
-    selEl.style.zIndex = '41'
-    cropDomRef.current.style.zIndex = '40'
+    selEl.style.zIndex = '42'
+    cropDomRef.current.style.zIndex = '41'
   }
   const raiseCrop = () => {
     if (!croppingRef.current || !cropDomRef.current) return
-    cropDomRef.current.style.zIndex = '41'
-    selEl.style.zIndex = '40'
+    cropDomRef.current.style.zIndex = '42'
+    selEl.style.zIndex = '41'
   }
   selEl.addEventListener('pointerenter', raiseSel)
   cropEl.addEventListener('pointerenter', raiseCrop)
@@ -1002,7 +1002,7 @@ const hoverHL = new fabric.Rect({
   originX:'left', originY:'top', strokeUniform:true,
   fill:'transparent',
   stroke:SEL_COLOR,
-  strokeWidth:1 / SCALE,
+  strokeWidth:2 / SCALE,
   strokeDashArray:[],
   selectable:false, evented:false, visible:false,
   excludeFromExport:true,
@@ -1064,9 +1064,9 @@ const syncSel = () => {
   if (croppingRef.current && tool?.isActive && tool.img && tool.frame) {
     const img   = tool.img as fabric.Object
     const frame = tool.frame as fabric.Object
-    // whichever is active uses selEl; the other uses cropEl
-    selEl.style.zIndex = '41'
-    cropEl && (cropEl.style.zIndex = '40')
+    // non-active overlay stays on top for easier access
+    selEl.style.zIndex = '40'
+    cropEl && (cropEl.style.zIndex = '41')
     if (obj === frame) {
       drawOverlay(frame, selEl)
       selEl._object = frame
