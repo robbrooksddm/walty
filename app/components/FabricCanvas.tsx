@@ -115,6 +115,7 @@ let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
 let PAD = 0
 const SEL_BORDER = 2
+const ROT_OFFSET = 30
 
 recompute()
 
@@ -632,11 +633,17 @@ useEffect(() => {
   (cropEl as any)._object = null;
 
   const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const selCorners = [...corners, 'rot'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  selCorners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
+    // use a custom data-corner for rotation so it does not include "t" or "r"
+    // which would otherwise confuse the pointer offset logic
     h.dataset.corner = c;
+    if (c === 'rot') {
+      h.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>';
+    }
     selEl.appendChild(h);
     handleMap[c] = h;
   });
@@ -1018,31 +1025,37 @@ const drawOverlay = (
   obj: fabric.Object,
   el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
 ) => {
-  const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
   const vt   = fc.viewportTransform || [1,0,0,1,0,0]
   const scale = vt[0]
   const c = containerRef.current
   const scrollX = (c?.scrollLeft ?? 0)
   const scrollY = (c?.scrollTop  ?? 0)
-  const left   = window.scrollX + scrollX + rect.left + vt[4] + (box.left - PAD) * scale
-  const top    = window.scrollY + scrollY + rect.top  + vt[5] + (box.top - PAD) * scale
-  const width  = (box.width  + PAD * 2) * scale
-  const height = (box.height + PAD * 2) * scale
+  const center = obj.getCenterPoint()
+  const left   = window.scrollX + scrollX + rect.left + vt[4] + center.x * scale
+  const top    = window.scrollY + scrollY + rect.top  + vt[5] + center.y * scale
+  const objW   = obj.getScaledWidth()  * scale
+  const objH   = obj.getScaledHeight() * scale
+  const width  = objW
+  // add extra room so the rotation handle stays inside the overlay's hit box
+  const height = objH + ROT_OFFSET * scale
   el.style.left   = `${left}px`
-  el.style.top    = `${top}px`
+  // shift overlay down by half the offset so the object remains centered
+  el.style.top    = `${top + (ROT_OFFSET * scale) / 2}px`
   el.style.width  = `${width}px`
   el.style.height = `${height}px`
+  el.style.transform = `translate(-50%,-50%) rotate(${obj.angle || 0}deg)`
+  el.style.transformOrigin = '50% 50%'
   el._object = obj
   if (el._handles) {
     const h = el._handles
     const half  = SEL_BORDER / 2
-    const midX  = Math.round(width  / 2)
-    const midY  = Math.round(height / 2)
+    const midX  = Math.round(objW / 2)
+    const midY  = Math.round(objH / 2)
     const leftX = Math.round(half)
-    const rightX = Math.round(width - half)
+    const rightX = Math.round(objW - half)
     const topY   = Math.round(half)
-    const botY   = Math.round(height - half)
+    const botY   = Math.round(objH - half)
     h.tl.style.left = `${leftX}px`;  h.tl.style.top = `${topY}px`
     h.tr.style.left = `${rightX}px`; h.tr.style.top = `${topY}px`
     h.br.style.left = `${rightX}px`; h.br.style.top = `${botY}px`
@@ -1051,6 +1064,10 @@ const drawOverlay = (
     h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
     h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+    if (h.rot) {
+      h.rot.style.left = `${midX}px`
+      h.rot.style.top  = `${botY + ROT_OFFSET * scale}px`
+    }
   }
 }
 
