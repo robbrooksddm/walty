@@ -17,6 +17,7 @@ import { SEL_COLOR } from '@/lib/fabricDefaults';
 import { CropTool } from '@/lib/CropTool'
 import { enableSnapGuides } from '@/lib/useSnapGuides'
 import ContextMenu from './ContextMenu'
+import SelectionToolbar from './SelectionToolbar'
 
 /* ---------- print spec ----------------------------------------- */
 export interface PrintSpec {
@@ -495,6 +496,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   )
 
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
+  const [toolPos, setToolPos] = useState<{ x: number; y: number } | null>(null)
 
 
 
@@ -1109,9 +1111,20 @@ const syncSel = () => {
   }
 
   cropEl && (cropEl.style.display = 'none', cropEl._object = null)
-  if (!obj) return
+  if (!obj) { setToolPos(null); return }
+  const box  = obj.getBoundingRect(true, true)
+  const rect = canvasRef.current!.getBoundingClientRect()
+  const vt   = fc.viewportTransform || [1,0,0,1,0,0]
+  const scale = vt[0]
+  const c = containerRef.current
+  const scrollX = (c?.scrollLeft ?? 0)
+  const scrollY = (c?.scrollTop  ?? 0)
+  const left   = window.scrollX + scrollX + rect.left + vt[4] + (box.left - PAD) * scale
+  const top    = window.scrollY + scrollY + rect.top  + vt[5] + (box.top - PAD) * scale
+  const width  = (box.width  + PAD * 2) * scale
   drawOverlay(obj, selEl)
   selEl._object = obj
+  setToolPos({ x: left + width / 2, y: top })
 }
 
 const syncHover = () => {
@@ -1149,6 +1162,7 @@ fc.on('selection:created', () => {
   }
   selDomRef.current && (selDomRef.current.style.display = 'none')
   cropDomRef.current && (cropDomRef.current.style.display = 'none')
+  setToolPos(null)
 })
 
 /* also hide hover during any transform of the active object */
@@ -1672,6 +1686,13 @@ doSync = () =>
           pos={menuPos}
           onAction={handleMenuAction}
           onClose={() => setMenuPos(null)}
+        />
+      )}
+      {toolPos && (
+        <SelectionToolbar
+          pos={toolPos}
+          onAction={handleMenuAction}
+          onMenu={setMenuPos}
         />
       )}
     </>
