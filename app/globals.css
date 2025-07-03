@@ -110,8 +110,8 @@ html {
   }
   .sel-overlay .handle {
     position:absolute;
-    width:12px;
-    height:12px;
+    width:16px;
+    height:16px;
     background:#fff;
     border:1px solid rgba(128,128,128,0.5);
     border-radius:50%;
@@ -120,9 +120,14 @@ html {
     pointer-events:auto;
   }
   .sel-overlay .handle.side {
-    width:4px;
-    height:12px;
-    border-radius:2px;
+    width:7px;
+    height:21px;
+    border-radius:3px;
+  }
+  .sel-overlay .handle.mt,
+  .sel-overlay .handle.mb {
+    width:21px;
+    height:7px;
   }
   .sel-overlay .handle.tl,
   .sel-overlay .handle.br { cursor:nwse-resize; }
