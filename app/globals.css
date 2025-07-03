@@ -120,6 +120,19 @@ html {
     transform:translate(-50%,-50%);
     pointer-events:auto;
   }
+  .sel-overlay .handle.rotate {
+    width:20px;
+    height:20px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:grab;
+  }
+  .sel-overlay .handle.rotate svg {
+    width:12px;
+    height:12px;
+    pointer-events:none;
+  }
   .sel-overlay .handle.side {
     width:7px;
     height:21px;

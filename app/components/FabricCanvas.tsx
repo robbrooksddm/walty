@@ -115,6 +115,7 @@ let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
 let PAD = 0
 const SEL_BORDER = 2
+const ROT_OFFSET = 40
 
 recompute()
 
@@ -640,6 +641,13 @@ useEffect(() => {
     selEl.appendChild(h);
     handleMap[c] = h;
   });
+  // rotation handle below the object
+  const rot = document.createElement('div');
+  rot.className = 'handle rotate';
+  rot.dataset.corner = 'mtr';
+  rot.innerHTML = '<svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M4 4v5h5"/><path d="M19 20a9 9 0 0 0-15-6.7"/></svg>';
+  selEl.appendChild(rot);
+  handleMap['rot'] = rot;
   (selEl as any)._handles = handleMap;
 
   const cropHandles: Record<string, HTMLDivElement> = {};
@@ -684,7 +692,8 @@ useEffect(() => {
     const scale = vt[0]
     const offset = PAD * scale
     const dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
-    const dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+    let dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+    if (corner === 'mtr') dy = 0
 
     const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
@@ -1051,6 +1060,11 @@ const drawOverlay = (
     h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
     h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+    if (h.rot) {
+      const rotY = Math.round(height + ROT_OFFSET)
+      h.rot.style.left = `${midX}px`
+      h.rot.style.top  = `${rotY}px`
+    }
   }
 }
 
