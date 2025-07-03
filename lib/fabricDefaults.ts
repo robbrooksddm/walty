@@ -98,6 +98,13 @@ const utils = (fabric as any).controlsUtils;   // hidden Fabric helpers
 (fabric.Object.prototype as any).controls.mtr.render =
   withShadow(utils.renderCircleControl);
 
+// place rotation handle below the object
+export const ROT_HANDLE_OFFSET = 24;
+const mtr = (fabric.Object.prototype as any).controls.mtr;
+mtr.x = 0;
+mtr.y = 0.5;
+mtr.offsetY = ROT_HANDLE_OFFSET;
+
 // corner circles
 ['tl','tr','bl','br'].forEach(pos => {
   (fabric.Object.prototype as any).controls[pos].render =
