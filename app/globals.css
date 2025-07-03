@@ -119,6 +119,14 @@ html {
     transform:translate(-50%,-50%);
     pointer-events:auto;
   }
+  .sel-overlay .handle.ml,
+  .sel-overlay .handle.mr {
+    transform:translate(0,-50%);
+  }
+  .sel-overlay .handle.mt,
+  .sel-overlay .handle.mb {
+    transform:translate(-50%,0);
+  }
   .sel-overlay .handle.side {
     width:7px;
     height:21px;
@@ -129,6 +137,11 @@ html {
     width:21px;
     height:7px;
     border-radius:3px;
+  }
+  .sel-overlay.cropping .handle.side,
+  .sel-overlay.cropping .handle.mt,
+  .sel-overlay.cropping .handle.mb {
+    display:none;
   }
   .sel-overlay .handle.tl,
   .sel-overlay .handle.br { cursor:nwse-resize; }

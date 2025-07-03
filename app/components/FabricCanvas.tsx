@@ -1061,6 +1061,8 @@ const syncSel = () => {
     // whichever is active uses selEl; the other uses cropEl
     selEl.style.zIndex = '41'
     cropEl && (cropEl.style.zIndex = '40')
+    selEl.classList.add('cropping')
+    cropEl?.classList.add('cropping')
     if (obj === frame) {
       drawOverlay(frame, selEl)
       selEl._object = frame
@@ -1081,6 +1083,9 @@ const syncSel = () => {
     selEl.style.display = 'block'
     return
   }
+
+  selEl.classList.remove('cropping')
+  cropEl?.classList.remove('cropping')
 
   cropEl && (cropEl.style.display = 'none', cropEl._object = null)
   if (!obj) return
