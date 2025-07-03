@@ -98,6 +98,18 @@ const utils = (fabric as any).controlsUtils;   // hidden Fabric helpers
 (fabric.Object.prototype as any).controls.mtr.render =
   withShadow(utils.renderCircleControl);
 
+// extra rotation handle below the object
+(fabric.Object.prototype as any).controls.mbr = new fabric.Control({
+  x: 0,
+  y: 0.5,
+  offsetY: 40,
+  withConnection: true,
+  actionName: 'rotate',
+  cursorStyleHandler: utils.rotationStyleHandler,
+  actionHandler: utils.rotationWithSnapping,
+  render: withShadow(utils.renderCircleControl),
+});
+
 // corner circles
 ['tl','tr','bl','br'].forEach(pos => {
   (fabric.Object.prototype as any).controls[pos].render =

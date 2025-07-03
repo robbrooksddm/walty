@@ -131,6 +131,18 @@ html {
     height:7px;
     border-radius:3px;
   }
+  .sel-overlay .handle.rotate {
+    cursor:grab;
+  }
+  .sel-overlay .handle.rotate::after {
+    content:"\21bb";
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    font-size:10px;
+    line-height:1;
+  }
   .sel-overlay .handle.tl,
   .sel-overlay .handle.br { cursor:nwse-resize; }
   .sel-overlay .handle.tr,
