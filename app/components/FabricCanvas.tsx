@@ -680,14 +680,21 @@ useEffect(() => {
   });
 
   const bridge = (e: PointerEvent) => {
-    let corner = (e.target as HTMLElement | null)?.dataset.corner
+    const obj = fc.getActiveObject()
+    const corner = (e.target as HTMLElement | null)?.dataset.corner
     const offsetCorner = corner === 'rot' ? 'mb' : corner
-    if (corner === 'rot') corner = 'mtr'
     const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const scale = vt[0]
+    const objScaleY = corner === 'rot' && obj
+      ? obj.getObjectScaling().scaleY
+      : 1
     const offset = PAD * scale
+    const rotOffset = corner === 'rot'
+      ? ROT_HANDLE_OFFSET * objScaleY * scale
+      : 0
     const dx = offsetCorner?.includes('l') ? offset : offsetCorner?.includes('r') ? -offset : 0
-    const dy = offsetCorner?.includes('t') ? offset : offsetCorner?.includes('b') ? -offset : 0
+    let dy = offsetCorner?.includes('t') ? offset : offsetCorner?.includes('b') ? -offset : 0
+    if (corner === 'rot') dy -= rotOffset
 
     const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
