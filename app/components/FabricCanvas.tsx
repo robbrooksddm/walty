@@ -484,6 +484,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const hoverDomRef  = useRef<HTMLDivElement | null>(null)
   const selDomRef    = useRef<HTMLDivElement | null>(null)
   const cropDomRef   = useRef<HTMLDivElement | null>(null)
+  const sizeBubbleRef = useRef<HTMLDivElement | null>(null)
 
   const containerRef = useRef<HTMLElement | null>(null)
 
@@ -651,6 +652,12 @@ useEffect(() => {
   document.body.appendChild(cropEl);
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
+
+  const sizeEl = document.createElement('div');
+  sizeEl.className = 'size-bubble';
+  sizeEl.style.display = 'none';
+  document.body.appendChild(sizeEl);
+  sizeBubbleRef.current = sizeEl;
 
   const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
@@ -1074,6 +1081,29 @@ const drawOverlay = (
   }
 }
 
+const updateSizeBubble = (obj: fabric.Object | null) => {
+  if (!sizeBubbleRef.current || !canvasRef.current || !obj) return
+  const rect = canvasRef.current.getBoundingClientRect()
+  const box = obj.getBoundingRect(true, true)
+  const vt = fc.viewportTransform || [1,0,0,1,0,0]
+  const scale = vt[0]
+  const c = containerRef.current
+  const scrollX = c?.scrollLeft ?? 0
+  const scrollY = c?.scrollTop ?? 0
+  const left = window.scrollX + scrollX + rect.left + vt[4] + (box.left + box.width) * scale + 8
+  const top = window.scrollY + scrollY + rect.top + vt[5] + box.top * scale - 24
+  const w = Math.round(obj.getScaledWidth())
+  const h = Math.round(obj.getScaledHeight())
+  sizeBubbleRef.current.textContent = `w:${w} h:${h}`
+  sizeBubbleRef.current.style.left = `${left}px`
+  sizeBubbleRef.current.style.top = `${top}px`
+  sizeBubbleRef.current.style.display = 'block'
+}
+
+const hideSizeBubble = () => {
+  if (sizeBubbleRef.current) sizeBubbleRef.current.style.display = 'none'
+}
+
 const syncSel = () => {
   const obj = fc.getActiveObject() as fabric.Object | undefined
   if (!selDomRef.current || !canvasRef.current) return
@@ -1149,6 +1179,7 @@ fc.on('selection:created', () => {
   }
   selDomRef.current && (selDomRef.current.style.display = 'none')
   cropDomRef.current && (cropDomRef.current.style.display = 'none')
+  hideSizeBubble()
 })
 
 /* also hide hover during any transform of the active object */
@@ -1158,10 +1189,11 @@ const handleAfterRender = () => {
   syncHover()
 }
 
-fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
-  .on('object:scaling',  () => { hoverHL.visible = false; syncSel() })
+fc.on('object:moving',   () => { hoverHL.visible = false; syncSel(); hideSizeBubble() })
+  .on('object:scaling',  e => { hoverHL.visible = false; syncSel(); updateSizeBubble(e.target as fabric.Object) })
   .on('object:scaled',   () => {
     hoverHL.visible = false
+    hideSizeBubble()
     requestAnimationFrame(() => requestAnimationFrame(syncSel))
   })
   .on('object:rotating', () => { hoverHL.visible = false; syncSel() })
@@ -1406,6 +1438,7 @@ window.addEventListener('keydown', onKey)
       hoverDomRef.current?.remove()
       selDomRef.current?.remove()
       cropDomRef.current?.remove()
+      sizeBubbleRef.current?.remove()
       if (scrollHandler) {
         window.removeEventListener('scroll', scrollHandler)
         window.removeEventListener('resize', scrollHandler)
