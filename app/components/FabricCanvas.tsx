@@ -631,7 +631,7 @@ useEffect(() => {
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
-  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const corners = ['tl','tr','br','bl','ml','mr','mt','mb','rot'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
   corners.forEach(c => {
     const h = document.createElement('div');
@@ -643,7 +643,7 @@ useEffect(() => {
   (selEl as any)._handles = handleMap;
 
   const cropHandles: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  corners.filter(c => c !== 'rot').forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c;
@@ -683,17 +683,48 @@ useEffect(() => {
     const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const scale = vt[0]
     const offset = PAD * scale
-    const dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
-    const dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+    let dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
+    let dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+    let obj: fabric.Object | null = null
+    let rect: DOMRect | null = null
+
+    if (corner === 'rot' && fc.getActiveObject()) {
+      obj = fc.getActiveObject() as fabric.Object
+      obj.setCoords()
+      const mtr = obj.oCoords!.mtr
+      rect = fc.upperCanvasEl.getBoundingClientRect()
+      dx = rect.left + mtr.x - e.clientX
+      dy = rect.top  + mtr.y - e.clientY
+      rotStart = obj.angle || 0
+      rotFlag = true
+    }
 
     const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
-    const move = (ev: PointerEvent) =>
-      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev, dx, dy)))
+    const move = (ev: PointerEvent) => {
+      let mx = dx
+      let my = dy
+      if (corner === 'rot' && obj && rect) {
+        obj.setCoords()
+        const m = obj.oCoords!.mtr
+        mx = rect.left + m.x - ev.clientX
+        my = rect.top  + m.y - ev.clientY
+      }
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev, mx, my)))
+    }
     const up = (ev: PointerEvent) => {
-      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev, dx, dy)))
+      let mx = dx
+      let my = dy
+      if (corner === 'rot' && obj && rect) {
+        obj.setCoords()
+        const m = obj.oCoords!.mtr
+        mx = rect.left + m.x - ev.clientX
+        my = rect.top  + m.y - ev.clientY
+      }
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev, mx, my)))
       document.removeEventListener('pointermove', move)
       document.removeEventListener('pointerup', up)
+      rotFlag = false
     }
     document.addEventListener('pointermove', move)
     document.addEventListener('pointerup', up)
@@ -998,7 +1029,7 @@ if (container) {
  
 
 /* ── 2 ▸ Hover overlay only ─────────────────────────────── */
-const hoverHL = new fabric.Rect({
+  const hoverHL = new fabric.Rect({
   originX:'left', originY:'top', strokeUniform:true,
   fill:'transparent',
   stroke:SEL_COLOR,
@@ -1013,26 +1044,34 @@ hoverRef.current = hoverHL
 /* ── 3 ▸ Selection lifecycle (DOM overlay) ─────────── */
 let scrollHandler: (() => void) | null = null
 let hoverScrollHandler: (() => void) | null = null
+let rotStart = 0
+let rotFlag = false
 
 const drawOverlay = (
   obj: fabric.Object,
   el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
 ) => {
-  const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
   const vt   = fc.viewportTransform || [1,0,0,1,0,0]
   const scale = vt[0]
   const c = containerRef.current
-  const scrollX = (c?.scrollLeft ?? 0)
-  const scrollY = (c?.scrollTop  ?? 0)
-  const left   = window.scrollX + scrollX + rect.left + vt[4] + (box.left - PAD) * scale
-  const top    = window.scrollY + scrollY + rect.top  + vt[5] + (box.top - PAD) * scale
-  const width  = (box.width  + PAD * 2) * scale
-  const height = (box.height + PAD * 2) * scale
+  const scrollX = c?.scrollLeft ?? 0
+  const scrollY = c?.scrollTop  ?? 0
+  const left   = window.scrollX + scrollX + rect.left + vt[4] + (obj.left - PAD) * scale
+  const top    = window.scrollY + scrollY + rect.top  + vt[5] + (obj.top  - PAD) * scale
+  const width  = (obj.getScaledWidth()  + PAD * 2) * scale
+  const height = (obj.getScaledHeight() + PAD * 2) * scale
   el.style.left   = `${left}px`
   el.style.top    = `${top}px`
   el.style.width  = `${width}px`
   el.style.height = `${height}px`
+  el.style.transformOrigin = '0 0'
+  const rot = obj.angle || 0
+  const parts = [] as string[]
+  if (obj.flipX) parts.push('scaleX(-1)')
+  if (obj.flipY) parts.push('scaleY(-1)')
+  if (rot) parts.push(`rotate(${rot}deg)`)
+  el.style.transform = parts.join(' ')
   el._object = obj
   if (el._handles) {
     const h = el._handles
@@ -1043,6 +1082,7 @@ const drawOverlay = (
     const rightX = Math.round(width - half)
     const topY   = Math.round(half)
     const botY   = Math.round(height - half)
+    const rotY   = Math.round(height + 60 * scale)
     h.tl.style.left = `${leftX}px`;  h.tl.style.top = `${topY}px`
     h.tr.style.left = `${rightX}px`; h.tr.style.top = `${topY}px`
     h.br.style.left = `${rightX}px`; h.br.style.top = `${botY}px`
@@ -1051,6 +1091,7 @@ const drawOverlay = (
     h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
     h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+    if (h.rot) { h.rot.style.left = `${midX}px`; h.rot.style.top = `${rotY}px` }
   }
 }
 
@@ -1089,9 +1130,9 @@ const syncSel = () => {
       }
     }
     if (selEl._handles)
-      ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'none')
+      ['ml','mr','mt','mb','rot'].forEach(k => selEl._handles![k].style.display = 'none')
     if (cropEl && cropEl._handles)
-      ['ml','mr','mt','mb'].forEach(k => cropEl._handles![k].style.display = 'none')
+      ['ml','mr','mt','mb','rot'].forEach(k => cropEl._handles![k].style.display = 'none')
     selEl.style.display = 'block'
     return
   }
@@ -1104,7 +1145,7 @@ const syncSel = () => {
   drawOverlay(obj, selEl)
   selEl._object = obj
   if (selEl._handles)
-    ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'block')
+    ['ml','mr','mt','mb','rot'].forEach(k => selEl._handles![k].style.display = 'block')
 }
 
 const syncHover = () => {
@@ -1157,7 +1198,14 @@ fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
     hoverHL.visible = false
     requestAnimationFrame(() => requestAnimationFrame(syncSel))
   })
-  .on('object:rotating', () => { hoverHL.visible = false; syncSel() })
+  .on('object:rotating', e => {
+    if (rotFlag) {
+      const obj = e.target as fabric.Object
+      obj.rotate(2 * rotStart - (obj.angle || 0))
+    }
+    hoverHL.visible = false
+    syncSel()
+  })
   .on('object:modified', () =>
     requestAnimationFrame(() => requestAnimationFrame(syncSel)))
   .on('after:render',    handleAfterRender)
