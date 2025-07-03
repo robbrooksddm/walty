@@ -142,34 +142,13 @@ html {
 
   /* crop window corner "L" handles */
   .sel-overlay.crop-window .handle.corner {
-    width:20px;
-    height:20px;
-    background:none;
-    border:none;
-    border-radius:0;
-    box-shadow:none;
-  }
-  .sel-overlay.crop-window .handle.corner::before,
-  .sel-overlay.crop-window .handle.corner::after {
-    content:'';
-    position:absolute;
-    box-sizing:border-box;
+    width:16px;
+    height:16px;
     background:#fff;
     border:1px solid rgba(128,128,128,0.5);
     border-radius:3px;
     box-shadow:0 1px 2px rgba(0,0,0,0.25);
-  }
-  .sel-overlay.crop-window .handle.corner::before {
-    width:6px;
-    height:20px;
-    left:0;
-    top:0;
-  }
-  .sel-overlay.crop-window .handle.corner::after {
-    width:20px;
-    height:6px;
-    left:0;
-    top:0;
+    clip-path:polygon(0 0,100% 0,100% 4px,4px 4px,4px 100%,0 100%);
   }
   .sel-overlay.crop-window .handle.tr { transform:translate(-50%,-50%) rotate(90deg); }
   .sel-overlay.crop-window .handle.br { transform:translate(-50%,-50%) rotate(180deg); }
