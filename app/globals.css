@@ -104,6 +104,7 @@ html {
   .sel-overlay {
     @apply absolute pointer-events-none box-border z-40;
     border:2px solid #2EC4B6; /* SEL_COLOR */
+    transform-origin:center;
   }
   .sel-overlay.interactive {
     @apply pointer-events-none;
@@ -130,6 +131,10 @@ html {
     width:21px;
     height:7px;
     border-radius:3px;
+  }
+  .sel-overlay .handle.rot {
+    background:#fff url('/rotate.svg') center/12px 12px no-repeat;
+    cursor:grab;
   }
   .sel-overlay .handle.tl,
   .sel-overlay .handle.br { cursor:nwse-resize; }
