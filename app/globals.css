@@ -131,6 +131,19 @@ html {
     height:7px;
     border-radius:3px;
   }
+  .sel-overlay .handle.rotate {
+    cursor:grab;
+  }
+  .sel-overlay .handle.rotate svg {
+    width:12px;
+    height:12px;
+    display:block;
+    transform:translate(-50%, -50%);
+    position:absolute;
+    top:50%;
+    left:50%;
+    pointer-events:none;
+  }
   .sel-overlay .handle.tl,
   .sel-overlay .handle.br { cursor:nwse-resize; }
   .sel-overlay .handle.tr,
