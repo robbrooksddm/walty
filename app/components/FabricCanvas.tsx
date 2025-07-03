@@ -115,6 +115,7 @@ let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
 let PAD = 0
 const SEL_BORDER = 2
+const ROT_OFFSET = 30
 
 recompute()
 
@@ -632,11 +633,15 @@ useEffect(() => {
   (cropEl as any)._object = null;
 
   const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const selCorners = [...corners, 'mtr'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  selCorners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c;
+    if (c === 'mtr') {
+      h.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>';
+    }
     selEl.appendChild(h);
     handleMap[c] = h;
   });
@@ -683,8 +688,13 @@ useEffect(() => {
     const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const scale = vt[0]
     const offset = PAD * scale
-    const dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
-    const dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+    const isRot = corner === 'mtr'
+    const dx = !isRot && corner?.includes('l') ? offset
+      : !isRot && corner?.includes('r') ? -offset
+      : 0
+    const dy = !isRot && corner?.includes('t') ? offset
+      : !isRot && corner?.includes('b') ? -offset
+      : 0
 
     const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
@@ -1018,21 +1028,23 @@ const drawOverlay = (
   obj: fabric.Object,
   el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
 ) => {
-  const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
   const vt   = fc.viewportTransform || [1,0,0,1,0,0]
   const scale = vt[0]
   const c = containerRef.current
   const scrollX = (c?.scrollLeft ?? 0)
   const scrollY = (c?.scrollTop  ?? 0)
-  const left   = window.scrollX + scrollX + rect.left + vt[4] + (box.left - PAD) * scale
-  const top    = window.scrollY + scrollY + rect.top  + vt[5] + (box.top - PAD) * scale
-  const width  = (box.width  + PAD * 2) * scale
-  const height = (box.height + PAD * 2) * scale
+  const center = obj.getCenterPoint()
+  const left   = window.scrollX + scrollX + rect.left + vt[4] + center.x * scale
+  const top    = window.scrollY + scrollY + rect.top  + vt[5] + center.y * scale
+  const width  = obj.getScaledWidth()  * scale
+  const height = obj.getScaledHeight() * scale
   el.style.left   = `${left}px`
   el.style.top    = `${top}px`
   el.style.width  = `${width}px`
   el.style.height = `${height}px`
+  el.style.transform = `translate(-50%,-50%) rotate(${obj.angle || 0}deg)`
+  el.style.transformOrigin = '50% 50%'
   el._object = obj
   if (el._handles) {
     const h = el._handles
@@ -1051,6 +1063,10 @@ const drawOverlay = (
     h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
     h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+    if (h.mtr) {
+      h.mtr.style.left = `${midX}px`
+      h.mtr.style.top  = `${botY + ROT_OFFSET * scale}px`
+    }
   }
 }
 

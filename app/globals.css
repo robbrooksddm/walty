@@ -106,7 +106,7 @@ html {
     border:2px solid #2EC4B6; /* SEL_COLOR */
   }
   .sel-overlay.interactive {
-    @apply pointer-events-none;
+    @apply pointer-events-auto;
   }
   .sel-overlay .handle {
     position:absolute;
@@ -130,6 +130,16 @@ html {
     width:21px;
     height:7px;
     border-radius:3px;
+  }
+  .sel-overlay .handle.mtr {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:grab;
+  }
+  .sel-overlay .handle.mtr svg {
+    width:12px;
+    height:12px;
   }
   .sel-overlay .handle.tl,
   .sel-overlay .handle.br { cursor:nwse-resize; }
