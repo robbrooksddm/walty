@@ -131,6 +131,13 @@ html {
     height:7px;
     border-radius:3px;
   }
+  .sel-overlay .handle.rot {
+    background-image:url('/rotate.svg');
+    background-repeat:no-repeat;
+    background-position:center;
+    background-size:10px;
+    cursor:grab;
+  }
   .sel-overlay .handle.tl,
   .sel-overlay .handle.br { cursor:nwse-resize; }
   .sel-overlay .handle.tr,

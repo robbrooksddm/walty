@@ -98,6 +98,50 @@ const utils = (fabric as any).controlsUtils;   // hidden Fabric helpers
 (fabric.Object.prototype as any).controls.mtr.render =
   withShadow(utils.renderCircleControl);
 
+// extra bottom rotation handle
+const rotateIcon: fabric.Control['render'] = function(
+  this: fabric.Control,
+  ctx, left, top, style: any, obj,
+) {
+  style = style || {};
+  const s = this.sizeX || style.cornerSize || obj.cornerSize;
+  const r = s / 2;
+  ctx.save();
+  ctx.translate(left, top);
+  ctx.rotate(fabric.util.degreesToRadians(obj.angle ?? 0));
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fillStyle = style.cornerColor || obj.cornerColor;
+  ctx.fill();
+  ctx.strokeStyle = style.cornerStrokeColor || obj.cornerStrokeColor;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.5, Math.PI * 0.2, Math.PI * 1.7);
+  ctx.strokeStyle = '#666';
+  ctx.lineWidth = 1.2 / SCALE;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(r * 0.5, -r * 0.5);
+  ctx.lineTo(r * 0.2, -r * 0.2);
+  ctx.lineTo(r * 0.6, -r * 0.1);
+  ctx.closePath();
+  ctx.fillStyle = '#666';
+  ctx.fill();
+  ctx.restore();
+};
+
+(fabric.Object.prototype as any).controls.rot = new fabric.Control({
+  x: 0,
+  y: 0.5,
+  offsetY: 40,
+  withConnection: true,
+  actionHandler: utils.rotationWithSnapping,
+  cursorStyleHandler: utils.rotationStyleHandler,
+  actionName: 'rotate',
+  render: withShadow(rotateIcon),
+});
+
 // corner circles
 ['tl','tr','bl','br'].forEach(pos => {
   (fabric.Object.prototype as any).controls[pos].render =
