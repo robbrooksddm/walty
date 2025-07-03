@@ -631,12 +631,15 @@ useEffect(() => {
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
-  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const corners = ['tl','tr','br','bl','ml','mr','mt','mb','mtr'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
   corners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c;
+    if (c === 'mtr') {
+      h.innerHTML = '<svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>';
+    }
     selEl.appendChild(h);
     handleMap[c] = h;
   });
@@ -647,6 +650,9 @@ useEffect(() => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c;
+    if (c === 'mtr') {
+      h.innerHTML = '<svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>';
+    }
     cropEl.appendChild(h);
     cropHandles[c] = h;
   });
@@ -1051,6 +1057,11 @@ const drawOverlay = (
     h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
     h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+    if (h.mtr) {
+      const off = 40 * scale;
+      h.mtr.style.left = `${midX}px`;
+      h.mtr.style.top = `${botY + off}px`;
+    }
   }
 }
 
@@ -1089,9 +1100,9 @@ const syncSel = () => {
       }
     }
     if (selEl._handles)
-      ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'none')
+      ['ml','mr','mt','mb','mtr'].forEach(k => selEl._handles![k].style.display = 'none')
     if (cropEl && cropEl._handles)
-      ['ml','mr','mt','mb'].forEach(k => cropEl._handles![k].style.display = 'none')
+      ['ml','mr','mt','mb','mtr'].forEach(k => cropEl._handles![k].style.display = 'none')
     selEl.style.display = 'block'
     return
   }
@@ -1104,7 +1115,7 @@ const syncSel = () => {
   drawOverlay(obj, selEl)
   selEl._object = obj
   if (selEl._handles)
-    ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'block')
+    ['ml','mr','mt','mb','mtr'].forEach(k => selEl._handles![k].style.display = 'block')
 }
 
 const syncHover = () => {
