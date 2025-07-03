@@ -59,8 +59,8 @@ html {
     pointer-events: none;
 
     /* thin dashed outline */
-    outline: 1px dashed #7c3aed;
-    outline-offset: -1px;
+    outline: 2px dashed #7c3aed;
+    outline-offset: -2px;
 
     border: 0;
     background: transparent !important;
@@ -103,7 +103,7 @@ html {
 @layer utilities {
   .sel-overlay {
     @apply absolute pointer-events-none box-border z-40;
-    border:2px solid #2EC4B6; /* SEL_COLOR */
+    border:4px solid #2EC4B6; /* SEL_COLOR */
   }
   .sel-overlay.interactive {
     @apply pointer-events-auto;

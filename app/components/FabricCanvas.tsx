@@ -114,7 +114,7 @@ let PAGE_H = 0
 let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
 let PAD = 0
-const SEL_BORDER = 2
+const SEL_BORDER = 4
 
 recompute()
 
@@ -1002,7 +1002,7 @@ const hoverHL = new fabric.Rect({
   originX:'left', originY:'top', strokeUniform:true,
   fill:'transparent',
   stroke:SEL_COLOR,
-  strokeWidth:1 / SCALE,
+  strokeWidth:2 / SCALE,
   strokeDashArray:[],
   selectable:false, evented:false, visible:false,
   excludeFromExport:true,
@@ -1066,7 +1066,7 @@ const syncSel = () => {
     const frame = tool.frame as fabric.Object
     // whichever is active uses selEl; the other uses cropEl
     selEl.style.zIndex = '41'
-    cropEl && (cropEl.style.zIndex = '40')
+    cropEl && (cropEl.style.zIndex = '41')
     if (obj === frame) {
       drawOverlay(frame, selEl)
       selEl._object = frame
