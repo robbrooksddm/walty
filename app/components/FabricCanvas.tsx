@@ -631,12 +631,12 @@ useEffect(() => {
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
-  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const corners = ['tl','tr','br','bl','ml','mr','mt','mb','rot'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
   corners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
-    h.dataset.corner = c;
+    h.dataset.corner = c === 'rot' ? 'mtr' : c;
     selEl.appendChild(h);
     handleMap[c] = h;
   });
@@ -646,7 +646,7 @@ useEffect(() => {
   corners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
-    h.dataset.corner = c;
+    h.dataset.corner = c === 'rot' ? 'mtr' : c;
     cropEl.appendChild(h);
     cropHandles[c] = h;
   });
@@ -1051,6 +1051,11 @@ const drawOverlay = (
     h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
     h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+    if (h.rot) {
+      const rotY = Math.round(botY + 40 * scale)
+      h.rot.style.left = `${midX}px`
+      h.rot.style.top  = `${rotY}px`
+    }
   }
 }
 
@@ -1089,9 +1094,9 @@ const syncSel = () => {
       }
     }
     if (selEl._handles)
-      ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'none')
+      ['ml','mr','mt','mb','rot'].forEach(k => selEl._handles![k].style.display = 'none')
     if (cropEl && cropEl._handles)
-      ['ml','mr','mt','mb'].forEach(k => cropEl._handles![k].style.display = 'none')
+      ['ml','mr','mt','mb','rot'].forEach(k => cropEl._handles![k].style.display = 'none')
     selEl.style.display = 'block'
     return
   }
@@ -1104,7 +1109,7 @@ const syncSel = () => {
   drawOverlay(obj, selEl)
   selEl._object = obj
   if (selEl._handles)
-    ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'block')
+    ['ml','mr','mt','mb','rot'].forEach(k => selEl._handles![k].style.display = 'block')
 }
 
 const syncHover = () => {

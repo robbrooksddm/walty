@@ -97,6 +97,10 @@ const utils = (fabric as any).controlsUtils;   // hidden Fabric helpers
 // rotation handle
 (fabric.Object.prototype as any).controls.mtr.render =
   withShadow(utils.renderCircleControl);
+(fabric.Object.prototype as any).controls.mtr.offsetY = 40;
+if ((fabric as any).Textbox) {
+  ((fabric as any).Textbox.prototype as any).controls.mtr.offsetY = 40;
+}
 
 // corner circles
 ['tl','tr','bl','br'].forEach(pos => {

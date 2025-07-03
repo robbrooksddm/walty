@@ -125,6 +125,18 @@ html {
     height:21px;
     border-radius:3px;
   }
+  .sel-overlay .handle.rot {
+    cursor:grab;
+  }
+  .sel-overlay .handle.rot::before {
+    content:"\21bb"; /* ↻ */
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    font-size:12px;
+    line-height:1;
+  }
   .sel-overlay .handle.mt,
   .sel-overlay .handle.mb {
     width:21px;
