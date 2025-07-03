@@ -209,7 +209,7 @@ export class CropTool {
     })
     // ---- replace default controls with 4 small white “L” handles ----
     // slightly larger "L" handles for easier grabbing
-    const sizePx = 4 / this.SCALE;
+    const sizePx = 5 / this.SCALE;
 
     /** Draw a single L‑shape, rotated for each corner */
     const drawL = (
@@ -221,7 +221,7 @@ export class CropTool {
       ctx.save();
       ctx.translate(left, top);
       ctx.rotate(rot);
-      ctx.lineWidth   = 0.5 / this.SCALE;
+      ctx.lineWidth   = 0.75 / this.SCALE;
       ctx.strokeStyle = '#ffffff';
       ctx.shadowColor = 'rgba(0,0,0,0.35)';          // subtle outline
       ctx.shadowBlur  = 3 / this.SCALE;
@@ -240,8 +240,8 @@ export class CropTool {
         x, y,
         offsetX: 0, offsetY: 0,
         // enlarge hit‑box for easier grabbing
-        sizeX: 12 / this.SCALE,
-        sizeY: 12 / this.SCALE,
+        sizeX: 20 / this.SCALE,
+        sizeY: 20 / this.SCALE,
         // use Fabric helpers (cast to `any` to silence TS)
         cursorStyleHandler: (fabric as any).controlsUtils.scaleCursorStyleHandler,
         actionHandler     : (fabric as any).controlsUtils.scalingEqually,
