@@ -631,19 +631,26 @@ useEffect(() => {
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
-  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const baseCorners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const selCorners = [...baseCorners, 'rot'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  selCorners.forEach(c => {
     const h = document.createElement('div');
-    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
-    h.dataset.corner = c;
+    const cls = ['ml','mr','mt','mb'].includes(c)
+      ? 'side'
+      : c === 'rot'
+        ? 'rotate'
+        : 'corner';
+    h.className = `handle ${cls} ${c}`;
+    h.dataset.corner = c === 'rot' ? 'mtr' : c;
+    if (c === 'rot') h.textContent = '↻';
     selEl.appendChild(h);
     handleMap[c] = h;
   });
   (selEl as any)._handles = handleMap;
 
   const cropHandles: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  baseCorners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c;
@@ -1025,14 +1032,18 @@ const drawOverlay = (
   const c = containerRef.current
   const scrollX = (c?.scrollLeft ?? 0)
   const scrollY = (c?.scrollTop  ?? 0)
-  const left   = window.scrollX + scrollX + rect.left + vt[4] + (box.left - PAD) * scale
-  const top    = window.scrollY + scrollY + rect.top  + vt[5] + (box.top - PAD) * scale
-  const width  = (box.width  + PAD * 2) * scale
-  const height = (box.height + PAD * 2) * scale
-  el.style.left   = `${left}px`
-  el.style.top    = `${top}px`
+  const angle = obj.angle || 0
+  const center = obj.getCenterPoint()
+  const cx = window.scrollX + scrollX + rect.left + vt[4] + center.x * scale
+  const cy = window.scrollY + scrollY + rect.top  + vt[5] + center.y * scale
+  const width  = (obj.getScaledWidth()  + PAD * 2) * scale
+  const height = (obj.getScaledHeight() + PAD * 2) * scale
+  el.style.left   = `${cx}px`
+  el.style.top    = `${cy}px`
   el.style.width  = `${width}px`
   el.style.height = `${height}px`
+  el.style.transform = `translate(-50%,-50%) rotate(${angle}deg)`
+  el.style.transformOrigin = '50% 50%'
   el._object = obj
   if (el._handles) {
     const h = el._handles
@@ -1051,6 +1062,11 @@ const drawOverlay = (
     h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
     h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+    if (h.rot) {
+      const rotY = Math.round(height + 20)
+      h.rot.style.left = `${midX}px`
+      h.rot.style.top = `${rotY}px`
+    }
   }
 }
 
