@@ -1002,7 +1002,7 @@ const hoverHL = new fabric.Rect({
   originX:'left', originY:'top', strokeUniform:true,
   fill:'transparent',
   stroke:SEL_COLOR,
-  strokeWidth:1 / SCALE,
+  strokeWidth:2 / SCALE,
   strokeDashArray:[],
   selectable:false, evented:false, visible:false,
   excludeFromExport:true,
@@ -1064,10 +1064,10 @@ const syncSel = () => {
   if (croppingRef.current && tool?.isActive && tool.img && tool.frame) {
     const img   = tool.img as fabric.Object
     const frame = tool.frame as fabric.Object
-    // whichever is active uses selEl; the other uses cropEl
-    selEl.style.zIndex = '41'
-    cropEl && (cropEl.style.zIndex = '40')
     if (obj === frame) {
+      // when the crop frame is active keep its overlay on top
+      selEl.style.zIndex = '41'
+      cropEl && (cropEl.style.zIndex = '40')
       drawOverlay(frame, selEl)
       selEl._object = frame
       selEl.classList.add('crop-window')
@@ -1078,6 +1078,9 @@ const syncSel = () => {
         cropEl.classList.remove('crop-window')
       }
     } else {
+      // when the photo is active raise the crop window overlay
+      selEl.style.zIndex = '40'
+      cropEl && (cropEl.style.zIndex = '41')
       drawOverlay(img, selEl)
       selEl._object = img
       selEl.classList.remove('crop-window')
