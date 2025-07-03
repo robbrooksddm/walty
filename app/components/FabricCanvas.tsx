@@ -500,15 +500,16 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
 
   const setPageLayers = useEditor(s => s.setPageLayers)
   const updateLayer   = useEditor(s => s.updateLayer)
+  const reorder       = useEditor(s => s.reorder)
+  const layerCount    = useEditor(
+    s => s.pages[s.activePage]?.layers.length || 0,
+  )
 
   const handleMenuAction = (a: import('./ContextMenu').MenuAction) => {
     const fc = fcRef.current
     if (!fc) return
     const active = fc.getActiveObject() as fabric.Object | undefined
     switch (a) {
-      case 'add':
-        useEditor.getState().addText()
-        break
       case 'cut':
         if (active) {
           clip.json = [active.toJSON(PROPS)]
@@ -570,6 +571,36 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
           }, '')
         }
         break
+      case 'layer-forward':
+        if (active) {
+          const idx = (active as any).layerIdx ?? 0
+          if (idx > 0 && idx <= layerCount - 1) reorder(idx, idx - 1)
+        }
+        break
+      case 'layer-back':
+        if (active) {
+          const idx = (active as any).layerIdx ?? 0
+          if (idx < layerCount - 1) reorder(idx, idx + 1)
+        }
+        break
+      case 'align':
+        if (active) {
+          const zoom = fc.viewportTransform?.[0] ?? 1
+          const fcH  = (fc.getHeight() ?? 0) / zoom
+          const fcW  = (fc.getWidth()  ?? 0) / zoom
+          const { width, height } = active.getBoundingRect(true, true)
+          active.set({
+            left: fcW / 2 - width / 2,
+            top : fcH / 2 - height / 2,
+          })
+          active.setCoords()
+          fc.requestRenderAll()
+          updateLayer(pageIdx, (active as any).layerIdx, {
+            leftPct: (active.left ?? 0) / fcW * 100,
+            topPct : (active.top  ?? 0) / fcH * 100,
+          })
+        }
+        break
       case 'delete':
         if (active) {
           allObjs(active).forEach(o => fc.remove(o))
@@ -578,21 +609,6 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
         break
       case 'crop':
         document.dispatchEvent(new Event('start-crop'))
-        break
-      case 'lock':
-        if (active) {
-          const next = !(active as any).locked
-          ;(active as any).locked = next
-          active.set({
-            lockMovementX: next,
-            lockMovementY: next,
-            lockScalingX : next,
-            lockScalingY : next,
-            lockRotation : next,
-          })
-          fc.requestRenderAll()
-          updateLayer(pageIdx, (active as any).layerIdx, { locked: next })
-        }
         break
     }
     setMenuPos(null)
