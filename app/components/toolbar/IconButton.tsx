@@ -11,7 +11,7 @@ interface IconBtnProps {
   active?     : boolean
   disabled?   : boolean
   hideCaption?: boolean
-  size?       : 'lg' | 'sm'        // ← NEW (default "lg")
+  size?       : 'lg' | 'sm' | 'xs'  // ← NEW (default "lg")
 }
 
 const IconButton = forwardRef<HTMLButtonElement, IconBtnProps>(
@@ -29,9 +29,14 @@ const IconButton = forwardRef<HTMLButtonElement, IconBtnProps>(
     ref,
   ) => {
     const isSm   = size === 'sm'
-    const btnCls = isSm ? 'h-10 w-10' : 'h-12 w-12'   // 40 px vs 48 px
-    const icnCls = isSm ? 'h-5 w-5'  : 'h-6 w-6'      // 20 px vs 24 px
-    const txtCls = isSm ? 'text-[10px]' : 'text-[11px]'
+    const isXs   = size === 'xs'
+    const btnCls = isXs
+      ? 'h-[30px] w-[30px]'
+      : isSm
+        ? 'h-10 w-10'          // 40 px
+        : 'h-12 w-12'          // 48 px
+    const icnCls = isSm || isXs ? 'h-5 w-5' : 'h-6 w-6'  // keep 20 px icon
+    const txtCls = isSm || isXs ? 'text-[10px]' : 'text-[11px]'
 
     return (
       <button
