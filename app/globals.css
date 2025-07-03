@@ -149,9 +149,9 @@ html {
     border-radius:3px;
     box-shadow:0 1px 2px rgba(0,0,0,0.25);
     clip-path:polygon(0 0,100% 0,100% 4px,4px 4px,4px 100%,0 100%);
-    transform:translate(-4px,-4px);
   }
-  .sel-overlay.crop-window .handle.tr { transform:translate(-4px,-4px) rotate(90deg); }
-  .sel-overlay.crop-window .handle.br { transform:translate(-4px,-4px) rotate(180deg); }
-  .sel-overlay.crop-window .handle.bl { transform:translate(-4px,-4px) rotate(270deg); }
+  .sel-overlay.crop-window .handle.tl { transform:translate(-4px,-4px); }
+  .sel-overlay.crop-window .handle.tr { transform:translate(4px,-4px) rotate(90deg); }
+  .sel-overlay.crop-window .handle.br { transform:translate(4px,4px) rotate(180deg); }
+  .sel-overlay.crop-window .handle.bl { transform:translate(-4px,4px) rotate(270deg); }
 }
