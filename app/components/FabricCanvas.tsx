@@ -1024,21 +1024,27 @@ const drawOverlay = (
   obj: fabric.Object,
   el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
 ) => {
-  const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
   const vt   = fc.viewportTransform || [1,0,0,1,0,0]
   const scale = vt[0]
   const c = containerRef.current
-  const scrollX = (c?.scrollLeft ?? 0)
-  const scrollY = (c?.scrollTop  ?? 0)
-  const left   = window.scrollX + scrollX + rect.left + vt[4] + (box.left - PAD) * scale
-  const top    = window.scrollY + scrollY + rect.top  + vt[5] + (box.top - PAD) * scale
-  const width  = (box.width  + PAD * 2) * scale
-  const height = (box.height + PAD * 2) * scale
+  const scrollX = c?.scrollLeft ?? 0
+  const scrollY = c?.scrollTop  ?? 0
+  const left   = window.scrollX + scrollX + rect.left + vt[4] + (obj.left - PAD) * scale
+  const top    = window.scrollY + scrollY + rect.top  + vt[5] + (obj.top  - PAD) * scale
+  const width  = (obj.getScaledWidth()  + PAD * 2) * scale
+  const height = (obj.getScaledHeight() + PAD * 2) * scale
   el.style.left   = `${left}px`
   el.style.top    = `${top}px`
   el.style.width  = `${width}px`
   el.style.height = `${height}px`
+  el.style.transformOrigin = '0 0'
+  const rot = obj.angle || 0
+  const parts = [] as string[]
+  if (obj.flipX) parts.push('scaleX(-1)')
+  if (obj.flipY) parts.push('scaleY(-1)')
+  if (rot) parts.push(`rotate(${rot}deg)`)
+  el.style.transform = parts.join(' ')
   el._object = obj
   if (el._handles) {
     const h = el._handles
