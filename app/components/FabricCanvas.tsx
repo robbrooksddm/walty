@@ -761,9 +761,13 @@ useEffect(() => {
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    const target = fc.findTarget(e, true) as fabric.Object | null;
+    if (target) fc.setActiveObject(target);
     setMenuPos({ x: e.clientX, y: e.clientY });
   };
   fc.upperCanvasEl.addEventListener('contextmenu', ctxMenu);
+  selEl.addEventListener('contextmenu', ctxMenu);
+  cropEl.addEventListener('contextmenu', ctxMenu);
  
 /* --- keep Fabric’s wrapper the same size as the visible preview --- */
 const container = canvasRef.current!.parentElement as HTMLElement | null;
