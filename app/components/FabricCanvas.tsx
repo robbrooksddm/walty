@@ -17,6 +17,7 @@ import { SEL_COLOR } from '@/lib/fabricDefaults';
 import { CropTool } from '@/lib/CropTool'
 import { enableSnapGuides } from '@/lib/useSnapGuides'
 import ContextMenu from './ContextMenu'
+import QuickActionBar from './QuickActionBar'
 
 /* ---------- print spec ----------------------------------------- */
 export interface PrintSpec {
@@ -495,6 +496,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   )
 
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
+  const [toolPos, setToolPos] = useState<{ x: number; y: number } | null>(null)
 
 
 
@@ -1105,13 +1107,19 @@ const syncSel = () => {
       }
     }
     selEl.style.display = 'block'
+    setToolPos(null)
     return
   }
 
   cropEl && (cropEl.style.display = 'none', cropEl._object = null)
-  if (!obj) return
+  if (!obj) {
+    setToolPos(null)
+    return
+  }
   drawOverlay(obj, selEl)
   selEl._object = obj
+  const rect = selEl.getBoundingClientRect()
+  setToolPos({ x: rect.left + rect.width / 2, y: rect.top })
 }
 
 const syncHover = () => {
@@ -1149,6 +1157,7 @@ fc.on('selection:created', () => {
   }
   selDomRef.current && (selDomRef.current.style.display = 'none')
   cropDomRef.current && (cropDomRef.current.style.display = 'none')
+  setToolPos(null)
 })
 
 /* also hide hover during any transform of the active object */
@@ -1667,6 +1676,13 @@ doSync = () =>
         style={{ width: PREVIEW_W * zoom, height: PREVIEW_H * zoom }}
         className={`border shadow rounded ${className}`}
       />
+      {toolPos && (
+        <QuickActionBar
+          pos={toolPos}
+          onAction={handleMenuAction}
+          onMore={p => setMenuPos(p)}
+        />
+      )}
       {menuPos && (
         <ContextMenu
           pos={menuPos}
