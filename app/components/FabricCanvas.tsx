@@ -17,6 +17,7 @@ import { SEL_COLOR } from '@/lib/fabricDefaults';
 import { CropTool } from '@/lib/CropTool'
 import { enableSnapGuides } from '@/lib/useSnapGuides'
 import ContextMenu from './ContextMenu'
+import QuickActionBar from './QuickActionBar'
 
 /* ---------- print spec ----------------------------------------- */
 export interface PrintSpec {
@@ -489,12 +490,14 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
 
   const cropToolRef = useRef<CropTool | null>(null)
   const croppingRef = useRef(false)
+  const transformingRef = useRef(false)
 
   const savedInteractivityRef = useRef(
     new WeakMap<fabric.Object, { sel: boolean; evt: boolean }>()
   )
 
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
+  const [actionPos, setActionPos] = useState<{ x: number; y: number } | null>(null)
 
 
 
@@ -1072,6 +1075,7 @@ const drawOverlay = (
     h.mt.style.left = `${midX}px`; h.mt.style.top = '0px'
     h.mb.style.left = `${midX}px`; h.mb.style.top = `${height}px`
   }
+  return { left, top, width, height }
 }
 
 const syncSel = () => {
@@ -1105,13 +1109,19 @@ const syncSel = () => {
       }
     }
     selEl.style.display = 'block'
+    setActionPos(null)
     return
   }
 
   cropEl && (cropEl.style.display = 'none', cropEl._object = null)
   if (!obj) return
-  drawOverlay(obj, selEl)
+  const box = drawOverlay(obj, selEl)
   selEl._object = obj
+  if (transformingRef.current) {
+    setActionPos(null)
+  } else {
+    setActionPos({ x: box.left + box.width / 2, y: box.top - 8 })
+  }
 }
 
 const syncHover = () => {
@@ -1139,17 +1149,18 @@ fc.on('selection:created', () => {
   window.addEventListener('resize', scrollHandler)
   containerRef.current?.addEventListener('scroll', scrollHandler, { passive: true, capture: true })
 })
-.on('selection:updated', syncSel)
-.on('selection:cleared', () => {
+  .on('selection:updated', syncSel)
+  .on('selection:cleared', () => {
   if (scrollHandler) {
     window.removeEventListener('scroll', scrollHandler)
     window.removeEventListener('resize', scrollHandler)
     containerRef.current?.removeEventListener('scroll', scrollHandler)
     scrollHandler = null
   }
-  selDomRef.current && (selDomRef.current.style.display = 'none')
-  cropDomRef.current && (cropDomRef.current.style.display = 'none')
-})
+    selDomRef.current && (selDomRef.current.style.display = 'none')
+    cropDomRef.current && (cropDomRef.current.style.display = 'none')
+    setActionPos(null)
+  })
 
 /* also hide hover during any transform of the active object */
 const handleAfterRender = () => {
@@ -1158,15 +1169,33 @@ const handleAfterRender = () => {
   syncHover()
 }
 
-fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
-  .on('object:scaling',  () => { hoverHL.visible = false; syncSel() })
+fc.on('object:moving',   () => {
+    hoverHL.visible = false
+    transformingRef.current = true
+    syncSel()
+  })
+  .on('object:scaling',  () => {
+    hoverHL.visible = false
+    transformingRef.current = true
+    syncSel()
+  })
+  .on('object:rotating', () => {
+    hoverHL.visible = false
+    transformingRef.current = true
+    syncSel()
+  })
   .on('object:scaled',   () => {
     hoverHL.visible = false
     requestAnimationFrame(() => requestAnimationFrame(syncSel))
   })
-  .on('object:rotating', () => { hoverHL.visible = false; syncSel() })
-  .on('object:modified', () =>
-    requestAnimationFrame(() => requestAnimationFrame(syncSel)))
+  .on('object:modified', () => {
+    transformingRef.current = false
+    requestAnimationFrame(() => requestAnimationFrame(syncSel))
+  })
+  .on('mouse:up', () => {
+    transformingRef.current = false
+    syncSel()
+  })
   .on('after:render',    handleAfterRender)
 
 /* ── 4 ▸ Hover outline (only when NOT the active object) ─── */
@@ -1666,6 +1695,11 @@ doSync = () =>
         height={PREVIEW_H * zoom}
         style={{ width: PREVIEW_W * zoom, height: PREVIEW_H * zoom }}
         className={`border shadow rounded ${className}`}
+      />
+      <QuickActionBar
+        pos={actionPos}
+        onAction={handleMenuAction}
+        onMenu={p => setMenuPos(p)}
       />
       {menuPos && (
         <ContextMenu
