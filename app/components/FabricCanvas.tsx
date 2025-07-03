@@ -688,8 +688,21 @@ useEffect(() => {
     const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const scale = vt[0]
     const offset = PAD * scale
-    const dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
-    const dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+    const isRot = corner === 'rot'
+    const dx = isRot
+      ? 0
+      : corner?.includes('l')
+        ? offset
+        : corner?.includes('r')
+          ? -offset
+          : 0
+    const dy = isRot
+      ? 0
+      : corner?.includes('t')
+        ? offset
+        : corner?.includes('b')
+          ? -offset
+          : 0
 
     const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
