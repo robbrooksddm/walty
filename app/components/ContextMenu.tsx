@@ -3,34 +3,33 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Plus,
   Scissors,
   Copy,
   ClipboardPaste,
   CopyPlus,
+  Layers,
+  AlignCenter,
   Trash2,
   Crop,
-  Lock,
 } from 'lucide-react';
 
 export type MenuAction =
-  | 'add'
   | 'cut'
   | 'copy'
   | 'paste'
   | 'duplicate'
-  | 'delete'
+  | 'layer'
+  | 'align'
   | 'crop'
-  | 'lock';
+  | 'delete';
 
 interface Props {
   pos: { x: number; y: number };
-  locked: boolean;
   onAction: (a: MenuAction) => void;
   onClose: () => void;
 }
 
-export default function ContextMenu({ pos, locked, onAction, onClose }: Props) {
+export default function ContextMenu({ pos, onAction, onClose }: Props) {
   useEffect(() => {
     const close = () => onClose();
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -56,17 +55,23 @@ export default function ContextMenu({ pos, locked, onAction, onClose }: Props) {
   return createPortal(
     <div
       style={{ top: pos.y, left: pos.x }}
-      className="fixed z-50 bg-white border border-[rgba(0,91,85,.2)] rounded shadow-lg pointer-events-auto"
+      className="fixed z-50 bg-white border border-[rgba(0,91,85,.2)] rounded-xl shadow-lg pointer-events-auto min-w-60"
     >
-      <div className="flex flex-col py-1">
-        <Item Icon={Plus}          label="Add"        action="add" />
-        <Item Icon={Scissors}      label="Cut"        action="cut" />
-        <Item Icon={Copy}          label="Copy"       action="copy" />
-        <Item Icon={ClipboardPaste} label="Paste"      action="paste" />
-        <Item Icon={CopyPlus}      label="Duplicate"  action="duplicate" />
-        <Item Icon={Trash2}        label="Delete"     action="delete" />
-        <Item Icon={Crop}          label="Crop"       action="crop" />
-        <Item Icon={Lock}          label={locked ? 'Unlock' : 'Lock'} action="lock" />
+      <div className="flex flex-col divide-y divide-[rgba(0,91,85,.1)] py-1">
+        <div className="flex flex-col">
+          <Item Icon={Scissors}      label="Cut"        action="cut" />
+          <Item Icon={Copy}          label="Copy"       action="copy" />
+          <Item Icon={ClipboardPaste} label="Paste"      action="paste" />
+          <Item Icon={CopyPlus}      label="Duplicate"  action="duplicate" />
+        </div>
+        <div className="flex flex-col">
+          <Item Icon={Layers}       label="Layer"      action="layer" />
+          <Item Icon={AlignCenter}  label="Align to Page" action="align" />
+        </div>
+        <div className="flex flex-col">
+          <Item Icon={Crop}          label="Crop"       action="crop" />
+          <Item Icon={Trash2}        label="Delete"     action="delete" />
+        </div>
       </div>
     </div>,
     document.body,

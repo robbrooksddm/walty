@@ -506,9 +506,6 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
     if (!fc) return
     const active = fc.getActiveObject() as fabric.Object | undefined
     switch (a) {
-      case 'add':
-        useEditor.getState().addText()
-        break
       case 'cut':
         if (active) {
           clip.json = [active.toJSON(PROPS)]
@@ -579,19 +576,19 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
       case 'crop':
         document.dispatchEvent(new Event('start-crop'))
         break
-      case 'lock':
+      case 'layer':
+        console.log('Layer submenu requested')
+        break
+      case 'align':
         if (active) {
-          const next = !(active as any).locked
-          ;(active as any).locked = next
-          active.set({
-            lockMovementX: next,
-            lockMovementY: next,
-            lockScalingX : next,
-            lockScalingY : next,
-            lockRotation : next,
-          })
+          const zoom = fc.viewportTransform?.[0] ?? 1
+          const h = (fc.getHeight() ?? 0) / zoom
+          const w = (fc.getWidth() ?? 0) / zoom
+          const { width, height } = active.getBoundingRect(true, true)
+          active.set({ left: w / 2 - width / 2, top: h / 2 - height / 2 })
+          active.setCoords()
           fc.requestRenderAll()
-          updateLayer(pageIdx, (active as any).layerIdx, { locked: next })
+          syncLayersFromCanvas(fc, pageIdx)
         }
         break
     }
@@ -1644,7 +1641,6 @@ doSync = () =>
       {menuPos && (
         <ContextMenu
           pos={menuPos}
-          locked={!!(fcRef.current?.getActiveObject() as any)?.locked}
           onAction={handleMenuAction}
           onClose={() => setMenuPos(null)}
         />
