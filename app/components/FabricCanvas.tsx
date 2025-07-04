@@ -17,6 +17,7 @@ import { SEL_COLOR } from '@/lib/fabricDefaults';
 import { CropTool } from '@/lib/CropTool'
 import { enableSnapGuides } from '@/lib/useSnapGuides'
 import ContextMenu from './ContextMenu'
+import QuickActionBar from './QuickActionBar'
 
 /* ---------- print spec ----------------------------------------- */
 export interface PrintSpec {
@@ -490,12 +491,15 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
 
   const cropToolRef = useRef<CropTool | null>(null)
   const croppingRef = useRef(false)
+  const transformingRef = useRef(false)
 
   const savedInteractivityRef = useRef(
     new WeakMap<fabric.Object, { sel: boolean; evt: boolean }>()
   )
 
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
+  const [actionPos, setActionPos] = useState<{ x: number; y: number } | null>(null)
+  const actionTimerRef = useRef<NodeJS.Timeout | null>(null)
 
 
 
@@ -1084,6 +1088,7 @@ const drawOverlay = (
     h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
     h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
   }
+  return { left, top, width, height }
 }
 
 const syncSel = () => {
@@ -1125,18 +1130,35 @@ const syncSel = () => {
     if (cropEl && cropEl._handles)
       ['ml','mr','mt','mb'].forEach(k => cropEl._handles![k].style.display = 'none')
     selEl.style.display = 'block'
+    setActionPos(null)
     return
   }
 
   selEl.classList.remove('crop-window')
   cropEl && cropEl.classList.remove('crop-window')
 
-  cropEl && (cropEl.style.display = 'none', cropEl._object = null)
-  if (!obj) return
-  drawOverlay(obj, selEl)
-  selEl._object = obj
-  if (selEl._handles)
-    ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'block')
+cropEl && (cropEl.style.display = 'none', cropEl._object = null);
+if (!obj) return;
+
+const box = drawOverlay(obj, selEl);   // redraw green outline
+selEl._object = obj;
+
+/* ── quick-action overlay ──────────────────────────── */
+if (transformingRef.current) {
+  setActionPos(null);                 // hide while dragging
+} else {
+  setActionPos({                      // centre the toolbar
+    x: box.left + box.width / 2,
+    y: box.top - 8,
+  });
+}
+
+/* ── stable branch: keep side-handles visible ──────── */
+if (selEl._handles) {
+  ['ml', 'mr', 'mt', 'mb'].forEach(k =>
+    selEl._handles![k].style.display = 'block',
+  );
+}
 }
 
 const syncHover = () => {
@@ -1184,18 +1206,20 @@ fc.on('selection:created', () => {
   window.addEventListener('resize', scrollHandler)
   containerRef.current?.addEventListener('scroll', scrollHandler, { passive: true, capture: true })
 })
-.on('selection:updated', syncSel)
+  .on('selection:updated', syncSel)
 .on('selection:cleared', () => {
   if (scrollHandler) {
-    window.removeEventListener('scroll', scrollHandler)
-    window.removeEventListener('resize', scrollHandler)
-    containerRef.current?.removeEventListener('scroll', scrollHandler)
-    scrollHandler = null
+    window.removeEventListener('scroll', scrollHandler);
+    window.removeEventListener('resize', scrollHandler);
+    containerRef.current?.removeEventListener('scroll', scrollHandler);
+    scrollHandler = null;
   }
-  selDomRef.current && (selDomRef.current.style.display = 'none')
-  cropDomRef.current && (cropDomRef.current.style.display = 'none')
-  hideSizeBubble()
+  selDomRef.current  && (selDomRef.current.style.display  = 'none');
+  cropDomRef.current && (cropDomRef.current.style.display = 'none');
+  setActionPos(null);     // from quick-action branch
+  hideSizeBubble();       // from stable branch
 })
+
 
 /* also hide hover during any transform of the active object */
 const handleAfterRender = () => {
@@ -1204,16 +1228,63 @@ const handleAfterRender = () => {
   syncHover()
 }
 
-fc.on('object:moving',   () => { hoverHL.visible = false; syncSel(); hideSizeBubble() })
-  .on('object:scaling',  e => { hoverHL.visible = false; syncSel(); showSizeBubble(e.target as fabric.Object, e) })
-  .on('object:scaled',   e => {
-    hoverHL.visible = false
-    hideSizeBubble()
-    requestAnimationFrame(() => requestAnimationFrame(syncSel))
+fc.on('object:moving', () => {
+  hoverHL.visible         = false;
+  transformingRef.current = true;
+  if (actionTimerRef.current) {
+    clearTimeout(actionTimerRef.current);
+    actionTimerRef.current = null;
+  }
+  syncSel();
+  hideSizeBubble();                  // moving never shows the bubble
+})
+
+.on('object:scaling', e => {
+  hoverHL.visible         = false;
+  transformingRef.current = true;
+  if (actionTimerRef.current) {
+    clearTimeout(actionTimerRef.current);
+    actionTimerRef.current = null;
+  }
+  syncSel();
+  showSizeBubble(e.target as fabric.Object, e);   // live size read-out
+})
+
+.on('object:rotating', () => {
+  hoverHL.visible         = false;
+  transformingRef.current = true;
+  if (actionTimerRef.current) {
+    clearTimeout(actionTimerRef.current);
+    actionTimerRef.current = null;
+  }
+  syncSel();
+  hideSizeBubble();                  // hide during rotation
+})
+
+.on('object:scaled', e => {
+  hoverHL.visible = false;
+  hideSizeBubble();
+  requestAnimationFrame(() => requestAnimationFrame(syncSel));
+})
+
+  .on('object:modified', () => {
+    if (transformingRef.current) {
+      transformingRef.current = false
+      setActionPos(null)
+      if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+      actionTimerRef.current = window.setTimeout(() => {
+        requestAnimationFrame(() => requestAnimationFrame(syncSel))
+      }, 250)
+    }
   })
-  .on('object:rotating', () => { hoverHL.visible = false; syncSel() })
-  .on('object:modified', () =>
-    requestAnimationFrame(() => requestAnimationFrame(syncSel)))
+  .on('mouse:up', () => {
+    if (transformingRef.current) {
+      transformingRef.current = false
+      setActionPos(null)
+      if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+      actionTimerRef.current = window.setTimeout(syncSel, 250)
+    }
+  })
   .on('after:render',    handleAfterRender)
 
 /* ── 4 ▸ Hover outline (only when NOT the active object) ─── */
@@ -1713,6 +1784,11 @@ doSync = () =>
         height={PREVIEW_H * zoom}
         style={{ width: PREVIEW_W * zoom, height: PREVIEW_H * zoom }}
         className={`border shadow rounded ${className}`}
+      />
+      <QuickActionBar
+        pos={actionPos}
+        onAction={handleMenuAction}
+        onMenu={p => setMenuPos(p)}
       />
       {menuPos && (
         <ContextMenu
