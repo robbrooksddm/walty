@@ -102,7 +102,7 @@ html {
 /* === DOM selection overlay ==================================== */
 @layer utilities {
   .sel-overlay {
-    @apply absolute pointer-events-none box-border z-40;
+    @apply absolute pointer-events-none box-border z-40 overflow-visible;
     border:2px solid #2EC4B6; /* SEL_COLOR */
   }
   .sel-overlay.interactive {
@@ -139,6 +139,7 @@ html {
   .sel-overlay .handle.mr { cursor:ew-resize; }
   .sel-overlay .handle.mt,
   .sel-overlay .handle.mb { cursor:ns-resize; }
+  .sel-overlay .handle.rot { cursor:grab; }
 
   /* ── NEW from stable-3-july-2025 ───────────────────────────── */
   .size-bubble {
