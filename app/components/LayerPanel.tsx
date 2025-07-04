@@ -40,7 +40,7 @@ function Row({ id, idx }: { id: string; idx: number }) {
   } = useSortable({ id });
 
   const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
   };
 
@@ -50,8 +50,7 @@ function Row({ id, idx }: { id: string; idx: number }) {
     <li
       ref={setNodeRef}
       style={style}
-      className="group flex items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 py-1 text-sm hover:bg-walty-orange/10"
-
+      className="group flex h-14 items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 text-sm hover:bg-walty-orange/10"
     >
       {/* drag handle */}
       <button
@@ -65,7 +64,19 @@ function Row({ id, idx }: { id: string; idx: number }) {
       {/* name */}
       <span className="flex-1 truncate text-walty-teal">
         {layer.type === "text" ? (
-          (layer.text ?? "text").slice(0, 20)
+          <span
+            style={{
+              fontFamily: layer.fontFamily,
+              fontSize: layer.fontSize,
+              fontWeight: layer.fontWeight as any,
+              fontStyle: layer.fontStyle,
+              textDecoration: layer.underline ? "underline" : undefined,
+              color: layer.fill,
+              lineHeight: layer.lineHeight ? String(layer.lineHeight) : undefined,
+            }}
+          >
+            {(layer.text ?? "text").slice(0, 20)}
+          </span>
         ) : (
           <img
             src={
