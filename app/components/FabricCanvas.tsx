@@ -1188,9 +1188,19 @@ const hideSizeBubble = () => {
   if (bubble) bubble.style.display = 'none'
 }
 
+const hideHover = () => {
+  const fc = fcRef.current
+  if (!hoverDomRef.current) return
+  hoverDomRef.current.style.display = 'none'
+  ;(hoverDomRef.current as any)._object = null
+  hoverHL.visible = false
+  fc?.requestRenderAll()
+}
+
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
+  hideHover()
   selDomRef.current && (selDomRef.current.style.display = 'block')
   if (croppingRef.current && cropDomRef.current) {
     cropDomRef.current.style.display = 'block'
@@ -1230,6 +1240,7 @@ const handleAfterRender = () => {
 
 fc.on('object:moving', () => {
   hoverHL.visible         = false;
+  hideHover();
   transformingRef.current = true;
   if (actionTimerRef.current) {
     clearTimeout(actionTimerRef.current);
@@ -1241,6 +1252,7 @@ fc.on('object:moving', () => {
 
 .on('object:scaling', e => {
   hoverHL.visible         = false;
+  hideHover();
   transformingRef.current = true;
   if (actionTimerRef.current) {
     clearTimeout(actionTimerRef.current);
@@ -1252,6 +1264,7 @@ fc.on('object:moving', () => {
 
 .on('object:rotating', () => {
   hoverHL.visible         = false;
+  hideHover();
   transformingRef.current = true;
   if (actionTimerRef.current) {
     clearTimeout(actionTimerRef.current);
@@ -1263,6 +1276,7 @@ fc.on('object:moving', () => {
 
 .on('object:scaled', e => {
   hoverHL.visible = false;
+  hideHover();
   hideSizeBubble();
   requestAnimationFrame(() => requestAnimationFrame(syncSel));
 })
@@ -1272,6 +1286,7 @@ fc.on('object:moving', () => {
       transformingRef.current = false
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+      hideHover()
       actionTimerRef.current = window.setTimeout(() => {
         requestAnimationFrame(() => requestAnimationFrame(syncSel))
       }, 250)
@@ -1282,6 +1297,7 @@ fc.on('object:moving', () => {
       transformingRef.current = false
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+      hideHover()
       actionTimerRef.current = window.setTimeout(syncSel, 250)
     }
   })
