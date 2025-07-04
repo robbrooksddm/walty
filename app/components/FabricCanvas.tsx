@@ -1245,8 +1245,8 @@ fc.on('selection:created', () => {
   if (croppingRef.current && cropDomRef.current) {
     cropDomRef.current.style.display = 'block'
   }
-  syncSel()
-  requestAnimationFrame(syncSel)
+  // defer overlay redraw so bounding boxes are stable
+  requestAnimationFrame(() => requestAnimationFrame(syncSel))
   scrollHandler = () => {
     fc.calcOffset()
     syncSel()
@@ -1256,7 +1256,8 @@ fc.on('selection:created', () => {
   window.addEventListener('resize', scrollHandler)
   containerRef.current?.addEventListener('scroll', scrollHandler, { passive: true, capture: true })
 })
-  .on('selection:updated', syncSel)
+  // delay redraw on selection updates to avoid momentary 0×0 outlines
+  .on('selection:updated', () => requestAnimationFrame(() => requestAnimationFrame(syncSel)))
 .on('selection:cleared', () => {
   if (scrollHandler) {
     window.removeEventListener('scroll', scrollHandler);
