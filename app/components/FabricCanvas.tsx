@@ -1064,19 +1064,28 @@ const drawOverlay = (
 ) => {
   const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
-  const vt   = fc.viewportTransform || [1,0,0,1,0,0]
+  const vt   = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
   const scale = vt[0]
   const c = containerRef.current
-  const scrollX = (c?.scrollLeft ?? 0)
-  const scrollY = (c?.scrollTop  ?? 0)
-  const left   = window.scrollX + scrollX + rect.left + vt[4] + (box.left - PAD) * scale
-  const top    = window.scrollY + scrollY + rect.top  + vt[5] + (box.top - PAD) * scale
-  const width  = (box.width  + PAD * 2) * scale
-  const height = (box.height + PAD * 2) * scale
+  const scrollX = c?.scrollLeft ?? 0
+  const scrollY = c?.scrollTop ?? 0
+
+  const cx = box.left + box.width / 2
+  const cy = box.top + box.height / 2
+  const w = obj.getScaledWidth() + PAD * 2
+  const h = obj.getScaledHeight() + PAD * 2
+  const left =
+    window.scrollX + scrollX + rect.left + vt[4] + (cx - w / 2) * scale
+  const top =
+    window.scrollY + scrollY + rect.top + vt[5] + (cy - h / 2) * scale
+  const width = w * scale
+  const height = h * scale
   el.style.left   = `${left}px`
   el.style.top    = `${top}px`
   el.style.width  = `${width}px`
   el.style.height = `${height}px`
+  el.style.transformOrigin = '50% 50%'
+  el.style.transform = `rotate(${obj.angle || 0}deg)`
   el._object = obj
   if (el._handles) {
     const h = el._handles
@@ -1093,19 +1102,13 @@ const drawOverlay = (
     h.bl.style.left = `${leftX}px`;  h.bl.style.top = `${botY}px`
     h.ml.style.left = `${leftX}px`;  h.ml.style.top = `${midY}px`
     h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
-    h.mt.style.left  = `${midX}px`;   h.mt.style.top  = `${topY}px`
-    h.mb.style.left  = `${midX}px`;   h.mb.style.top  = `${botY}px`
+    h.mt.style.left  = `${midX}px`
+    h.mt.style.top   = `${topY}px`
+    h.mb.style.left  = `${midX}px`
+    h.mb.style.top   = `${botY}px`
     if (h.rot) {
-      const angle = (obj.angle || 0) * Math.PI / 180
-      const offset = obj.getScaledHeight() / 2 + ROT_OFF / scale
-      const cx = box.left + box.width / 2
-      const cy = box.top  + box.height / 2
-      const x = cx + offset * Math.sin(angle)
-      const y = cy - offset * Math.cos(angle)
-      const relX = Math.round((x - (box.left - PAD)) * scale)
-      const relY = Math.round((y - (box.top  - PAD)) * scale)
-      h.rot.style.left = `${relX}px`
-      h.rot.style.top  = `${relY}px`
+      h.rot.style.left = `${midX}px`
+      h.rot.style.top  = `${Math.round(topY - ROT_OFF)}px`
     }
   }
   return { left, top, width, height }
