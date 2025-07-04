@@ -676,13 +676,13 @@ useEffect(() => {
   const sizeBubble = document.createElement('div');
   sizeBubble.className = 'size-bubble';
   sizeBubble.style.display = 'none';
-  selEl.appendChild(sizeBubble);
+  document.body.appendChild(sizeBubble);
   (selEl as any)._sizeBubble = sizeBubble;
 
   const rotBubble = document.createElement('div');
   rotBubble.className = 'rot-bubble';
   rotBubble.style.display = 'none';
-  selEl.appendChild(rotBubble);
+  document.body.appendChild(rotBubble);
   (selEl as any)._rotBubble = rotBubble;
 
   const cropHandles: Record<string, HTMLDivElement> = {};
@@ -1202,12 +1202,11 @@ const syncHover = () => {
     const bubble = (selDomRef.current as any)._sizeBubble as HTMLDivElement | undefined
     if (!bubble) return
     bubble.textContent = `w:${Math.round(obj.getScaledWidth())} h:${Math.round(obj.getScaledHeight())}`
-    const rect = selDomRef.current.getBoundingClientRect()
     const e = ev.e as MouseEvent | PointerEvent | undefined
     const x = e?.clientX ?? 0
     const y = e?.clientY ?? 0
-    bubble.style.left = `${x - rect.left + 30}px`
-    bubble.style.top = `${y - rect.top + 30}px`
+    bubble.style.left = `${x + 30}px`
+    bubble.style.top = `${y + 30}px`
     bubble.style.display = 'block'
   }
 
@@ -1225,12 +1224,11 @@ const showRotBubble = (obj: fabric.Object | undefined, ev: fabric.IEvent | undef
   angle = ((angle % 360) + 360) % 360
   if (angle > 180) angle -= 360
   bubble.textContent = `${Math.round(angle)}\u00B0`
-  const rect = selDomRef.current.getBoundingClientRect()
   const e = ev.e as MouseEvent | PointerEvent | undefined
   const x = e?.clientX ?? 0
   const y = e?.clientY ?? 0
-  bubble.style.left = `${x - rect.left + 30}px`
-  bubble.style.top = `${y - rect.top + 30}px`
+  bubble.style.left = `${x + 30}px`
+  bubble.style.top = `${y + 30}px`
   bubble.style.display = 'block'
 }
 
@@ -1583,6 +1581,8 @@ window.addEventListener('keydown', onKey)
       hoverDomRef.current?.remove()
       selDomRef.current?.remove()
       cropDomRef.current?.remove()
+      sizeBubble.remove()
+      rotBubble.remove()
       if (scrollHandler) {
         window.removeEventListener('scroll', scrollHandler)
         window.removeEventListener('resize', scrollHandler)
