@@ -107,7 +107,7 @@ html {
     transform-origin:0 0;
   }
   .sel-overlay.interactive {
-    @apply pointer-events-none;
+    @apply pointer-events-auto;
   }
   .sel-overlay .handle {
     position:absolute;

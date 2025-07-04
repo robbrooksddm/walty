@@ -683,10 +683,20 @@ useEffect(() => {
     const corner = (e.target as HTMLElement | null)?.dataset.corner
     const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const scale = vt[0]
-    const offset = PAD * scale
-    const base = corner === 'rot' ? 'mb' : corner
-    const dx = base?.includes('l') ? offset : base?.includes('r') ? -offset : 0
-    const dy = base?.includes('t') ? offset : base?.includes('b') ? -offset : 0
+    const base = corner === 'rot' ? 'mtr' : corner
+    const padOffset = PAD * scale
+    const rotOffset = (PAD + ROT_HANDLE_OFFSET) * scale
+    let dx = 0, dy = 0
+    if (base) {
+      if (base.includes('l')) dx = padOffset
+      else if (base.includes('r')) dx = -padOffset
+      if (base.includes('t')) dy = padOffset
+      else if (base.includes('b')) dy = -padOffset
+      if (base === 'mtr') {
+        dx = 0
+        dy = -rotOffset
+      }
+    }
 
     const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
