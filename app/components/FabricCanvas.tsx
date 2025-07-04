@@ -115,7 +115,7 @@ let PAGE_H = 0
 let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
 let PAD = 0
-const ROT_OFF = 40
+const ROT_OFF = 40  // distance from object to rotation handle
 const SEL_BORDER = 2
 
 recompute()
@@ -668,6 +668,7 @@ useEffect(() => {
         ? 'handle rot'
         : `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c === 'rot' ? 'mtr' : c;
+    if (c === 'rot') h.textContent = '\u21BB';
     selEl.appendChild(h);
     handleMap[c] = h;
   });
@@ -1108,7 +1109,7 @@ const drawOverlay = (
     h.mb.style.top   = `${botY}px`
     if (h.rot) {
       h.rot.style.left = `${midX}px`
-      h.rot.style.top  = `${Math.round(topY - ROT_OFF)}px`
+      h.rot.style.top  = `${Math.round(botY + ROT_OFF)}px`
     }
   }
   return { left, top, width, height }
