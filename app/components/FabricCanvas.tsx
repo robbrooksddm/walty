@@ -1169,16 +1169,17 @@ const syncSel = () => {
 cropEl && (cropEl.style.display = 'none', cropEl._object = null);
 if (!obj) return;
 
-const box = drawOverlay(obj, selEl);   // redraw green outline
+drawOverlay(obj, selEl);              // redraw green outline
 selEl._object = obj;
 
 /* ── quick-action overlay ──────────────────────────── */
+const rect = selEl.getBoundingClientRect();
 if (transformingRef.current) {
   setActionPos(null);                 // hide while dragging
 } else {
   setActionPos({                      // centre the toolbar
-    x: box.left + box.width / 2,
-    y: box.top - 8,
+    x: rect.left + rect.width / 2,
+    y: rect.top - 8,
   });
 }
 
