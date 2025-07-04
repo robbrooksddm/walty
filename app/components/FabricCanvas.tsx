@@ -1068,6 +1068,7 @@ const drawOverlay = (
     _object?: fabric.Object | null
   }
 ) => {
+  obj.setCoords()
   const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
   const vt   = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
