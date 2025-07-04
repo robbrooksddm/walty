@@ -49,6 +49,20 @@ const EMPTY: TemplatePage[] = [
   { name: 'back'   , layers: [] },
 ]
 
+/* mirror a PointerEvent/MouseEvent so we can forward it */
+const mirrorPointer = (ev: PointerEvent | MouseEvent) => ({
+  clientX: ev.clientX,
+  clientY: ev.clientY,
+  button: ev.button,
+  buttons: 'buttons' in ev ? (ev as any).buttons : 0,
+  ctrlKey: ev.ctrlKey,
+  shiftKey: ev.shiftKey,
+  altKey: ev.altKey,
+  metaKey: ev.metaKey,
+  bubbles: true,
+  cancelable: true,
+})
+
 /* ---------- tiny coach-mark component ------------------------------ */
 function CoachMark({ anchor, onClose }: { anchor: DOMRect | null; onClose: () => void }) {
   if (!anchor) return null
@@ -183,6 +197,31 @@ export default function CardEditor({
     })
     setActiveIdx(idx)
   }
+
+  const handleBgPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const fc = activeFc
+    if (!fc) return
+
+    const target = e.target as HTMLElement
+    if (target.closest('canvas')) return
+
+    fc.discardActiveObject()
+    fc.requestRenderAll()
+
+    const el = fc.upperCanvasEl
+    const down = new MouseEvent('mousedown', mirrorPointer(e.nativeEvent))
+    el.dispatchEvent(down)
+    const move = (ev: PointerEvent) =>
+      el.dispatchEvent(new MouseEvent('mousemove', mirrorPointer(ev)))
+    const up = (ev: PointerEvent) => {
+      el.dispatchEvent(new MouseEvent('mouseup', mirrorPointer(ev)))
+      document.removeEventListener('pointermove', move)
+      document.removeEventListener('pointerup', up)
+    }
+    document.addEventListener('pointermove', move)
+    document.addEventListener('pointerup', up)
+    e.preventDefault()
+  }, [activeFc])
 
   const [thumbs, setThumbs] = useState<string[]>(['', '', '', ''])
 
@@ -855,12 +894,7 @@ const handleProofAll = async () => {
             className={`flex-1 flex justify-center items-start bg-[--walty-cream] pt-6 gap-6 ${
               isCropMode ? 'overflow-visible' : 'overflow-auto'
             }`}
-            onMouseDown={e => {
-              if (e.target === e.currentTarget && activeFc) {
-                activeFc.discardActiveObject();
-                activeFc.requestRenderAll();
-              }
-            }}
+            onPointerDown={handleBgPointerDown}
           >
             
             {/* front */}
