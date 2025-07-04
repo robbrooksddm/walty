@@ -1094,6 +1094,7 @@ const drawOverlay = (
 const syncSel = () => {
   const obj = fc.getActiveObject() as fabric.Object | undefined
   if (!selDomRef.current || !canvasRef.current) return
+  fc.calcOffset()
   const selEl  = selDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
   const cropEl = cropDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null } | null
 
