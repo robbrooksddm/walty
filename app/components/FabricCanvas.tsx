@@ -1322,24 +1322,32 @@ fc.on('object:moving', () => {
   requestAnimationFrame(() => requestAnimationFrame(syncSel));
 })
 
-  .on('object:modified', () => {
-    if (transformingRef.current) {
-      transformingRef.current = false
-      setActionPos(null)
-      if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
-      actionTimerRef.current = window.setTimeout(() => {
-        requestAnimationFrame(() => requestAnimationFrame(syncSel))
-      }, 250)
-    }
-    hideRotBubble()
-  })
+.on('object:modified', () => {
+  if (transformingRef.current) {
+    transformingRef.current = false
+    setActionPos(null)
+  }
+  if (actionTimerRef.current) {
+    clearTimeout(actionTimerRef.current)
+    actionTimerRef.current = null
+  }
+  fc.requestRenderAll()
+  fc.calcOffset()
+  syncSel()
+  hideRotBubble()
+})
   .on('mouse:up', () => {
     if (transformingRef.current) {
       transformingRef.current = false
       setActionPos(null)
-      if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
-      actionTimerRef.current = window.setTimeout(syncSel, 250)
     }
+    if (actionTimerRef.current) {
+      clearTimeout(actionTimerRef.current)
+      actionTimerRef.current = null
+    }
+    fc.requestRenderAll()
+    fc.calcOffset()
+    syncSel()
     hideSizeBubble()
     hideRotBubble()
   })
