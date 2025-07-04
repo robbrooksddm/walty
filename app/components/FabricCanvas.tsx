@@ -1329,19 +1329,28 @@ fc.on('object:moving', () => {
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
       actionTimerRef.current = window.setTimeout(() => {
         requestAnimationFrame(() => requestAnimationFrame(syncSel))
-      }, 250)
+      }, 200)
+      hideRotBubble()
+      return
     }
     hideRotBubble()
+    requestAnimationFrame(() => requestAnimationFrame(syncSel))
   })
   .on('mouse:up', () => {
     if (transformingRef.current) {
       transformingRef.current = false
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
-      actionTimerRef.current = window.setTimeout(syncSel, 250)
+      actionTimerRef.current = window.setTimeout(() => {
+        requestAnimationFrame(() => requestAnimationFrame(syncSel))
+      }, 200)
+      hideSizeBubble()
+      hideRotBubble()
+      return
     }
     hideSizeBubble()
     hideRotBubble()
+    requestAnimationFrame(() => requestAnimationFrame(syncSel))
   })
   .on('after:render',    handleAfterRender)
 
