@@ -679,6 +679,12 @@ useEffect(() => {
   selEl.appendChild(sizeBubble);
   (selEl as any)._sizeBubble = sizeBubble;
 
+  const rotBubble = document.createElement('div');
+  rotBubble.className = 'rot-bubble';
+  rotBubble.style.display = 'none';
+  selEl.appendChild(rotBubble);
+  (selEl as any)._rotBubble = rotBubble;
+
   const cropHandles: Record<string, HTMLDivElement> = {};
   cropCorners.forEach(c => {
     const h = document.createElement('div');
@@ -1211,6 +1217,31 @@ const hideSizeBubble = () => {
   if (bubble) bubble.style.display = 'none'
 }
 
+const showRotBubble = (obj: fabric.Object | undefined, ev: fabric.IEvent | undefined) => {
+  if (!obj || !selDomRef.current || !ev) return
+  const bubble = (selDomRef.current as any)._rotBubble as HTMLDivElement | undefined
+  if (!bubble) return
+  let ang = obj.angle ?? 0
+  ang = ((ang % 360) + 360) % 360
+  if (ang > 180) ang -= 360
+  let deg = Math.round(ang)
+  if (deg === -180) deg = 180
+  bubble.textContent = `${deg}\u00B0`
+  const rect = selDomRef.current.getBoundingClientRect()
+  const e = ev.e as MouseEvent | PointerEvent | undefined
+  const x = e?.clientX ?? 0
+  const y = e?.clientY ?? 0
+  bubble.style.left = `${x - rect.left + 30}px`
+  bubble.style.top = `${y - rect.top + 30}px`
+  bubble.style.display = 'block'
+}
+
+const hideRotBubble = () => {
+  if (!selDomRef.current) return
+  const bubble = (selDomRef.current as any)._rotBubble as HTMLDivElement | undefined
+  if (bubble) bubble.style.display = 'none'
+}
+
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
@@ -1241,6 +1272,7 @@ fc.on('selection:created', () => {
   cropDomRef.current && (cropDomRef.current.style.display = 'none');
   setActionPos(null);     // from quick-action branch
   hideSizeBubble();       // from stable branch
+  hideRotBubble();
 })
 
 
@@ -1260,6 +1292,7 @@ fc.on('object:moving', () => {
   }
   syncSel();
   hideSizeBubble();                  // moving never shows the bubble
+  hideRotBubble();
 })
 
 .on('object:scaling', e => {
@@ -1271,9 +1304,10 @@ fc.on('object:moving', () => {
   }
   syncSel();
   showSizeBubble(e.target as fabric.Object, e);   // live size read-out
+  hideRotBubble();
 })
 
-.on('object:rotating', () => {
+.on('object:rotating', e => {
   hoverHL.visible         = false;
   transformingRef.current = true;
   if (actionTimerRef.current) {
@@ -1281,12 +1315,14 @@ fc.on('object:moving', () => {
     actionTimerRef.current = null;
   }
   syncSel();
-  hideSizeBubble();                  // hide during rotation
+  hideSizeBubble();                  // hide size bubble during rotation
+  showRotBubble(e.target as fabric.Object, e);
 })
 
 .on('object:scaled', e => {
   hoverHL.visible = false;
   hideSizeBubble();
+  hideRotBubble();
   requestAnimationFrame(() => requestAnimationFrame(syncSel));
 })
 
@@ -1299,6 +1335,7 @@ fc.on('object:moving', () => {
         requestAnimationFrame(() => requestAnimationFrame(syncSel))
       }, 250)
     }
+    hideRotBubble()
   })
   .on('mouse:up', () => {
     if (transformingRef.current) {
@@ -1307,6 +1344,7 @@ fc.on('object:moving', () => {
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
       actionTimerRef.current = window.setTimeout(syncSel, 250)
     }
+    hideRotBubble()
   })
   .on('after:render',    handleAfterRender)
 
