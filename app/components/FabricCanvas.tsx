@@ -1050,6 +1050,19 @@ hoverRef.current = hoverHL
 let scrollHandler: (() => void) | null = null
 let hoverScrollHandler: (() => void) | null = null
 
+const hideHoverOverlay = () => {
+  if (!hoverDomRef.current) return
+  hoverDomRef.current.style.display = 'none'
+  ;(hoverDomRef.current as any)._object = null
+  if (hoverScrollHandler) {
+    window.removeEventListener('scroll', hoverScrollHandler)
+    window.removeEventListener('resize', hoverScrollHandler)
+    containerRef.current?.removeEventListener('scroll', hoverScrollHandler)
+    hoverScrollHandler = null
+  }
+  hoverHL.visible = false
+}
+
 const drawOverlay = (
   obj: fabric.Object,
   el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
@@ -1189,7 +1202,7 @@ const hideSizeBubble = () => {
 }
 
 fc.on('selection:created', () => {
-  hoverHL.visible = false
+  hideHoverOverlay()
   fc.requestRenderAll()
   selDomRef.current && (selDomRef.current.style.display = 'block')
   if (croppingRef.current && cropDomRef.current) {
@@ -1218,6 +1231,7 @@ fc.on('selection:created', () => {
   cropDomRef.current && (cropDomRef.current.style.display = 'none');
   setActionPos(null);     // from quick-action branch
   hideSizeBubble();       // from stable branch
+  hideHoverOverlay();
 })
 
 
@@ -1229,7 +1243,7 @@ const handleAfterRender = () => {
 }
 
 fc.on('object:moving', () => {
-  hoverHL.visible         = false;
+  hideHoverOverlay()
   transformingRef.current = true;
   if (actionTimerRef.current) {
     clearTimeout(actionTimerRef.current);
@@ -1240,7 +1254,7 @@ fc.on('object:moving', () => {
 })
 
 .on('object:scaling', e => {
-  hoverHL.visible         = false;
+  hideHoverOverlay()
   transformingRef.current = true;
   if (actionTimerRef.current) {
     clearTimeout(actionTimerRef.current);
@@ -1251,7 +1265,7 @@ fc.on('object:moving', () => {
 })
 
 .on('object:rotating', () => {
-  hoverHL.visible         = false;
+  hideHoverOverlay()
   transformingRef.current = true;
   if (actionTimerRef.current) {
     clearTimeout(actionTimerRef.current);
@@ -1262,14 +1276,15 @@ fc.on('object:moving', () => {
 })
 
 .on('object:scaled', e => {
-  hoverHL.visible = false;
+  hideHoverOverlay()
   hideSizeBubble();
   requestAnimationFrame(() => requestAnimationFrame(syncSel));
 })
 
-  .on('object:modified', () => {
+.on('object:modified', () => {
     if (transformingRef.current) {
       transformingRef.current = false
+      hideHoverOverlay()
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
       actionTimerRef.current = window.setTimeout(() => {
@@ -1277,9 +1292,10 @@ fc.on('object:moving', () => {
       }, 250)
     }
   })
-  .on('mouse:up', () => {
+.on('mouse:up', () => {
     if (transformingRef.current) {
       transformingRef.current = false
+      hideHoverOverlay()
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
       actionTimerRef.current = window.setTimeout(syncSel, 250)
