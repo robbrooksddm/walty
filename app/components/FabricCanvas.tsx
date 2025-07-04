@@ -745,11 +745,23 @@ useEffect(() => {
   const onSelDown = (e: PointerEvent) => {
     const obj = (selEl as any)._object as fabric.Object | null
     if (obj) fc.setActiveObject(obj)
+    if (actionTimerRef.current) {
+      clearTimeout(actionTimerRef.current)
+      actionTimerRef.current = null
+    }
+    transformingRef.current = true
+    setActionPos(null)
     bridge(e)
   }
   const onCropDown = (e: PointerEvent) => {
     const obj = (cropEl as any)._object as fabric.Object | null
     if (obj) fc.setActiveObject(obj)
+    if (actionTimerRef.current) {
+      clearTimeout(actionTimerRef.current)
+      actionTimerRef.current = null
+    }
+    transformingRef.current = true
+    setActionPos(null)
     bridge(e)
   }
   selEl.addEventListener('pointerdown', onSelDown)
