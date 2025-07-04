@@ -1241,11 +1241,12 @@ const hideRotBubble = () => {
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
+  syncSel()
   selDomRef.current && (selDomRef.current.style.display = 'block')
   if (croppingRef.current && cropDomRef.current) {
     cropDomRef.current.style.display = 'block'
   }
-  syncSel()
+  hoverDomRef.current && (hoverDomRef.current.style.display = 'none')
   requestAnimationFrame(syncSel)
   scrollHandler = () => {
     fc.calcOffset()
