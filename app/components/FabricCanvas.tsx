@@ -1340,6 +1340,8 @@ fc.on('object:moving', () => {
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
       actionTimerRef.current = window.setTimeout(syncSel, 250)
     }
+    hideSizeBubble()
+    hideRotBubble()
   })
   .on('after:render',    handleAfterRender)
 
