@@ -143,6 +143,18 @@ html {
     width:27px;
     height:27px;
     cursor:grab;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .sel-overlay .handle.rot svg {
+    width:16px;
+    height:16px;
+    stroke:#666;
+    stroke-width:2;
+    fill:none;
+    pointer-events:none;
   }
 
   /* ── NEW from stable-3-july-2025 ───────────────────────────── */

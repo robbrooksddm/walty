@@ -668,6 +668,23 @@ useEffect(() => {
         ? 'handle rot'
         : `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c === 'rot' ? 'mtr' : c;
+    if (c === 'rot') {
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const icon = document.createElementNS(svgNS, 'svg');
+      icon.setAttribute('viewBox', '0 0 24 24');
+      icon.setAttribute('fill', 'none');
+      icon.setAttribute('stroke', 'currentColor');
+      icon.setAttribute('stroke-width', '2');
+      icon.setAttribute('stroke-linecap', 'round');
+      icon.setAttribute('stroke-linejoin', 'round');
+      const p1 = document.createElementNS(svgNS, 'path');
+      p1.setAttribute('d', 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8');
+      const p2 = document.createElementNS(svgNS, 'path');
+      p2.setAttribute('d', 'M21 3v5h-5');
+      icon.appendChild(p1);
+      icon.appendChild(p2);
+      h.appendChild(icon);
+    }
     selEl.appendChild(h);
     handleMap[c] = h;
   });
