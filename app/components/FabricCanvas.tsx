@@ -1316,30 +1316,31 @@ fc.on('object:moving', () => {
 })
 
 .on('object:scaled', e => {
-  hoverHL.visible = false;
-  hideSizeBubble();
-  hideRotBubble();
-  requestAnimationFrame(() => requestAnimationFrame(syncSel));
+  hoverHL.visible = false
+  hideSizeBubble()
+  hideRotBubble()
+  syncSel()
+  requestAnimationFrame(syncSel)
 })
 
-  .on('object:modified', () => {
-    if (transformingRef.current) {
-      transformingRef.current = false
-      setActionPos(null)
-      if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
-      actionTimerRef.current = window.setTimeout(() => {
-        requestAnimationFrame(() => requestAnimationFrame(syncSel))
-      }, 250)
-    }
-    hideRotBubble()
-  })
+.on('object:modified', () => {
+  if (transformingRef.current) {
+    transformingRef.current = false
+    if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+    actionTimerRef.current = null
+  }
+  syncSel()
+  requestAnimationFrame(syncSel)
+  hideRotBubble()
+})
   .on('mouse:up', () => {
     if (transformingRef.current) {
       transformingRef.current = false
-      setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
-      actionTimerRef.current = window.setTimeout(syncSel, 250)
+      actionTimerRef.current = null
     }
+    syncSel()
+    requestAnimationFrame(syncSel)
     hideSizeBubble()
     hideRotBubble()
   })
