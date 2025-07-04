@@ -855,11 +855,40 @@ const handleProofAll = async () => {
             className={`flex-1 flex justify-center items-start bg-[--walty-cream] pt-6 gap-6 ${
               isCropMode ? 'overflow-visible' : 'overflow-auto'
             }`}
-            onMouseDown={e => {
-              if (e.target === e.currentTarget && activeFc) {
-                activeFc.discardActiveObject();
-                activeFc.requestRenderAll();
-              }
+            onPointerDown={e => {
+              if (e.target !== e.currentTarget || !activeFc) return;
+
+              activeFc.discardActiveObject();
+              activeFc.requestRenderAll();
+
+              const forward = (ev: PointerEvent | MouseEvent) => ({
+                clientX   : ev.clientX,
+                clientY   : ev.clientY,
+                button    : ev.button,
+                buttons   : 'buttons' in ev ? (ev as any).buttons : 0,
+                ctrlKey   : ev.ctrlKey,
+                shiftKey  : ev.shiftKey,
+                altKey    : ev.altKey,
+                metaKey   : ev.metaKey,
+                bubbles   : true,
+                cancelable: true,
+              });
+
+              const canvasEl = (activeFc as any).upperCanvasEl as HTMLCanvasElement;
+              const down = new MouseEvent('mousedown', forward(e.nativeEvent));
+              canvasEl.dispatchEvent(down);
+
+              const move = (ev: PointerEvent) =>
+                canvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)));
+              const up = (ev: PointerEvent) => {
+                canvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev)));
+                document.removeEventListener('pointermove', move);
+                document.removeEventListener('pointerup', up);
+              };
+
+              document.addEventListener('pointermove', move);
+              document.addEventListener('pointerup', up);
+              e.preventDefault();
             }}
           >
             
