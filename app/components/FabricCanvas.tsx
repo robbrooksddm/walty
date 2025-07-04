@@ -1327,9 +1327,13 @@ fc.on('object:moving', () => {
       transformingRef.current = false
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+      requestAnimationFrame(() => requestAnimationFrame(syncSel))
       actionTimerRef.current = window.setTimeout(() => {
-        requestAnimationFrame(() => requestAnimationFrame(syncSel))
+        /* keep quick actions delayed */
+        requestAnimationFrame(syncSel)
       }, 250)
+    } else {
+      requestAnimationFrame(() => requestAnimationFrame(syncSel))
     }
     hideRotBubble()
   })
@@ -1338,7 +1342,10 @@ fc.on('object:moving', () => {
       transformingRef.current = false
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+      requestAnimationFrame(() => requestAnimationFrame(syncSel))
       actionTimerRef.current = window.setTimeout(syncSel, 250)
+    } else {
+      requestAnimationFrame(() => requestAnimationFrame(syncSel))
     }
     hideSizeBubble()
     hideRotBubble()
