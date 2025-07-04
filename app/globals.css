@@ -139,7 +139,23 @@ html {
   .sel-overlay .handle.mr { cursor:ew-resize; }
   .sel-overlay .handle.mt,
   .sel-overlay .handle.mb { cursor:ns-resize; }
-  .sel-overlay .handle.rot { cursor:grab; }
+  .sel-overlay .handle.rot {
+    width:27px;
+    height:27px;
+    cursor:grab;
+    position:relative;
+  }
+  .sel-overlay .handle.rot::before {
+    content:'';
+    position:absolute;
+    top:50%;
+    left:50%;
+    width:16px;
+    height:16px;
+    transform:translate(-50%,-50%);
+    background:url('/rotate.svg') center/contain no-repeat;
+    pointer-events:none;
+  }
 
   /* ── NEW from stable-3-july-2025 ───────────────────────────── */
   .size-bubble {
