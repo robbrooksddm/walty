@@ -1325,7 +1325,6 @@ fc.on('object:moving', () => {
 .on('object:modified', () => {
   if (transformingRef.current) {
     transformingRef.current = false
-    setActionPos(null)
     if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
     actionTimerRef.current = null
   }
@@ -1335,7 +1334,6 @@ fc.on('object:moving', () => {
   .on('mouse:up', () => {
     if (transformingRef.current) {
       transformingRef.current = false
-      setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
       actionTimerRef.current = null
     }
