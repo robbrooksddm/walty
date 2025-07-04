@@ -1120,7 +1120,7 @@ const drawOverlay = (
   return { left, top, width, height }
 }
 
-const syncSel = () => {
+const syncSel = (skipAction = false) => {
   const obj = fc.getActiveObject() as fabric.Object | undefined
   if (!selDomRef.current || !canvasRef.current) return
   const selEl  = selDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
@@ -1173,8 +1173,8 @@ const box = drawOverlay(obj, selEl);   // redraw green outline
 selEl._object = obj;
 
 /* ── quick-action overlay ──────────────────────────── */
-if (transformingRef.current) {
-  setActionPos(null);                 // hide while dragging
+if (transformingRef.current || skipAction) {
+  setActionPos(null);                 // hide while dragging or if skipping
 } else {
   setActionPos({                      // centre the toolbar
     x: box.left + box.width / 2,
@@ -1325,21 +1325,31 @@ fc.on('object:moving', () => {
   .on('object:modified', () => {
     if (transformingRef.current) {
       transformingRef.current = false
-      setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+      setActionPos(null)
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => syncSel(true))
+      )
+      actionTimerRef.current = window.setTimeout(syncSel, 200)
+    } else {
+      requestAnimationFrame(() => requestAnimationFrame(syncSel))
     }
     hideRotBubble()
-    requestAnimationFrame(() => requestAnimationFrame(syncSel))
   })
   .on('mouse:up', () => {
     if (transformingRef.current) {
       transformingRef.current = false
-      setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+      setActionPos(null)
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => syncSel(true))
+      )
+      actionTimerRef.current = window.setTimeout(syncSel, 200)
+    } else {
+      requestAnimationFrame(() => requestAnimationFrame(syncSel))
     }
     hideSizeBubble()
     hideRotBubble()
-    requestAnimationFrame(() => requestAnimationFrame(syncSel))
   })
   .on('after:render',    handleAfterRender)
 
