@@ -1190,6 +1190,10 @@ const hideSizeBubble = () => {
 
 fc.on('selection:created', () => {
   hoverHL.visible = false
+  if (hoverDomRef.current) {
+    hoverDomRef.current.style.display = 'none'
+    ;(hoverDomRef.current as any)._object = null
+  }
   fc.requestRenderAll()
   selDomRef.current && (selDomRef.current.style.display = 'block')
   if (croppingRef.current && cropDomRef.current) {
@@ -1230,6 +1234,10 @@ const handleAfterRender = () => {
 
 fc.on('object:moving', () => {
   hoverHL.visible         = false;
+  if (hoverDomRef.current) {
+    hoverDomRef.current.style.display = 'none'
+    ;(hoverDomRef.current as any)._object = null
+  }
   transformingRef.current = true;
   if (actionTimerRef.current) {
     clearTimeout(actionTimerRef.current);
@@ -1241,6 +1249,10 @@ fc.on('object:moving', () => {
 
 .on('object:scaling', e => {
   hoverHL.visible         = false;
+  if (hoverDomRef.current) {
+    hoverDomRef.current.style.display = 'none'
+    ;(hoverDomRef.current as any)._object = null
+  }
   transformingRef.current = true;
   if (actionTimerRef.current) {
     clearTimeout(actionTimerRef.current);
@@ -1252,6 +1264,10 @@ fc.on('object:moving', () => {
 
 .on('object:rotating', () => {
   hoverHL.visible         = false;
+  if (hoverDomRef.current) {
+    hoverDomRef.current.style.display = 'none'
+    ;(hoverDomRef.current as any)._object = null
+  }
   transformingRef.current = true;
   if (actionTimerRef.current) {
     clearTimeout(actionTimerRef.current);
@@ -1263,6 +1279,10 @@ fc.on('object:moving', () => {
 
 .on('object:scaled', e => {
   hoverHL.visible = false;
+  if (hoverDomRef.current) {
+    hoverDomRef.current.style.display = 'none'
+    ;(hoverDomRef.current as any)._object = null
+  }
   hideSizeBubble();
   requestAnimationFrame(() => requestAnimationFrame(syncSel));
 })
@@ -1276,6 +1296,10 @@ fc.on('object:moving', () => {
         requestAnimationFrame(() => requestAnimationFrame(syncSel))
       }, 250)
     }
+    if (hoverDomRef.current) {
+      hoverDomRef.current.style.display = 'none'
+      ;(hoverDomRef.current as any)._object = null
+    }
   })
   .on('mouse:up', () => {
     if (transformingRef.current) {
@@ -1283,6 +1307,10 @@ fc.on('object:moving', () => {
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
       actionTimerRef.current = window.setTimeout(syncSel, 250)
+    }
+    if (hoverDomRef.current) {
+      hoverDomRef.current.style.display = 'none'
+      ;(hoverDomRef.current as any)._object = null
     }
   })
   .on('after:render',    handleAfterRender)
