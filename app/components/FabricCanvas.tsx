@@ -661,6 +661,10 @@ useEffect(() => {
   const selCorners  = ['tl','tr','br','bl','ml','mr','mt','mb','rot'] as const;
   const cropCorners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
+
+  const ROT_ICON =
+    '<svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>';
+
   selCorners.forEach(c => {
     const h = document.createElement('div');
     h.className =
@@ -668,6 +672,7 @@ useEffect(() => {
         ? 'handle rot'
         : `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c === 'rot' ? 'mtr' : c;
+    if (c === 'rot') h.innerHTML = ROT_ICON;
     selEl.appendChild(h);
     handleMap[c] = h;
   });
@@ -1108,7 +1113,7 @@ const drawOverlay = (
     h.mb.style.top   = `${botY}px`
     if (h.rot) {
       h.rot.style.left = `${midX}px`
-      h.rot.style.top  = `${Math.round(topY - ROT_OFF)}px`
+      h.rot.style.top  = `${Math.round(botY + ROT_OFF)}px`
     }
   }
   return { left, top, width, height }
