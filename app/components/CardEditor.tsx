@@ -183,6 +183,19 @@ export default function CardEditor({
     })
     setActiveIdx(idx)
   }
+  const mirrorPointer = (ev: PointerEvent | MouseEvent) => ({
+    clientX   : ev.clientX,
+    clientY   : ev.clientY,
+    button    : (ev as any).button,
+    buttons   : "buttons" in ev ? (ev as any).buttons : 0,
+    ctrlKey   : ev.ctrlKey,
+    shiftKey  : ev.shiftKey,
+    altKey    : ev.altKey,
+    metaKey   : ev.metaKey,
+    bubbles   : true,
+    cancelable: true,
+  });
+
 
   const [thumbs, setThumbs] = useState<string[]>(['', '', '', ''])
 
@@ -855,10 +868,23 @@ const handleProofAll = async () => {
             className={`flex-1 flex justify-center items-start bg-[--walty-cream] pt-6 gap-6 ${
               isCropMode ? 'overflow-visible' : 'overflow-auto'
             }`}
-            onMouseDown={e => {
+            onPointerDown={e => {
               if (e.target === e.currentTarget && activeFc) {
                 activeFc.discardActiveObject();
                 activeFc.requestRenderAll();
+
+                const el = activeFc.upperCanvasEl;
+                el.dispatchEvent(new MouseEvent('mousedown', mirrorPointer(e)));
+                const move = (ev: PointerEvent) =>
+                  el.dispatchEvent(new MouseEvent('mousemove', mirrorPointer(ev)));
+                const up = (ev: PointerEvent) => {
+                  el.dispatchEvent(new MouseEvent('mouseup', mirrorPointer(ev)));
+                  document.removeEventListener('pointermove', move);
+                  document.removeEventListener('pointerup', up);
+                };
+                document.addEventListener('pointermove', move);
+                document.addEventListener('pointerup', up);
+                e.preventDefault();
               }
             }}
           >
