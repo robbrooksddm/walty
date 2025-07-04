@@ -115,7 +115,7 @@ let PAGE_H = 0
 let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
 let PAD = 0
-const ROT_OFF = 40
+const ROT_OFF = 32
 const SEL_BORDER = 2
 
 recompute()
@@ -668,6 +668,10 @@ useEffect(() => {
         ? 'handle rot'
         : `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c === 'rot' ? 'mtr' : c;
+    if (c === 'rot') {
+      h.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>';
+    }
     selEl.appendChild(h);
     handleMap[c] = h;
   });
@@ -1114,7 +1118,7 @@ const drawOverlay = (
     h.mb.style.top   = `${botY}px`
     if (h.rot) {
       h.rot.style.left = `${midX}px`
-      h.rot.style.top  = `${Math.round(topY - ROT_OFF)}px`
+      h.rot.style.top  = `${Math.round(botY + ROT_OFF)}px`
     }
   }
   return { left, top, width, height }
