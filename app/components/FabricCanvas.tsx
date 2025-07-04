@@ -1329,7 +1329,7 @@ fc.on('object:moving', () => {
     if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
     actionTimerRef.current = null
   }
-  requestAnimationFrame(syncSel)
+  requestAnimationFrame(() => requestAnimationFrame(syncSel))
   hideRotBubble()
 })
   .on('mouse:up', () => {
@@ -1339,7 +1339,7 @@ fc.on('object:moving', () => {
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
       actionTimerRef.current = null
     }
-    requestAnimationFrame(syncSel)
+    requestAnimationFrame(() => requestAnimationFrame(syncSel))
     hideSizeBubble()
     hideRotBubble()
   })
