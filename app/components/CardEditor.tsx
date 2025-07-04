@@ -49,6 +49,23 @@ const EMPTY: TemplatePage[] = [
   { name: 'back'   , layers: [] },
 ]
 
+/* mirror a PointerEvent/MouseEvent so we can forward it */
+const mirrorPointer = (ev: PointerEvent | MouseEvent) => ({
+  clientX: ev.clientX,
+  clientY: ev.clientY,
+  button: ev.button,
+  buttons: 'buttons' in ev ? (ev as any).buttons : 0,
+  pointerId: 'pointerId' in ev ? (ev as any).pointerId : 0,
+  pointerType: 'pointerType' in ev ? (ev as any).pointerType : 'mouse',
+  isPrimary: 'isPrimary' in ev ? (ev as any).isPrimary : true,
+  ctrlKey: ev.ctrlKey,
+  shiftKey: ev.shiftKey,
+  altKey: ev.altKey,
+  metaKey: ev.metaKey,
+  bubbles: true,
+  cancelable: true,
+})
+
 /* ---------- tiny coach-mark component ------------------------------ */
 function CoachMark({ anchor, onClose }: { anchor: DOMRect | null; onClose: () => void }) {
   if (!anchor) return null
@@ -183,6 +200,31 @@ export default function CardEditor({
     })
     setActiveIdx(idx)
   }
+
+  const handleBgPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const fc = activeFc
+    if (!fc) return
+    if (e.target !== e.currentTarget) return
+    fc.discardActiveObject()
+    fc.requestRenderAll()
+
+    const el = fc.upperCanvasEl
+    const options = mirrorPointer(e.nativeEvent)
+    el.dispatchEvent(new PointerEvent('pointerdown', options))
+    const move = (ev: PointerEvent) => {
+      const opts = mirrorPointer(ev)
+      el.dispatchEvent(new PointerEvent('pointermove', opts))
+    }
+    const up = (ev: PointerEvent) => {
+      const opts = mirrorPointer(ev)
+      el.dispatchEvent(new PointerEvent('pointerup', opts))
+      document.removeEventListener('pointermove', move)
+      document.removeEventListener('pointerup', up)
+    }
+    document.addEventListener('pointermove', move)
+    document.addEventListener('pointerup', up)
+    e.preventDefault()
+  }, [activeFc])
 
   const [thumbs, setThumbs] = useState<string[]>(['', '', '', ''])
 
@@ -855,12 +897,7 @@ const handleProofAll = async () => {
             className={`flex-1 flex justify-center items-start bg-[--walty-cream] pt-6 gap-6 ${
               isCropMode ? 'overflow-visible' : 'overflow-auto'
             }`}
-            onMouseDown={e => {
-              if (e.target === e.currentTarget && activeFc) {
-                activeFc.discardActiveObject();
-                activeFc.requestRenderAll();
-              }
-            }}
+            onPointerDown={handleBgPointerDown}
           >
             
             {/* front */}
