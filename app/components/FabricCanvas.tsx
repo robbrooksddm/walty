@@ -1138,20 +1138,20 @@ const syncSel = () => {
       selEl._object = frame
       selEl.classList.add('crop-window')
       if (cropEl) {
-        cropEl.style.display = 'block'
         drawOverlay(img, cropEl)
         cropEl._object = img
         cropEl.classList.remove('crop-window')
+        cropEl.style.display = 'block'
       }
     } else {
       drawOverlay(img, selEl)
       selEl._object = img
       selEl.classList.remove('crop-window')
       if (cropEl) {
-        cropEl.style.display = 'block'
         drawOverlay(frame, cropEl)
         cropEl._object = frame
         cropEl.classList.add('crop-window')
+        cropEl.style.display = 'block'
       }
     }
     if (selEl._handles)
@@ -1241,11 +1241,12 @@ const hideRotBubble = () => {
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
+  // position overlays before revealing them to avoid flashing at (0,0)
+  syncSel()
   selDomRef.current && (selDomRef.current.style.display = 'block')
   if (croppingRef.current && cropDomRef.current) {
     cropDomRef.current.style.display = 'block'
   }
-  syncSel()
   requestAnimationFrame(syncSel)
   scrollHandler = () => {
     fc.calcOffset()
