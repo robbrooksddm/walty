@@ -104,9 +104,10 @@ html {
   .sel-overlay {
     @apply absolute pointer-events-none box-border z-40;
     border:2px solid #2EC4B6; /* SEL_COLOR */
+    transform-origin:0 0;
   }
   .sel-overlay.interactive {
-    @apply pointer-events-none;
+    @apply pointer-events-auto;
   }
   .sel-overlay .handle {
     position:absolute;
@@ -139,6 +140,19 @@ html {
   .sel-overlay .handle.mr { cursor:ew-resize; }
   .sel-overlay .handle.mt,
   .sel-overlay .handle.mb { cursor:ns-resize; }
+
+  .sel-overlay .handle.rot {
+    cursor:grab;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:10px;
+    width:21px;
+    height:21px;
+  }
+  .sel-overlay .handle.rot::before {
+    content:'\21bb';
+  }
 
   /* crop window corner "L" handles */
   .sel-overlay.crop-window .handle.corner {
