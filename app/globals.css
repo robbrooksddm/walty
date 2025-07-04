@@ -139,6 +139,8 @@ html {
   .sel-overlay .handle.mr { cursor:ew-resize; }
   .sel-overlay .handle.mt,
   .sel-overlay .handle.mb { cursor:ns-resize; }
+  .sel-overlay .handle.mtr { cursor:grab; }
+  .sel-overlay .handle.mtr:active { cursor:grabbing; }
 
   /* ── NEW from stable-3-july-2025 ───────────────────────────── */
   .size-bubble {

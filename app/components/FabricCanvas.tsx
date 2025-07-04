@@ -658,10 +658,12 @@ useEffect(() => {
   (cropEl as any)._object = null;
 
   const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const selHandles = [...corners, 'mtr'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  selHandles.forEach(c => {
+    const cls = ['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner';
     const h = document.createElement('div');
-    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
+    h.className = `handle ${cls} ${c}`;
     h.dataset.corner = c;
     selEl.appendChild(h);
     handleMap[c] = h;
@@ -1087,6 +1089,11 @@ const drawOverlay = (
     h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
     h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+    if (h.mtr) {
+      const off = obj.controls?.mtr?.offsetY ?? -40
+      h.mtr.style.left = `${midX}px`
+      h.mtr.style.top  = `${Math.round(topY + off * scale)}px`
+    }
   }
   return { left, top, width, height }
 }
