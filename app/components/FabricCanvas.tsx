@@ -115,6 +115,7 @@ let PAGE_H = 0
 let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
 let PAD = 0
+const ROT_OFF = 40
 const SEL_BORDER = 2
 
 recompute()
@@ -657,12 +658,16 @@ useEffect(() => {
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
-  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const selCorners  = ['tl','tr','br','bl','ml','mr','mt','mb','rot'] as const;
+  const cropCorners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  selCorners.forEach(c => {
     const h = document.createElement('div');
-    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
-    h.dataset.corner = c;
+    h.className =
+      c === 'rot'
+        ? 'handle rot'
+        : `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
+    h.dataset.corner = c === 'rot' ? 'mtr' : c;
     selEl.appendChild(h);
     handleMap[c] = h;
   });
@@ -675,7 +680,7 @@ useEffect(() => {
   (selEl as any)._sizeBubble = sizeBubble;
 
   const cropHandles: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  cropCorners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c;
@@ -684,12 +689,16 @@ useEffect(() => {
   });
   (cropEl as any)._handles = cropHandles;
 
-  const forward = (ev: PointerEvent | MouseEvent, dx = 0, dy = 0) => ({
-    clientX   : ev.clientX + dx,
-    clientY   : ev.clientY + dy,
-    button    : ev.button,
-    buttons   : 'buttons' in ev ? ev.buttons : 0,
-    ctrlKey   : ev.ctrlKey,
+  const forward = (
+    ev: PointerEvent | MouseEvent,
+    dx = 0,
+    dy = 0,
+  ) => ({
+      clientX   : ev.clientX + dx,
+      clientY   : ev.clientY + dy,
+      button    : ev.button,
+      buttons   : 'buttons' in ev ? ev.buttons : 0,
+      ctrlKey   : ev.ctrlKey,
     shiftKey  : ev.shiftKey,
     altKey    : ev.altKey,
     metaKey   : ev.metaKey,
@@ -715,8 +724,13 @@ useEffect(() => {
     const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const scale = vt[0]
     const offset = PAD * scale
-    const dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
-    const dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+    const isRot = corner === 'mtr'
+    const dx = !isRot && corner?.includes('l') ? offset
+      : !isRot && corner?.includes('r') ? -offset
+      : 0
+    const dy = !isRot && corner?.includes('t') ? offset
+      : !isRot && corner?.includes('b') ? -offset
+      : 0
 
     const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
@@ -1085,8 +1099,12 @@ const drawOverlay = (
     h.bl.style.left = `${leftX}px`;  h.bl.style.top = `${botY}px`
     h.ml.style.left = `${leftX}px`;  h.ml.style.top = `${midY}px`
     h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
-    h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
-    h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+    h.mt.style.left  = `${midX}px`;   h.mt.style.top  = `${topY}px`
+    h.mb.style.left  = `${midX}px`;   h.mb.style.top  = `${botY}px`
+    if (h.rot) {
+      h.rot.style.left = `${midX}px`
+      h.rot.style.top  = `${topY - ROT_OFF}px`
+    }
   }
   return { left, top, width, height }
 }
@@ -1126,7 +1144,7 @@ const syncSel = () => {
       }
     }
     if (selEl._handles)
-      ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'none')
+      ['ml','mr','mt','mb','rot'].forEach(k => selEl._handles![k].style.display = 'none')
     if (cropEl && cropEl._handles)
       ['ml','mr','mt','mb'].forEach(k => cropEl._handles![k].style.display = 'none')
     selEl.style.display = 'block'
@@ -1155,8 +1173,8 @@ if (transformingRef.current) {
 
 /* ── stable branch: keep side-handles visible ──────── */
 if (selEl._handles) {
-  ['ml', 'mr', 'mt', 'mb'].forEach(k =>
-    selEl._handles![k].style.display = 'block',
+  ['ml', 'mr', 'mt', 'mb', 'rot'].forEach(k =>
+    selEl._handles![k].style.display = 'block'
   );
 }
 }
