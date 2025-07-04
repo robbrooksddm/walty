@@ -1138,8 +1138,8 @@ const syncSel = () => {
       selEl._object = frame
       selEl.classList.add('crop-window')
       if (cropEl) {
-        cropEl.style.display = 'block'
         drawOverlay(img, cropEl)
+        cropEl.style.display = 'block'
         cropEl._object = img
         cropEl.classList.remove('crop-window')
       }
@@ -1148,8 +1148,8 @@ const syncSel = () => {
       selEl._object = img
       selEl.classList.remove('crop-window')
       if (cropEl) {
-        cropEl.style.display = 'block'
         drawOverlay(frame, cropEl)
+        cropEl.style.display = 'block'
         cropEl._object = frame
         cropEl.classList.add('crop-window')
       }
