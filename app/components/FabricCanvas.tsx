@@ -1325,12 +1325,15 @@ fc.on('object:moving', () => {
   .on('object:modified', () => {
     if (transformingRef.current) {
       transformingRef.current = false
-      setActionPos(null)
-      if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
-      actionTimerRef.current = window.setTimeout(() => {
-        requestAnimationFrame(() => requestAnimationFrame(syncSel))
-      }, 250)
     }
+    setActionPos(null)
+    if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+    // Keep the outline aligned by syncing right away and again
+    // after Fabric settles the final bounding box.
+    syncSel()
+    actionTimerRef.current = window.setTimeout(() => {
+      requestAnimationFrame(() => requestAnimationFrame(syncSel))
+    }, 250)
     hideRotBubble()
   })
   .on('mouse:up', () => {
