@@ -500,6 +500,9 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const [actionPos, setActionPos] = useState<{ x: number; y: number } | null>(null)
   const actionTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const selFrameRef    = useRef<number | null>(null)
+  const ghostFrameRef  = useRef<number | null>(null)
+  const selFrameRef    = useRef<number | null>(null)
 
 
 
@@ -843,6 +846,9 @@ if (container) {
   const crop = new CropTool(fc, SCALE, SEL_COLOR, state => {
     croppingRef.current = state
     isolateCrop(state)
+    hideSel()
+    hideHover()
+    hoverHL.visible = false
     onCroppingChange?.(state)
   })
   cropToolRef.current = crop;
@@ -1161,6 +1167,17 @@ if (selEl._handles) {
 }
 }
 
+const queueSyncSel = () => {
+  if (selFrameRef.current) cancelAnimationFrame(selFrameRef.current)
+  selFrameRef.current = requestAnimationFrame(() => {
+    selFrameRef.current = requestAnimationFrame(() => {
+      fc.calcOffset()
+      syncSel()
+      selFrameRef.current = null
+    })
+  })
+}
+
 const syncHover = () => {
   if (!hoverDomRef.current || !canvasRef.current) return
   const obj = (hoverDomRef.current as any)._object as fabric.Object | null
@@ -1188,25 +1205,37 @@ const hideSizeBubble = () => {
   if (bubble) bubble.style.display = 'none'
 }
 
+const hideSel = () => {
+  if (!selDomRef.current) return
+  selDomRef.current.style.display = 'none'
+  ;(selDomRef.current as any)._object = null
+}
+
+const hideHover = () => {
+  if (!hoverDomRef.current) return
+  hoverDomRef.current.style.display = 'none'
+  ;(hoverDomRef.current as any)._object = null
+}
+
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
+  hideHover()
   selDomRef.current && (selDomRef.current.style.display = 'block')
   if (croppingRef.current && cropDomRef.current) {
     cropDomRef.current.style.display = 'block'
   }
-  syncSel()
-  requestAnimationFrame(syncSel)
+  queueSyncSel()
   scrollHandler = () => {
     fc.calcOffset()
-    syncSel()
+    queueSyncSel()
     syncHover()
   }
   window.addEventListener('scroll', scrollHandler, { passive: true, capture: true })
   window.addEventListener('resize', scrollHandler)
   containerRef.current?.addEventListener('scroll', scrollHandler, { passive: true, capture: true })
 })
-  .on('selection:updated', syncSel)
+  .on('selection:updated', queueSyncSel)
 .on('selection:cleared', () => {
   if (scrollHandler) {
     window.removeEventListener('scroll', scrollHandler);
@@ -1214,6 +1243,7 @@ fc.on('selection:created', () => {
     containerRef.current?.removeEventListener('scroll', scrollHandler);
     scrollHandler = null;
   }
+  if (selFrameRef.current) cancelAnimationFrame(selFrameRef.current)
   selDomRef.current  && (selDomRef.current.style.display  = 'none');
   cropDomRef.current && (cropDomRef.current.style.display = 'none');
   setActionPos(null);     // from quick-action branch
@@ -1224,47 +1254,54 @@ fc.on('selection:created', () => {
 /* also hide hover during any transform of the active object */
 const handleAfterRender = () => {
   fc.calcOffset()
-  syncSel()
+  queueSyncSel()
   syncHover()
 }
 
 fc.on('object:moving', () => {
   hoverHL.visible         = false;
+  hideHover();
   transformingRef.current = true;
   if (actionTimerRef.current) {
     clearTimeout(actionTimerRef.current);
     actionTimerRef.current = null;
   }
+  if (selFrameRef.current) cancelAnimationFrame(selFrameRef.current)
   syncSel();
   hideSizeBubble();                  // moving never shows the bubble
 })
 
 .on('object:scaling', e => {
   hoverHL.visible         = false;
+  hideHover();
   transformingRef.current = true;
   if (actionTimerRef.current) {
     clearTimeout(actionTimerRef.current);
     actionTimerRef.current = null;
   }
+  if (selFrameRef.current) cancelAnimationFrame(selFrameRef.current)
   syncSel();
   showSizeBubble(e.target as fabric.Object, e);   // live size read-out
 })
 
 .on('object:rotating', () => {
   hoverHL.visible         = false;
+  hideHover();
   transformingRef.current = true;
   if (actionTimerRef.current) {
     clearTimeout(actionTimerRef.current);
     actionTimerRef.current = null;
   }
+  if (selFrameRef.current) cancelAnimationFrame(selFrameRef.current)
   syncSel();
   hideSizeBubble();                  // hide during rotation
 })
 
 .on('object:scaled', e => {
   hoverHL.visible = false;
+  hideHover();
   hideSizeBubble();
-  requestAnimationFrame(() => requestAnimationFrame(syncSel));
+  queueSyncSel();
 })
 
   .on('object:modified', () => {
@@ -1272,9 +1309,9 @@ fc.on('object:moving', () => {
       transformingRef.current = false
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
-      actionTimerRef.current = window.setTimeout(() => {
-        requestAnimationFrame(() => requestAnimationFrame(syncSel))
-      }, 250)
+      hideSel()
+      hideHover()
+      actionTimerRef.current = window.setTimeout(queueSyncSel, 250)
     }
   })
   .on('mouse:up', () => {
@@ -1282,7 +1319,9 @@ fc.on('object:moving', () => {
       transformingRef.current = false
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
-      actionTimerRef.current = window.setTimeout(syncSel, 250)
+      hideSel()
+      hideHover()
+      actionTimerRef.current = window.setTimeout(queueSyncSel, 250)
     }
   })
   .on('after:render',    handleAfterRender)
@@ -1694,8 +1733,14 @@ img.on('mouseup', () => {
 
 doSync = () =>
   canvasRef.current && ghost && (() => {
-    fc.calcOffset()
-    syncGhost(img, ghost, canvasRef.current)
+    if (ghostFrameRef.current) cancelAnimationFrame(ghostFrameRef.current)
+    ghostFrameRef.current = requestAnimationFrame(() => {
+      ghostFrameRef.current = requestAnimationFrame(() => {
+        fc.calcOffset()
+        syncGhost(img, ghost, canvasRef.current!)
+        ghostFrameRef.current = null
+      })
+    })
   })()
             doSync()
             img.on('moving',   doSync)
@@ -1721,6 +1766,7 @@ doSync = () =>
               window.removeEventListener('scroll', doSync)
               window.removeEventListener('resize', doSync)
               fc.off('after:render', doSync)
+              if (ghostFrameRef.current) cancelAnimationFrame(ghostFrameRef.current)
               ghost?.remove()
             })
           }
