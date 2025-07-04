@@ -684,7 +684,8 @@ useEffect(() => {
     const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const scale = vt[0]
     const offset = PAD * scale
-    const base = corner === 'rot' ? 'mb' : corner
+    // forward rotation handle events to Fabric's built‑in `mtr` control
+    const base = corner === 'rot' ? 'mtr' : corner
     const dx = base?.includes('l') ? offset : base?.includes('r') ? -offset : 0
     const dy = base?.includes('t') ? offset : base?.includes('b') ? -offset : 0
 
