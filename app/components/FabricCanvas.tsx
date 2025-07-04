@@ -1128,6 +1128,8 @@ const syncSel = () => {
 
   const tool = cropToolRef.current as any
   if (croppingRef.current && tool?.isActive && tool.img && tool.frame) {
+    tool.img.setCoords()
+    tool.frame.setCoords()
     const img   = tool.img as fabric.Object
     const frame = tool.frame as fabric.Object
     // whichever is active uses selEl; the other uses cropEl
@@ -1168,6 +1170,8 @@ const syncSel = () => {
 
 cropEl && (cropEl.style.display = 'none', cropEl._object = null);
 if (!obj) return;
+
+  obj.setCoords()
 
 const box = drawOverlay(obj, selEl);   // redraw green outline
 selEl._object = obj;
