@@ -115,7 +115,6 @@ let PAGE_H = 0
 let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
 let PAD = 0
-const ROT_OFF = 40
 const SEL_BORDER = 2
 
 recompute()
@@ -1059,6 +1058,7 @@ const drawOverlay = (
   obj: fabric.Object,
   el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
 ) => {
+  obj.setCoords()
   const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
   const vt   = fc.viewportTransform || [1,0,0,1,0,0]
@@ -1093,8 +1093,13 @@ const drawOverlay = (
     h.mt.style.left  = `${midX}px`;   h.mt.style.top  = `${topY}px`
     h.mb.style.left  = `${midX}px`;   h.mb.style.top  = `${botY}px`
     if (h.rot) {
-      h.rot.style.left = `${midX}px`
-      h.rot.style.top  = `${topY - ROT_OFF}px`
+      const mtr = (obj as any).oCoords?.mtr as { x: number; y: number } | undefined
+      if (mtr) {
+        const rx = Math.round((mtr.x - (box.left - PAD)) * scale)
+        const ry = Math.round((mtr.y - (box.top  - PAD)) * scale)
+        h.rot.style.left = `${rx}px`
+        h.rot.style.top  = `${ry}px`
+      }
     }
   }
   return { left, top, width, height }
