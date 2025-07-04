@@ -32,6 +32,20 @@ import WaltyEditorHeader                from './WaltyEditorHeader'
 import type { TemplatePage }            from './FabricCanvas'
 import type { TemplateProduct }         from '@/app/library/getTemplatePages'
 
+/* mirror pointer event properties so they can be re-dispatched */
+const mirrorPointer = (ev: PointerEvent | MouseEvent) => ({
+  clientX   : ev.clientX,
+  clientY   : ev.clientY,
+  button    : ev.button,
+  buttons   : 'buttons' in ev ? (ev as any).buttons : 0,
+  ctrlKey   : ev.ctrlKey,
+  shiftKey  : ev.shiftKey,
+  altKey    : ev.altKey,
+  metaKey   : ev.metaKey,
+  bubbles   : true,
+  cancelable: true,
+})
+
 
 /* ---------- helpers ------------------------------------------------ */
 type Section = 'front' | 'inside' | 'back'
@@ -855,11 +869,31 @@ const handleProofAll = async () => {
             className={`flex-1 flex justify-center items-start bg-[--walty-cream] pt-6 gap-6 ${
               isCropMode ? 'overflow-visible' : 'overflow-auto'
             }`}
-            onMouseDown={e => {
-              if (e.target === e.currentTarget && activeFc) {
-                activeFc.discardActiveObject();
-                activeFc.requestRenderAll();
+            onPointerDown={e => {
+              const fc = activeFc
+              if (!fc) return
+
+              if (e.target === e.currentTarget) {
+                fc.discardActiveObject()
+                fc.requestRenderAll()
               }
+
+              const el = (fc as any).upperCanvasEl as HTMLCanvasElement | undefined
+              if (!el) return
+
+              const down = new MouseEvent('mousedown', mirrorPointer(e.nativeEvent))
+              el.dispatchEvent(down)
+
+              const move = (ev: PointerEvent) =>
+                el.dispatchEvent(new MouseEvent('mousemove', mirrorPointer(ev)))
+              const up = (ev: PointerEvent) => {
+                el.dispatchEvent(new MouseEvent('mouseup', mirrorPointer(ev)))
+                document.removeEventListener('pointermove', move)
+                document.removeEventListener('pointerup', up)
+              }
+              document.addEventListener('pointermove', move)
+              document.addEventListener('pointerup', up)
+              e.preventDefault()
             }}
           >
             
