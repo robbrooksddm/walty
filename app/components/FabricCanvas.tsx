@@ -679,6 +679,12 @@ useEffect(() => {
   selEl.appendChild(sizeBubble);
   (selEl as any)._sizeBubble = sizeBubble;
 
+  const rotateBubble = document.createElement('div');
+  rotateBubble.className = 'rotate-bubble';
+  rotateBubble.style.display = 'none';
+  selEl.appendChild(rotateBubble);
+  (selEl as any)._rotateBubble = rotateBubble;
+
   const cropHandles: Record<string, HTMLDivElement> = {};
   cropCorners.forEach(c => {
     const h = document.createElement('div');
@@ -1211,6 +1217,26 @@ const hideSizeBubble = () => {
   if (bubble) bubble.style.display = 'none'
 }
 
+  const showRotateBubble = (obj: fabric.Object | undefined, ev: fabric.IEvent | undefined) => {
+    if (!obj || !selDomRef.current || !ev) return
+    const bubble = (selDomRef.current as any)._rotateBubble as HTMLDivElement | undefined
+    if (!bubble) return
+    bubble.textContent = `${Math.round(obj.angle || 0)}\u00B0`
+    const rect = selDomRef.current.getBoundingClientRect()
+    const e = ev.e as MouseEvent | PointerEvent | undefined
+    const x = e?.clientX ?? 0
+    const y = e?.clientY ?? 0
+    bubble.style.left = `${x - rect.left + 30}px`
+    bubble.style.top  = `${y - rect.top + 30}px`
+    bubble.style.display = 'block'
+  }
+
+const hideRotateBubble = () => {
+  if (!selDomRef.current) return
+  const bubble = (selDomRef.current as any)._rotateBubble as HTMLDivElement | undefined
+  if (bubble) bubble.style.display = 'none'
+}
+
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
@@ -1241,6 +1267,7 @@ fc.on('selection:created', () => {
   cropDomRef.current && (cropDomRef.current.style.display = 'none');
   setActionPos(null);     // from quick-action branch
   hideSizeBubble();       // from stable branch
+  hideRotateBubble();
 })
 
 
@@ -1260,6 +1287,7 @@ fc.on('object:moving', () => {
   }
   syncSel();
   hideSizeBubble();                  // moving never shows the bubble
+  hideRotateBubble();
 })
 
 .on('object:scaling', e => {
@@ -1271,9 +1299,10 @@ fc.on('object:moving', () => {
   }
   syncSel();
   showSizeBubble(e.target as fabric.Object, e);   // live size read-out
+  hideRotateBubble();
 })
 
-.on('object:rotating', () => {
+.on('object:rotating', e => {
   hoverHL.visible         = false;
   transformingRef.current = true;
   if (actionTimerRef.current) {
@@ -1282,11 +1311,13 @@ fc.on('object:moving', () => {
   }
   syncSel();
   hideSizeBubble();                  // hide during rotation
+  showRotateBubble(e.target as fabric.Object, e);
 })
 
 .on('object:scaled', e => {
   hoverHL.visible = false;
   hideSizeBubble();
+  hideRotateBubble();
   requestAnimationFrame(() => requestAnimationFrame(syncSel));
 })
 
@@ -1299,6 +1330,7 @@ fc.on('object:moving', () => {
         requestAnimationFrame(() => requestAnimationFrame(syncSel))
       }, 250)
     }
+    hideRotateBubble()
   })
   .on('mouse:up', () => {
     if (transformingRef.current) {
@@ -1307,6 +1339,7 @@ fc.on('object:moving', () => {
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
       actionTimerRef.current = window.setTimeout(syncSel, 250)
     }
+    hideRotateBubble()
   })
   .on('after:render',    handleAfterRender)
 
