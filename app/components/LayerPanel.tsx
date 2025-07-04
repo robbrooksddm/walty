@@ -37,6 +37,9 @@ function Row({ id, idx }: { id: string; idx: number }) {
     setNodeRef,
     transform,
     transition,
+    isOver,
+    activeIndex,
+    overIndex,
   } = useSortable({ id });
 
   const style: React.CSSProperties = {
@@ -44,15 +47,23 @@ function Row({ id, idx }: { id: string; idx: number }) {
     transition,
   };
 
+  const showBefore = isOver && activeIndex > overIndex;
+  const showAfter = isOver && activeIndex < overIndex;
+
   if (!layer) return null;
 
   return (
     <li
       ref={setNodeRef}
       style={style}
-      className="group flex h-14 items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 text-sm hover:bg-walty-orange/10"
-
+      className="group relative flex h-14 items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 text-sm hover:bg-walty-orange/10"
     >
+      {showBefore && (
+        <div className="absolute inset-x-0 top-0 h-0.5 bg-walty-teal" />
+      )}
+      {showAfter && (
+        <div className="absolute inset-x-0 bottom-0 h-0.5 bg-walty-teal" />
+      )}
       {/* drag handle */}
       <button
         {...listeners}
@@ -64,7 +75,7 @@ function Row({ id, idx }: { id: string; idx: number }) {
 
       {/* name / preview */}
       <span
-        className="flex-1 truncate"
+        className="flex-1 truncate text-center"
         style={
           layer.type === 'text'
             ? {
@@ -73,7 +84,7 @@ function Row({ id, idx }: { id: string; idx: number }) {
                 fontStyle: layer.fontStyle as React.CSSProperties['fontStyle'],
                 textDecoration: layer.underline ? 'underline' : undefined,
                 color: layer.fill,
-                textAlign: layer.textAlign as React.CSSProperties['textAlign'],
+                // center thumbnail preview regardless of actual text alignment
               }
             : undefined
         }
@@ -89,7 +100,7 @@ function Row({ id, idx }: { id: string; idx: number }) {
             alt="layer"
             width={48}
             height={48}
-            className="inline-block h-12 w-12 rounded object-cover"
+            className="mx-auto inline-block h-12 w-12 rounded object-cover"
           />
         )}
       </span>
