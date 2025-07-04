@@ -855,10 +855,39 @@ const handleProofAll = async () => {
             className={`flex-1 flex justify-center items-start bg-[--walty-cream] pt-6 gap-6 ${
               isCropMode ? 'overflow-visible' : 'overflow-auto'
             }`}
-            onMouseDown={e => {
+            onPointerDown={e => {
               if (e.target === e.currentTarget && activeFc) {
-                activeFc.discardActiveObject();
-                activeFc.requestRenderAll();
+                activeFc.discardActiveObject()
+                activeFc.requestRenderAll()
+
+                const forward = (ev: PointerEvent) => ({
+                  clientX   : ev.clientX,
+                  clientY   : ev.clientY,
+                  button    : ev.button,
+                  buttons   : ev.buttons,
+                  ctrlKey   : ev.ctrlKey,
+                  shiftKey  : ev.shiftKey,
+                  altKey    : ev.altKey,
+                  metaKey   : ev.metaKey,
+                  bubbles   : true,
+                  cancelable: true,
+                })
+                const down = new MouseEvent('mousedown', forward(e.nativeEvent))
+                activeFc.upperCanvasEl.dispatchEvent(down)
+                const move = (ev: PointerEvent) =>
+                  activeFc.upperCanvasEl.dispatchEvent(
+                    new MouseEvent('mousemove', forward(ev)),
+                  )
+                const up = (ev: PointerEvent) => {
+                  activeFc.upperCanvasEl.dispatchEvent(
+                    new MouseEvent('mouseup', forward(ev)),
+                  )
+                  document.removeEventListener('pointermove', move)
+                  document.removeEventListener('pointerup', up)
+                }
+                document.addEventListener('pointermove', move)
+                document.addEventListener('pointerup', up)
+                e.preventDefault()
               }
             }}
           >
