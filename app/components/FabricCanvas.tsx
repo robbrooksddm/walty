@@ -685,8 +685,9 @@ useEffect(() => {
     const scale = vt[0]
     const offset = PAD * scale
     const base = corner === 'rot' ? 'mb' : corner
-    const dx = base?.includes('l') ? offset : base?.includes('r') ? -offset : 0
-    const dy = base?.includes('t') ? offset : base?.includes('b') ? -offset : 0
+    let dx = base?.includes('l') ? offset : base?.includes('r') ? -offset : 0
+    let dy = base?.includes('t') ? offset : base?.includes('b') ? -offset : 0
+    if (corner === 'rot') dy -= ROT_HANDLE_OFFSET * scale
 
     const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
