@@ -1190,6 +1190,11 @@ const hideSizeBubble = () => {
 
 fc.on('selection:created', () => {
   hoverHL.visible = false
+  // Hide any hover outline when an object becomes selected
+  if (hoverDomRef.current) {
+    hoverDomRef.current.style.display = 'none'
+    ;(hoverDomRef.current as any)._object = null
+  }
   fc.requestRenderAll()
   selDomRef.current && (selDomRef.current.style.display = 'block')
   if (croppingRef.current && cropDomRef.current) {
@@ -1214,6 +1219,10 @@ fc.on('selection:created', () => {
     containerRef.current?.removeEventListener('scroll', scrollHandler);
     scrollHandler = null;
   }
+  if (hoverDomRef.current) {
+    hoverDomRef.current.style.display = 'none'
+    ;(hoverDomRef.current as any)._object = null
+  }
   selDomRef.current  && (selDomRef.current.style.display  = 'none');
   cropDomRef.current && (cropDomRef.current.style.display = 'none');
   setActionPos(null);     // from quick-action branch
@@ -1230,6 +1239,11 @@ const handleAfterRender = () => {
 
 fc.on('object:moving', () => {
   hoverHL.visible         = false;
+  // Ensure any hover overlay is hidden while dragging
+  if (hoverDomRef.current) {
+    hoverDomRef.current.style.display = 'none'
+    ;(hoverDomRef.current as any)._object = null
+  }
   transformingRef.current = true;
   if (actionTimerRef.current) {
     clearTimeout(actionTimerRef.current);
@@ -1241,6 +1255,11 @@ fc.on('object:moving', () => {
 
 .on('object:scaling', e => {
   hoverHL.visible         = false;
+  // Hide hover overlay during scaling
+  if (hoverDomRef.current) {
+    hoverDomRef.current.style.display = 'none'
+    ;(hoverDomRef.current as any)._object = null
+  }
   transformingRef.current = true;
   if (actionTimerRef.current) {
     clearTimeout(actionTimerRef.current);
@@ -1252,6 +1271,11 @@ fc.on('object:moving', () => {
 
 .on('object:rotating', () => {
   hoverHL.visible         = false;
+  // Hide hover overlay during rotation
+  if (hoverDomRef.current) {
+    hoverDomRef.current.style.display = 'none'
+    ;(hoverDomRef.current as any)._object = null
+  }
   transformingRef.current = true;
   if (actionTimerRef.current) {
     clearTimeout(actionTimerRef.current);
@@ -1263,6 +1287,10 @@ fc.on('object:moving', () => {
 
 .on('object:scaled', e => {
   hoverHL.visible = false;
+  if (hoverDomRef.current) {
+    hoverDomRef.current.style.display = 'none'
+    ;(hoverDomRef.current as any)._object = null
+  }
   hideSizeBubble();
   requestAnimationFrame(() => requestAnimationFrame(syncSel));
 })
@@ -1270,6 +1298,10 @@ fc.on('object:moving', () => {
   .on('object:modified', () => {
     if (transformingRef.current) {
       transformingRef.current = false
+      if (hoverDomRef.current) {
+        hoverDomRef.current.style.display = 'none'
+        ;(hoverDomRef.current as any)._object = null
+      }
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
       actionTimerRef.current = window.setTimeout(() => {
@@ -1280,6 +1312,10 @@ fc.on('object:moving', () => {
   .on('mouse:up', () => {
     if (transformingRef.current) {
       transformingRef.current = false
+      if (hoverDomRef.current) {
+        hoverDomRef.current.style.display = 'none'
+        ;(hoverDomRef.current as any)._object = null
+      }
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
       actionTimerRef.current = window.setTimeout(syncSel, 250)
