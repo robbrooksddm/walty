@@ -638,7 +638,7 @@ const handleProofAll = async () => {
   const [sliderPos, setSliderPos] = useState(0)
   const zoomRef = useRef(1)
   const targetZoom = useRef(1)
-  const animRef = useRef<number>()
+  const animRef = useRef<number | null>(null)
   const zoomPointRef = useRef<{ x: number; y: number } | null>(null)
 
   const sliderToZoom = (pos: number) => {
@@ -658,7 +658,7 @@ const handleProofAll = async () => {
       zoomRef.current = target
       setZoom(target)
       canvasMap.forEach(fc => fc?.requestRenderAll())
-      animRef.current = undefined
+      animRef.current = null
       return
     }
     const next = current + (target - current) * 0.15
@@ -723,7 +723,7 @@ const handleProofAll = async () => {
       if (e.ctrlKey || e.metaKey || e.altKey) {
         const fc = activeFc
         if (fc) {
-          const rect = fc.upperCanvasEl.getBoundingClientRect()
+          const rect = (fc as any).upperCanvasEl.getBoundingClientRect()
           zoomPointRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
         }
         const delta = e.deltaMode === 1 ? e.deltaY * 20 : e.deltaY

@@ -786,7 +786,7 @@ if (container) {
       if (tool?.frame) allowed.add(tool.frame)
       fc.getObjects().forEach(o => {
         if (allowed.has(o)) return
-        map.set(o, { sel: o.selectable, evt: o.evented })
+        map.set(o, { sel: o.selectable ?? false, evt: o.evented ?? false })
         o.selectable = false
         o.evented = false
       })
@@ -1028,8 +1028,8 @@ const drawOverlay = (
   const c = containerRef.current
   const scrollX = (c?.scrollLeft ?? 0)
   const scrollY = (c?.scrollTop  ?? 0)
-  const left   = window.scrollX + scrollX + rect.left + vt[4] + (obj.left - PAD) * scale
-  const top    = window.scrollY + scrollY + rect.top  + vt[5] + (obj.top  - PAD) * scale
+  const left   = window.scrollX + scrollX + rect.left + vt[4] + ((obj.left ?? 0) - PAD) * scale
+  const top    = window.scrollY + scrollY + rect.top  + vt[5] + ((obj.top  ?? 0) - PAD) * scale
   const width  = (boxW + PAD * 2) * scale
   const height = (boxH + PAD * 2) * scale
   el.style.left   = `${left}px`
@@ -1583,12 +1583,12 @@ doSync = () =>
     syncGhost(img, ghost, canvasRef.current)
   })()
             doSync()
-            img.on('moving',   doSync)
-               .on('scaling',  doSync)
-               .on('rotating', doSync)
-               window.addEventListener('scroll', doSync, { passive: true, capture: true })
-               window.addEventListener('resize', doSync)
-               fc.on('after:render', doSync)
+             img.on('moving',   doSync)
+                .on('scaling',  doSync)
+                .on('rotating', doSync)
+                window.addEventListener('scroll', doSync!, { passive: true, capture: true })
+                window.addEventListener('resize', doSync!)
+                fc.on('after:render', doSync)
                
 
             /* hide overlay when actively selected */
@@ -1602,12 +1602,12 @@ doSync = () =>
               ghost!.style.display = 'none'
             })
 
-            img.on('removed', () => {
-              window.removeEventListener('scroll', doSync)
-              window.removeEventListener('resize', doSync)
-              fc.off('after:render', doSync)
-              ghost?.remove()
-            })
+              img.on('removed', () => {
+                window.removeEventListener('scroll', doSync!)
+                window.removeEventListener('resize', doSync!)
+                fc.off('after:render', doSync)
+                ghost?.remove()
+              })
           }
 
           /* keep z-order */
