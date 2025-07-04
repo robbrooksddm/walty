@@ -143,11 +143,11 @@ html {
 
   /* ── NEW from stable-3-july-2025 ───────────────────────────── */
   .size-bubble {
-    @apply absolute text-white text-xs px-2 py-1 rounded-md bg-neutral-800/90 whitespace-nowrap pointer-events-none;
+    @apply fixed text-white text-xs px-2 py-1 rounded-md bg-neutral-800/90 whitespace-nowrap pointer-events-none;
   }
 
   .rot-bubble {
-    @apply absolute text-white text-xs px-2 py-1 rounded-md bg-neutral-800/90 whitespace-nowrap pointer-events-none;
+    @apply fixed text-white text-xs px-2 py-1 rounded-md bg-neutral-800/90 whitespace-nowrap pointer-events-none;
   }
 
   /* ── NEW from stable-4-july-2025 ───────────────────────────── */
