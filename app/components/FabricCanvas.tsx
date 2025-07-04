@@ -1286,7 +1286,7 @@ fc.on('object:moving', () => {
     clearTimeout(actionTimerRef.current);
     actionTimerRef.current = null;
   }
-  syncSel();
+  requestAnimationFrame(syncSel);
   hideSizeBubble();                  // moving never shows the bubble
   hideRotBubble();
 })
@@ -1298,7 +1298,7 @@ fc.on('object:moving', () => {
     clearTimeout(actionTimerRef.current);
     actionTimerRef.current = null;
   }
-  syncSel();
+  requestAnimationFrame(syncSel);
   showSizeBubble(e.target as fabric.Object, e);   // live size read-out
   hideRotBubble();
 })
@@ -1310,7 +1310,7 @@ fc.on('object:moving', () => {
     clearTimeout(actionTimerRef.current);
     actionTimerRef.current = null;
   }
-  syncSel();
+  requestAnimationFrame(syncSel);
   hideSizeBubble();                  // hide during rotation
   showRotBubble(e.target as fabric.Object, e);
 })
@@ -1319,7 +1319,7 @@ fc.on('object:moving', () => {
   hoverHL.visible = false;
   hideSizeBubble();
   hideRotBubble();
-  requestAnimationFrame(() => requestAnimationFrame(syncSel));
+  requestAnimationFrame(syncSel);
 })
 
   .on('object:modified', () => {
@@ -1328,9 +1328,10 @@ fc.on('object:moving', () => {
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
       actionTimerRef.current = window.setTimeout(() => {
-        requestAnimationFrame(() => requestAnimationFrame(syncSel))
+        requestAnimationFrame(syncSel)
       }, 250)
     }
+    requestAnimationFrame(syncSel)
     hideRotBubble()
   })
   .on('mouse:up', () => {
@@ -1342,6 +1343,7 @@ fc.on('object:moving', () => {
     }
     hideSizeBubble()
     hideRotBubble()
+    requestAnimationFrame(syncSel)
   })
   .on('after:render',    handleAfterRender)
 
