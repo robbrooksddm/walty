@@ -23,12 +23,12 @@ module.exports = {
       /* ——— Fonts (match CSS vars set by next/font) ——— */
       fontFamily: {
         // generic
-        sans:    ["var(--font-inter)", "Inter", "ui-sans-serif", "system-ui"],
-        display: ["var(--font-domine)", "Domine", "serif"],
+        sans:    ["var(--font-ambit)", "AmbitRegular", "ui-sans-serif", "system-ui"],
+        display: ["var(--font-recoleta)", "Recoleta", "serif"],
         serif:   ["var(--font-recoleta)", "ui-serif", "serif"],
 
-        // handy shortcuts — use `font-recoleta` or `font-domine` directly
-        domine:   ["var(--font-domine)"],
+        // handy shortcuts — use `font-recoleta` or `font-ambit` directly
+        ambit:    ["var(--font-ambit)"],
         recoleta: ["var(--font-recoleta)"],
       },
 

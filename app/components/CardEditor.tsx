@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useLayoutEffect } from 'react'
+import { useEffect, useRef, useState, useLayoutEffect, useCallback } from 'react'
 import { fabric }                       from 'fabric'
 
 import { useEditor, setEditorSpec }     from './EditorStore'
@@ -159,12 +159,11 @@ export default function CardEditor({
   const redo = useEditor(s => s.redo)
 
 
-  /* 3 ─ visible section ------------------------------------------ */
-  const [section, setSection] = useState<Section>('front')
-  const activeIdx: PageIdx =
-    section === 'front'  ? 0 :
-    section === 'inside' ? 1 :
-    3                                                        // back
+  /* 3 ─ page selection ------------------------------------------ */
+  const [activeIdx, setActiveIdx] = useState<PageIdx>(0)
+  const section: Section =
+    activeIdx === 0 ? 'front' :
+    activeIdx === 3 ? 'back'  : 'inside'
   useEffect(() => { setActive(activeIdx) }, [activeIdx, setActive])
 
   /* 4 ─ Fabric canvases ------------------------------------------ */
@@ -173,6 +172,17 @@ export default function CardEditor({
   const onReady = (idx: number, fc: fabric.Canvas | null) =>
     setCanvasMap(list => { const next = [...list]; next[idx] = fc; return next })
   const activeFc = canvasMap[activeIdx]
+
+  /* ensure any active selection is cleared before switching pages */
+  const gotoPage = (idx: PageIdx) => {
+    canvasMap.forEach(fc => {
+      if (fc) {
+        fc.discardActiveObject()
+        fc.requestRenderAll()
+      }
+    })
+    setActiveIdx(idx)
+  }
 
   const [thumbs, setThumbs] = useState<string[]>(['', '', '', ''])
 
@@ -544,6 +554,16 @@ const generateProofURL = async (variantHandle: string): Promise<string | null> =
   const product = products.find(p => p.variantHandle === variantHandle)
   const sku = product?.slug ?? variantHandle
   const showGuides = product?.showProofSafeArea ?? false
+  if (typeof document !== 'undefined') {
+    try {
+      if (document.fonts?.status !== 'loaded') {
+        await document.fonts.ready
+      }
+      await new Promise(r => requestAnimationFrame(() => r(null)))
+    } catch {
+      /* ignore */
+    }
+  }
   const { pages, pageImages } = collectProofData(showGuides)
   const blob = await fetchProofBlob(sku, `${variantHandle}.jpg`, pages, pageImages)
   if (!blob) return null
@@ -581,6 +601,17 @@ const handleProofAll = async () => {
   if (!products.length) return
   const JSZip = (await import('jszip')).default
 
+  if (typeof document !== 'undefined') {
+    try {
+      if (document.fonts?.status !== 'loaded') {
+        await document.fonts.ready
+      }
+      await new Promise(r => requestAnimationFrame(() => r(null)))
+    } catch {
+      /* ignore */
+    }
+  }
+
   const zip = new JSZip()
   for (const p of products) {
     const { pages, pageImages } = collectProofData(p.showProofSafeArea)
@@ -601,7 +632,69 @@ const handleProofAll = async () => {
 }
 
   /* 7 ─ coach-mark ----------------------------------------------- */
+  const containerRef = useRef<HTMLDivElement | null>(null)
   const [anchor, setAnchor] = useState<DOMRect | null>(null)
+  const [zoom, setZoom] = useState(1)
+  const [sliderPos, setSliderPos] = useState(0)
+  const zoomRef = useRef(1)
+  const targetZoom = useRef(1)
+  const animRef = useRef<number>()
+  const zoomPointRef = useRef<{ x: number; y: number } | null>(null)
+
+  const sliderToZoom = (pos: number) => {
+    const pct = pos < 0 ? 10 + (pos + 1) * 90 : 100 + pos * 400
+    return pct / 100
+  }
+
+  const zoomToSlider = (z: number) => {
+    const pct = z * 100
+    return pct < 100 ? (pct - 10) / 90 - 1 : (pct - 100) / 400
+  }
+
+  const animateZoom = () => {
+    const current = zoomRef.current
+    const target = targetZoom.current
+    if (Math.abs(current - target) < 0.001) {
+      zoomRef.current = target
+      setZoom(target)
+      canvasMap.forEach(fc => fc?.requestRenderAll())
+      animRef.current = undefined
+      return
+    }
+    const next = current + (target - current) * 0.15
+    zoomRef.current = next
+    const origin = zoomPointRef.current
+    canvasMap.forEach(fc => {
+      if (!fc) return
+      const base = fc.getZoom() / current
+      const point = origin
+        ? new fabric.Point(origin.x, origin.y)
+        : new fabric.Point(fc.getWidth() / 2, fc.getHeight() / 2)
+      fc.zoomToPoint(point, base * next)
+      fc.requestRenderAll()
+    })
+    setZoom(next)
+    animRef.current = requestAnimationFrame(animateZoom)
+  }
+
+  const setZoomSmooth = useCallback((val: number, origin: { x: number; y: number } | null) => {
+    zoomPointRef.current = origin
+    targetZoom.current = Math.min(Math.max(val, 0.1), 5)
+    setSliderPos(zoomToSlider(targetZoom.current))
+    if (!animRef.current) animRef.current = requestAnimationFrame(animateZoom)
+  }, [])
+
+  const handleZoomIn = useCallback(() => {
+    const fc = activeFc
+    const origin = fc ? { x: fc.getWidth() / 2, y: fc.getHeight() / 2 } : null
+    setZoomSmooth(targetZoom.current + 0.25, origin)
+  }, [activeFc, setZoomSmooth])
+
+  const handleZoomOut = useCallback(() => {
+    const fc = activeFc
+    const origin = fc ? { x: fc.getWidth() / 2, y: fc.getHeight() / 2 } : null
+    setZoomSmooth(targetZoom.current - 0.25, origin)
+  }, [activeFc, setZoomSmooth])
   const ran = useRef(false)
   useEffect(() => {
     if (ran.current || typeof window === 'undefined') return
@@ -623,6 +716,41 @@ const handleProofAll = async () => {
     ran.current = true
   }, [])
 
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const wheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) {
+        const fc = activeFc
+        if (fc) {
+          const rect = fc.upperCanvasEl.getBoundingClientRect()
+          zoomPointRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+        }
+        const delta = e.deltaMode === 1 ? e.deltaY * 20 : e.deltaY
+        setZoomSmooth(targetZoom.current * Math.pow(0.999, delta), zoomPointRef.current)
+        e.preventDefault()
+      }
+    }
+    const key = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === '+' || e.key === '=') {
+          handleZoomIn()
+          e.preventDefault()
+        }
+        if (e.key === '-') {
+          handleZoomOut()
+          e.preventDefault()
+        }
+      }
+    }
+    el.addEventListener('wheel', wheel, { passive: false })
+    window.addEventListener('keydown', key)
+    return () => {
+      el.removeEventListener('wheel', wheel)
+      window.removeEventListener('keydown', key)
+    }
+  }, [activeFc, handleZoomIn, handleZoomOut, setZoomSmooth])
+
   /* 8 ─ loader guard --------------------------------------------- */
   if (pages.length !== 4) {
     return (
@@ -632,12 +760,13 @@ const handleProofAll = async () => {
     )
   }
 
-  const boxWidth = previewW()
-  const box = `flex-shrink-0`
+  const boxWidth = previewW() * zoom
+  const box = `flex-shrink-0 relative`
 
   /* ---------------- UI ------------------------------------------ */
   return (
     <div
+      ref={containerRef}
       className="flex flex-col h-screen box-border"
       style={{ paddingTop: "calc(var(--walty-header-h) + var(--walty-toolbar-h))" }}
     >
@@ -653,12 +782,18 @@ const handleProofAll = async () => {
           onRedo={redo}
           onSave={handleSave}
           onProof={mode === 'staff' ? handleProofAll : undefined}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
           saving={saving}
           mode={mode}
         />
       )}
       
-      <div className="flex flex-1 relative bg-[--walty-cream] lg:max-w-6xl mx-auto">
+      <div
+        className={`flex flex-1 relative bg-[--walty-cream] mx-auto ${
+          isCropMode ? '' : 'lg:max-w-6xl'
+        }`}
+      >
         {/* global overlays */}
         <CoachMark
           anchor={anchor}
@@ -685,7 +820,12 @@ const handleProofAll = async () => {
         {!isCropMode && <LayerPanel />}
 
         {/* main */}
-        <div className="flex flex-col flex-1 min-h-0 mx-auto max-w-[868px]">
+        <div
+          className={`flex flex-col flex-1 min-h-0 mx-auto ${
+            isCropMode ? 'max-w-none' : 'max-w-[868px]'
+          }`}
+        >
+
           {!isCropMode && (activeType === 'text' ? (
             <TextToolbar
               canvas={activeFc}
@@ -711,51 +851,96 @@ const handleProofAll = async () => {
           ))}
 
                     {/* canvases */}
-          <div className="flex-1 flex justify-center items-start overflow-auto bg-[--walty-cream] pt-6 gap-6">
+          <div
+            className={`flex-1 flex justify-center items-start bg-[--walty-cream] pt-6 gap-6 ${
+              isCropMode ? 'overflow-visible' : 'overflow-auto'
+            }`}
+            onMouseDown={e => {
+              if (e.target === e.currentTarget && activeFc) {
+                activeFc.discardActiveObject();
+                activeFc.requestRenderAll();
+              }
+            }}
+          >
+            
             {/* front */}
-            <div className={section === 'front' ? box : 'hidden'} style={{ width: boxWidth }}>
+            <div
+              className={section === 'front' ? box : 'hidden'}
+              style={{ width: boxWidth }}
+              onClick={() => activeIdx !== 0 && gotoPage(0)}
+            >
               <FabricCanvas
                 pageIdx={0}
                 page={pages[0]}
                 onReady={fc => onReady(0, fc)}
                 isCropping={cropping[0]}
                 onCroppingChange={state => handleCroppingChange(0, state)}
+                zoom={zoom}
                 mode={mode}
               />
+              {activeIdx !== 0 && (
+                <div className="absolute inset-0 bg-black/30 cursor-pointer" />
+              )}
             </div>
             {/* inside */}
-            <div className={section === 'inside' ? 'flex gap-6' : 'hidden'}>
-              <div className={box} style={{ width: boxWidth }}>
+            <div className={section === 'inside' ? 'flex gap-0' : 'hidden'}>
+              <div
+                className={`${box} mr-[-1px]`}
+                style={{ width: boxWidth }}
+                onClick={() => activeIdx !== 1 && gotoPage(1)}
+              >
                 <FabricCanvas
                   pageIdx={1}
                   page={pages[1]}
                   onReady={fc => onReady(1, fc)}
                   isCropping={cropping[1]}
                   onCroppingChange={state => handleCroppingChange(1, state)}
+                  zoom={zoom}
                   mode={mode}
+                  className="rounded-r-none border-r-0"
                 />
+                {activeIdx !== 1 && (
+                  <div className="absolute inset-0 bg-black/30 cursor-pointer" />
+                )}
               </div>
-              <div className={box} style={{ width: boxWidth }}>
+              <div
+                className={box}
+                style={{ width: boxWidth }}
+                onClick={() => activeIdx !== 2 && gotoPage(2)}
+              >
                 <FabricCanvas
                   pageIdx={2}
                   page={pages[2]}
                   onReady={fc => onReady(2, fc)}
                   isCropping={cropping[2]}
                   onCroppingChange={state => handleCroppingChange(2, state)}
+                  zoom={zoom}
                   mode={mode}
+                  className="rounded-l-none border-l-0"
                 />
+                {activeIdx !== 2 && (
+                  <div className="absolute inset-0 bg-black/30 cursor-pointer" />
+                )}
               </div>
             </div>
             {/* back */}
-            <div className={section === 'back' ? box : 'hidden'} style={{ width: boxWidth }}>
+            <div
+              className={section === 'back' ? box : 'hidden'}
+              style={{ width: boxWidth }}
+              onClick={() => activeIdx !== 3 && gotoPage(3)}
+            >
               <FabricCanvas
                 pageIdx={3}
                 page={pages[3]}
                 onReady={fc => onReady(3, fc)}
                 isCropping={cropping[3]}
                 onCroppingChange={state => handleCroppingChange(3, state)}
+                zoom={zoom}
                 mode={mode}
               />
+              {activeIdx !== 3 && (
+                <div className="absolute inset-0 bg-black/30 cursor-pointer" />
+              )}
             </div>
           </div>
 
@@ -764,26 +949,18 @@ const handleProofAll = async () => {
             {(['FRONT', 'INNER-L', 'INNER-R', 'BACK'] as const).map((lbl, i) => (
               <button
                 key={lbl}
-                className={`thumb ${
-                  (section === 'front' && i === 0) ||
-                  (section === 'inside' && (i === 1 || i === 2)) ||
-                  (section === 'back' && i === 3)
-                    ? 'thumb-active'
-                    : ''
-                }`}
-                onClick={() =>
-                  setSection(i === 0 ? 'front' : i === 3 ? 'back' : 'inside')
-                }
+                className={`thumb ${activeIdx === i ? 'thumb-active' : ''}`}
+                onClick={() => activeIdx !== i && gotoPage(i as PageIdx)}
               >
                 {thumbs[i] ? (
                   <img
                     src={thumbs[i]}
                     alt={lbl}
                     className="h-full w-full object-cover"
-                  />
-                ) : (
-                  lbl
-                )}
+                />
+              ) : (
+                lbl
+              )}
               </button>
             ))}
           </div>
@@ -803,6 +980,23 @@ const handleProofAll = async () => {
         products={products}
         generateProofUrls={generateProofURLs}
       />
+      <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 bg-white shadow px-3 py-2 rounded">
+        <span className="text-xs">{Math.round(zoom * 100)}%</span>
+        <input
+          type="range"
+          min="-1"
+          max="1"
+          step="0.01"
+          value={sliderPos}
+          onChange={e => {
+            const val = parseFloat(e.currentTarget.value)
+            setSliderPos(val)
+            const origin = activeFc ? { x: activeFc.getWidth() / 2, y: activeFc.getHeight() / 2 } : null
+            setZoomSmooth(sliderToZoom(val), origin)
+          }}
+          className="h-2 w-32"
+        />
+      </div>
     </div>
   )
 }

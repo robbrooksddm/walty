@@ -17,6 +17,7 @@ import { SEL_COLOR } from '@/lib/fabricDefaults';
 import { CropTool } from '@/lib/CropTool'
 import { enableSnapGuides } from '@/lib/useSnapGuides'
 import ContextMenu from './ContextMenu'
+import QuickActionBar from './QuickActionBar'
 
 /* ---------- print spec ----------------------------------------- */
 export interface PrintSpec {
@@ -74,7 +75,7 @@ function recompute() {
   PREVIEW_W = currentPreview.previewWidthPx
   PREVIEW_H = currentPreview.previewHeightPx
   SCALE = PREVIEW_W / PAGE_W
-  PAD = 4 / SCALE
+  PAD = 0
   // compute safe-zone after scaling so rounding happens in preview pixels
   const safeXPreview = safeInsetXIn * currentSpec.dpi * SCALE
   const safeYPreview = safeInsetYIn * currentSpec.dpi * SCALE
@@ -113,7 +114,8 @@ let PAGE_W = 0
 let PAGE_H = 0
 let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
-let PAD = 4
+let PAD = 0
+const SEL_BORDER = 2
 
 recompute()
 
@@ -270,11 +272,15 @@ const syncGhost = (
 ) => {
   const canvasRect = canvas.getBoundingClientRect()
   const { left, top, width, height } = img.getBoundingRect()
-
-  ghost.style.left   = `${canvasRect.left + left   * SCALE}px`
-  ghost.style.top    = `${canvasRect.top  + top    * SCALE}px`
-  ghost.style.width  = `${width  * SCALE}px`
-  ghost.style.height = `${height * SCALE}px`
+  const fc   = img.canvas as fabric.Canvas | null
+  const vt   = fc?.viewportTransform || [SCALE, 0, 0, SCALE, 0, 0]
+  const scale = vt[0]
+  const posX  = window.scrollX + canvasRect.left + vt[4] + left * scale
+  const posY  = window.scrollY + canvasRect.top  + vt[5] + top  * scale
+  ghost.style.left   = `${posX}px`
+  ghost.style.top    = `${posY}px`
+  ghost.style.width  = `${width  * scale}px`
+  ghost.style.height = `${height * scale}px`
 }
 
 const getSrcUrl = (raw: Layer): string | undefined => {
@@ -423,15 +429,17 @@ const addGuides = (fc: fabric.Canvas, mode: Mode) => {
     ].forEach(l => fc.add(l))
   }
 
-  if (mode === 'staff') {
-    const bleed = mm(currentSpec.bleedIn * 25.4)
-    ;[
-      mk([bleed, bleed, PAGE_W - bleed, bleed], 'bleed', '#f87171'),
-      mk([PAGE_W - bleed, bleed, PAGE_W - bleed, PAGE_H - bleed], 'bleed', '#f87171'),
-      mk([PAGE_W - bleed, PAGE_H - bleed, bleed, PAGE_H - bleed], 'bleed', '#f87171'),
-      mk([bleed, PAGE_H - bleed, bleed, bleed], 'bleed', '#f87171'),
-    ].forEach(l => fc.add(l))
-  }
+  // Bleed guides were previously shown for staff users. They are now disabled
+  // so the red bleed lines are no longer visible in the editor.
+  // if (mode === 'staff') {
+  //   const bleed = mm(currentSpec.bleedIn * 25.4)
+  //   ;[
+  //     mk([bleed, bleed, PAGE_W - bleed, bleed], 'bleed', '#f87171'),
+  //     mk([PAGE_W - bleed, bleed, PAGE_W - bleed, PAGE_H - bleed], 'bleed', '#f87171'),
+  //     mk([PAGE_W - bleed, PAGE_H - bleed, bleed, PAGE_H - bleed], 'bleed', '#f87171'),
+  //     mk([bleed, PAGE_H - bleed, bleed, bleed], 'bleed', '#f87171'),
+  //   ].forEach(l => fc.add(l))
+  // }
 }
 
 /* ---------- white backdrop -------------------------------------- */
@@ -462,10 +470,12 @@ interface Props {
   onReady    : (fc: fabric.Canvas | null) => void
   isCropping?: boolean
   onCroppingChange?: (state: boolean) => void
+  zoom?: number
   mode?: Mode
+  className?: string
 }
 
-export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, mode = 'customer' }: Props) {
+export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = false, onCroppingChange, zoom = 1, mode = 'customer', className = '' }: Props) {
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const fcRef        = useRef<fabric.Canvas | null>(null)
   const maskRectsRef = useRef<fabric.Rect[]>([]);
@@ -473,10 +483,23 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const hydrating    = useRef(false)
   const isEditing    = useRef(false)
 
+  const hoverDomRef  = useRef<HTMLDivElement | null>(null)
+  const selDomRef    = useRef<HTMLDivElement | null>(null)
+  const cropDomRef   = useRef<HTMLDivElement | null>(null)
+
+  const containerRef = useRef<HTMLElement | null>(null)
+
   const cropToolRef = useRef<CropTool | null>(null)
   const croppingRef = useRef(false)
+  const transformingRef = useRef(false)
+
+  const savedInteractivityRef = useRef(
+    new WeakMap<fabric.Object, { sel: boolean; evt: boolean }>()
+  )
 
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
+  const [actionPos, setActionPos] = useState<{ x: number; y: number } | null>(null)
+  const actionTimerRef = useRef<NodeJS.Timeout | null>(null)
 
 
 
@@ -488,9 +511,6 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
     if (!fc) return
     const active = fc.getActiveObject() as fabric.Object | undefined
     switch (a) {
-      case 'add':
-        useEditor.getState().addText()
-        break
       case 'cut':
         if (active) {
           clip.json = [active.toJSON(PROPS)]
@@ -552,6 +572,46 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
           }, '')
         }
         break
+      case 'bring-forward':
+        if (active) {
+          fc.bringForward(active)
+          fc.requestRenderAll()
+          syncLayersFromCanvas(fc, pageIdx)
+        }
+        break
+      case 'send-backward':
+        if (active) {
+          fc.sendBackwards(active)
+          fc.requestRenderAll()
+          syncLayersFromCanvas(fc, pageIdx)
+        }
+        break
+      case 'bring-to-front':
+        if (active) {
+          fc.bringToFront(active)
+          fc.requestRenderAll()
+          syncLayersFromCanvas(fc, pageIdx)
+        }
+        break
+      case 'send-to-back':
+        if (active) {
+          fc.sendToBack(active)
+          fc.requestRenderAll()
+          syncLayersFromCanvas(fc, pageIdx)
+        }
+        break
+      case 'align':
+        if (active) {
+          const zoom = fc.viewportTransform?.[0] ?? 1
+          const fcH = (fc.getHeight() ?? 0) / zoom
+          const fcW = (fc.getWidth()  ?? 0) / zoom
+          const { width, height } = active.getBoundingRect(true, true)
+          active.set({ left: fcW / 2 - width / 2, top: fcH / 2 - height / 2 })
+          active.setCoords()
+          fc.requestRenderAll()
+          syncLayersFromCanvas(fc, pageIdx)
+        }
+        break
       case 'delete':
         if (active) {
           allObjs(active).forEach(o => fc.remove(o))
@@ -560,21 +620,6 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
         break
       case 'crop':
         document.dispatchEvent(new Event('start-crop'))
-        break
-      case 'lock':
-        if (active) {
-          const next = !(active as any).locked
-          ;(active as any).locked = next
-          active.set({
-            lockMovementX: next,
-            lockMovementY: next,
-            lockScalingX : next,
-            lockScalingY : next,
-            lockRotation : next,
-          })
-          fc.requestRenderAll()
-          updateLayer(pageIdx, (active as any).layerIdx, { locked: next })
-        }
         break
     }
     setMenuPos(null)
@@ -590,35 +635,214 @@ useEffect(() => {
   fc.backgroundColor = '#fff';
   fc.preserveObjectStacking = true;
 
+  /* create DOM overlays for hover & selection */
+  const hoverEl = document.createElement('div');
+  hoverEl.className = 'sel-overlay';
+  hoverEl.style.display = 'none';
+  document.body.appendChild(hoverEl);
+  hoverDomRef.current = hoverEl;
+  (hoverEl as any)._object = null;
+
+  const selEl = document.createElement('div');
+  selEl.className = 'sel-overlay interactive';
+  selEl.style.display = 'none';
+  document.body.appendChild(selEl);
+  selDomRef.current = selEl;
+  (selEl as any)._object = null;
+
+  const cropEl = document.createElement('div');
+  cropEl.className = 'sel-overlay interactive';
+  cropEl.style.display = 'none';
+  document.body.appendChild(cropEl);
+  cropDomRef.current = cropEl;
+  (cropEl as any)._object = null;
+
+  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const handleMap: Record<string, HTMLDivElement> = {};
+  corners.forEach(c => {
+    const h = document.createElement('div');
+    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
+    h.dataset.corner = c;
+    selEl.appendChild(h);
+    handleMap[c] = h;
+  });
+  (selEl as any)._handles = handleMap;
+
+  const sizeBubble = document.createElement('div');
+  sizeBubble.className = 'size-bubble';
+  sizeBubble.style.display = 'none';
+  selEl.appendChild(sizeBubble);
+  (selEl as any)._sizeBubble = sizeBubble;
+
+  const cropHandles: Record<string, HTMLDivElement> = {};
+  corners.forEach(c => {
+    const h = document.createElement('div');
+    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
+    h.dataset.corner = c;
+    cropEl.appendChild(h);
+    cropHandles[c] = h;
+  });
+  (cropEl as any)._handles = cropHandles;
+
+  const forward = (ev: PointerEvent | MouseEvent, dx = 0, dy = 0) => ({
+    clientX   : ev.clientX + dx,
+    clientY   : ev.clientY + dy,
+    button    : ev.button,
+    buttons   : 'buttons' in ev ? ev.buttons : 0,
+    ctrlKey   : ev.ctrlKey,
+    shiftKey  : ev.shiftKey,
+    altKey    : ev.altKey,
+    metaKey   : ev.metaKey,
+    bubbles   : true,
+    cancelable: true,
+  });
+
+  const forwardMouse = (ev: MouseEvent) => ({
+    clientX   : ev.clientX,
+    clientY   : ev.clientY,
+    button    : ev.button,
+    buttons   : ev.buttons,
+    ctrlKey   : ev.ctrlKey,
+    shiftKey  : ev.shiftKey,
+    altKey    : ev.altKey,
+    metaKey   : ev.metaKey,
+    bubbles   : true,
+    cancelable: true,
+  });
+
+  const bridge = (e: PointerEvent) => {
+    const corner = (e.target as HTMLElement | null)?.dataset.corner
+    const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
+    const scale = vt[0]
+    const offset = PAD * scale
+    const dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
+    const dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+
+    const down = new MouseEvent('mousedown', forward(e, dx, dy))
+    fc.upperCanvasEl.dispatchEvent(down)
+    const move = (ev: PointerEvent) =>
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev, dx, dy)))
+    const up = (ev: PointerEvent) => {
+      fc.upperCanvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev, dx, dy)))
+      document.removeEventListener('pointermove', move)
+      document.removeEventListener('pointerup', up)
+    }
+    document.addEventListener('pointermove', move)
+    document.addEventListener('pointerup', up)
+    e.preventDefault()
+  }
+  const onSelDown = (e: PointerEvent) => {
+    const obj = (selEl as any)._object as fabric.Object | null
+    if (obj) fc.setActiveObject(obj)
+    bridge(e)
+  }
+  const onCropDown = (e: PointerEvent) => {
+    const obj = (cropEl as any)._object as fabric.Object | null
+    if (obj) fc.setActiveObject(obj)
+    bridge(e)
+  }
+  selEl.addEventListener('pointerdown', onSelDown)
+  cropEl.addEventListener('pointerdown', onCropDown)
+
+  selEl.addEventListener('dblclick', e => {
+    fc.upperCanvasEl.dispatchEvent(new MouseEvent('dblclick', forwardMouse(e)))
+  })
+  cropEl.addEventListener('dblclick', e => {
+    fc.upperCanvasEl.dispatchEvent(new MouseEvent('dblclick', forwardMouse(e)))
+  })
+
+  const relayMove = (ev: PointerEvent) =>
+    fc.upperCanvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
+  selEl.addEventListener('pointermove', relayMove)
+  cropEl.addEventListener('pointermove', relayMove)
+
+  const raiseSel = () => {
+    if (!croppingRef.current || !cropDomRef.current) return
+    selEl.style.zIndex = '41'
+    cropDomRef.current.style.zIndex = '40'
+  }
+  const raiseCrop = () => {
+    if (!croppingRef.current || !cropDomRef.current) return
+    cropDomRef.current.style.zIndex = '41'
+    selEl.style.zIndex = '40'
+  }
+  selEl.addEventListener('pointerenter', raiseSel)
+  cropEl.addEventListener('pointerenter', raiseCrop)
+
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    const target = fc.findTarget(e, true) as fabric.Object | null;
+    if (target) fc.setActiveObject(target);
     setMenuPos({ x: e.clientX, y: e.clientY });
   };
   fc.upperCanvasEl.addEventListener('contextmenu', ctxMenu);
-  /* --- keep Fabric’s wrapper the same size as the visible preview --- */
-  const container = canvasRef.current!.parentElement as HTMLElement | null;
-  if (container) {
-    container.style.width  = `${PREVIEW_W}px`;
-    container.style.height = `${PREVIEW_H}px`;
-    container.style.maxWidth  = `${PREVIEW_W}px`;
-    container.style.maxHeight = `${PREVIEW_H}px`;
-  }
+  selEl.addEventListener('contextmenu', ctxMenu);
+  cropEl.addEventListener('contextmenu', ctxMenu);
+ 
+/* --- keep Fabric’s wrapper the same size as the visible preview --- */
+const container = canvasRef.current!.parentElement as HTMLElement | null;
+if (container) {
+  const pad = 4 * zoom;
+
+  // zoom-aware dimensions
+  container.style.width     = `${PREVIEW_W * zoom}px`;
+  container.style.height    = `${PREVIEW_H * zoom}px`;
+  container.style.maxWidth  = `${PREVIEW_W * zoom}px`;
+  container.style.maxHeight = `${PREVIEW_H * zoom}px`;
+  container.style.padding   = `${pad}px`;
+  container.style.overflow  = 'visible';
+
+  // keep the ref so scroll listeners work
+  containerRef.current = container;
+}
+  
+  fc.setWidth(PREVIEW_W * zoom)
+  fc.setHeight(PREVIEW_H * zoom)
   addBackdrop(fc);
   // keep the preview scaled to the configured width
-  fc.setViewportTransform([SCALE, 0, 0, SCALE, 0, 0]);
+  fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0]);
   enableSnapGuides(fc, PAGE_W, PAGE_H);
 
   /* keep event coordinates aligned with any scroll/resize */
   const updateOffset = () => fc.calcOffset();
   updateOffset();
-  window.addEventListener('scroll', updateOffset, { passive: true });
+  window.addEventListener('scroll', updateOffset, { passive: true, capture: true });
   window.addEventListener('resize', updateOffset);
+  containerRef.current?.addEventListener('scroll', updateOffset, { passive: true, capture: true });
+
+  const isolateCrop = (active: boolean) => {
+    const map = savedInteractivityRef.current
+    const tool = cropToolRef.current as any
+    const allowed = new Set<fabric.Object>()
+    if (active) {
+      if (tool?.img) allowed.add(tool.img)
+      if (tool?.frame) allowed.add(tool.frame)
+      fc.getObjects().forEach(o => {
+        if (allowed.has(o)) return
+        map.set(o, { sel: o.selectable, evt: o.evented })
+        o.selectable = false
+        o.evented = false
+      })
+      fc.discardActiveObject()
+    } else {
+      fc.getObjects().forEach(o => {
+        const prev = map.get(o)
+        if (prev) {
+          o.selectable = prev.sel
+          o.evented = prev.evt
+        }
+      })
+      savedInteractivityRef.current = new WeakMap()
+    }
+    fc.requestRenderAll()
+  }
 
   /* ── Crop‑tool wiring ────────────────────────────────────── */
   // create a reusable crop helper and keep it in a ref
   const crop = new CropTool(fc, SCALE, SEL_COLOR, state => {
     croppingRef.current = state
+    isolateCrop(state)
     onCroppingChange?.(state)
   })
   cropToolRef.current = crop;
@@ -822,44 +1046,277 @@ const hoverHL = new fabric.Rect({
 fc.add(hoverHL)
 hoverRef.current = hoverHL
 
-/* ── 3 ▸ Selection lifecycle (no extra overlay) ─────────── */
+/* ── 3 ▸ Selection lifecycle (DOM overlay) ─────────── */
 let scrollHandler: (() => void) | null = null
+let hoverScrollHandler: (() => void) | null = null
+
+const drawOverlay = (
+  obj: fabric.Object,
+  el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
+) => {
+  const box  = obj.getBoundingRect(true, true)
+  const rect = canvasRef.current!.getBoundingClientRect()
+  const vt   = fc.viewportTransform || [1,0,0,1,0,0]
+  const scale = vt[0]
+  const c = containerRef.current
+  const scrollX = (c?.scrollLeft ?? 0)
+  const scrollY = (c?.scrollTop  ?? 0)
+  const left   = window.scrollX + scrollX + rect.left + vt[4] + (box.left - PAD) * scale
+  const top    = window.scrollY + scrollY + rect.top  + vt[5] + (box.top - PAD) * scale
+  const width  = (box.width  + PAD * 2) * scale
+  const height = (box.height + PAD * 2) * scale
+  el.style.left   = `${left}px`
+  el.style.top    = `${top}px`
+  el.style.width  = `${width}px`
+  el.style.height = `${height}px`
+  el._object = obj
+  if (el._handles) {
+    const h = el._handles
+    const half  = SEL_BORDER / 2
+    const midX  = Math.round(width  / 2)
+    const midY  = Math.round(height / 2)
+    const leftX = Math.round(half)
+    const rightX = Math.round(width - half)
+    const topY   = Math.round(half)
+    const botY   = Math.round(height - half)
+    h.tl.style.left = `${leftX}px`;  h.tl.style.top = `${topY}px`
+    h.tr.style.left = `${rightX}px`; h.tr.style.top = `${topY}px`
+    h.br.style.left = `${rightX}px`; h.br.style.top = `${botY}px`
+    h.bl.style.left = `${leftX}px`;  h.bl.style.top = `${botY}px`
+    h.ml.style.left = `${leftX}px`;  h.ml.style.top = `${midY}px`
+    h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
+    h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
+    h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+  }
+  return { left, top, width, height }
+}
+
+const syncSel = () => {
+  const obj = fc.getActiveObject() as fabric.Object | undefined
+  if (!selDomRef.current || !canvasRef.current) return
+  const selEl  = selDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
+  const cropEl = cropDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null } | null
+
+  const tool = cropToolRef.current as any
+  if (croppingRef.current && tool?.isActive && tool.img && tool.frame) {
+    const img   = tool.img as fabric.Object
+    const frame = tool.frame as fabric.Object
+    // whichever is active uses selEl; the other uses cropEl
+    selEl.style.zIndex = '41'
+    cropEl && (cropEl.style.zIndex = '40')
+    if (obj === frame) {
+      drawOverlay(frame, selEl)
+      selEl._object = frame
+      selEl.classList.add('crop-window')
+      if (cropEl) {
+        cropEl.style.display = 'block'
+        drawOverlay(img, cropEl)
+        cropEl._object = img
+        cropEl.classList.remove('crop-window')
+      }
+    } else {
+      drawOverlay(img, selEl)
+      selEl._object = img
+      selEl.classList.remove('crop-window')
+      if (cropEl) {
+        cropEl.style.display = 'block'
+        drawOverlay(frame, cropEl)
+        cropEl._object = frame
+        cropEl.classList.add('crop-window')
+      }
+    }
+    if (selEl._handles)
+      ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'none')
+    if (cropEl && cropEl._handles)
+      ['ml','mr','mt','mb'].forEach(k => cropEl._handles![k].style.display = 'none')
+    selEl.style.display = 'block'
+    setActionPos(null)
+    return
+  }
+
+  selEl.classList.remove('crop-window')
+  cropEl && cropEl.classList.remove('crop-window')
+
+cropEl && (cropEl.style.display = 'none', cropEl._object = null);
+if (!obj) return;
+
+const box = drawOverlay(obj, selEl);   // redraw green outline
+selEl._object = obj;
+
+/* ── quick-action overlay ──────────────────────────── */
+if (transformingRef.current) {
+  setActionPos(null);                 // hide while dragging
+} else {
+  setActionPos({                      // centre the toolbar
+    x: box.left + box.width / 2,
+    y: box.top - 8,
+  });
+}
+
+/* ── stable branch: keep side-handles visible ──────── */
+if (selEl._handles) {
+  ['ml', 'mr', 'mt', 'mb'].forEach(k =>
+    selEl._handles![k].style.display = 'block',
+  );
+}
+}
+
+const syncHover = () => {
+  if (!hoverDomRef.current || !canvasRef.current) return
+  const obj = (hoverDomRef.current as any)._object as fabric.Object | null
+  if (!obj) return
+  drawOverlay(obj, hoverDomRef.current as HTMLDivElement & { _object?: fabric.Object | null })
+}
+
+  const showSizeBubble = (obj: fabric.Object | undefined, ev: fabric.IEvent | undefined) => {
+    if (!obj || !selDomRef.current || !ev) return
+    const bubble = (selDomRef.current as any)._sizeBubble as HTMLDivElement | undefined
+    if (!bubble) return
+    bubble.textContent = `w:${Math.round(obj.getScaledWidth())} h:${Math.round(obj.getScaledHeight())}`
+    const rect = selDomRef.current.getBoundingClientRect()
+    const e = ev.e as MouseEvent | PointerEvent | undefined
+    const x = e?.clientX ?? 0
+    const y = e?.clientY ?? 0
+    bubble.style.left = `${x - rect.left + 30}px`
+    bubble.style.top = `${y - rect.top + 30}px`
+    bubble.style.display = 'block'
+  }
+
+const hideSizeBubble = () => {
+  if (!selDomRef.current) return
+  const bubble = (selDomRef.current as any)._sizeBubble as HTMLDivElement | undefined
+  if (bubble) bubble.style.display = 'none'
+}
 
 fc.on('selection:created', () => {
-  hoverHL.visible = false            // hide leftover hover rectangle
+  hoverHL.visible = false
   fc.requestRenderAll()
-  scrollHandler = () => fc.requestRenderAll()
-  window.addEventListener('scroll', scrollHandler, { passive:true })
+  selDomRef.current && (selDomRef.current.style.display = 'block')
+  if (croppingRef.current && cropDomRef.current) {
+    cropDomRef.current.style.display = 'block'
+  }
+  syncSel()
+  requestAnimationFrame(syncSel)
+  scrollHandler = () => {
+    fc.calcOffset()
+    syncSel()
+    syncHover()
+  }
+  window.addEventListener('scroll', scrollHandler, { passive: true, capture: true })
+  window.addEventListener('resize', scrollHandler)
+  containerRef.current?.addEventListener('scroll', scrollHandler, { passive: true, capture: true })
 })
+  .on('selection:updated', syncSel)
 .on('selection:cleared', () => {
-  if (scrollHandler) { window.removeEventListener('scroll', scrollHandler); scrollHandler = null }
+  if (scrollHandler) {
+    window.removeEventListener('scroll', scrollHandler);
+    window.removeEventListener('resize', scrollHandler);
+    containerRef.current?.removeEventListener('scroll', scrollHandler);
+    scrollHandler = null;
+  }
+  selDomRef.current  && (selDomRef.current.style.display  = 'none');
+  cropDomRef.current && (cropDomRef.current.style.display = 'none');
+  setActionPos(null);     // from quick-action branch
+  hideSizeBubble();       // from stable branch
 })
 
+
 /* also hide hover during any transform of the active object */
-fc.on('object:moving',   () => { hoverHL.visible = false })
-  .on('object:scaling',  () => { hoverHL.visible = false })
-  .on('object:rotating', () => { hoverHL.visible = false })
+const handleAfterRender = () => {
+  fc.calcOffset()
+  syncSel()
+  syncHover()
+}
+
+fc.on('object:moving', () => {
+  hoverHL.visible         = false;
+  transformingRef.current = true;
+  if (actionTimerRef.current) {
+    clearTimeout(actionTimerRef.current);
+    actionTimerRef.current = null;
+  }
+  syncSel();
+  hideSizeBubble();                  // moving never shows the bubble
+})
+
+.on('object:scaling', e => {
+  hoverHL.visible         = false;
+  transformingRef.current = true;
+  if (actionTimerRef.current) {
+    clearTimeout(actionTimerRef.current);
+    actionTimerRef.current = null;
+  }
+  syncSel();
+  showSizeBubble(e.target as fabric.Object, e);   // live size read-out
+})
+
+.on('object:rotating', () => {
+  hoverHL.visible         = false;
+  transformingRef.current = true;
+  if (actionTimerRef.current) {
+    clearTimeout(actionTimerRef.current);
+    actionTimerRef.current = null;
+  }
+  syncSel();
+  hideSizeBubble();                  // hide during rotation
+})
+
+.on('object:scaled', e => {
+  hoverHL.visible = false;
+  hideSizeBubble();
+  requestAnimationFrame(() => requestAnimationFrame(syncSel));
+})
+
+  .on('object:modified', () => {
+    if (transformingRef.current) {
+      transformingRef.current = false
+      setActionPos(null)
+      if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+      actionTimerRef.current = window.setTimeout(() => {
+        requestAnimationFrame(() => requestAnimationFrame(syncSel))
+      }, 250)
+    }
+  })
+  .on('mouse:up', () => {
+    if (transformingRef.current) {
+      transformingRef.current = false
+      setActionPos(null)
+      if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+      actionTimerRef.current = window.setTimeout(syncSel, 250)
+    }
+  })
+  .on('after:render',    handleAfterRender)
 
 /* ── 4 ▸ Hover outline (only when NOT the active object) ─── */
 fc.on('mouse:over', e => {
   const t = e.target as fabric.Object | undefined
   if (!t || (t as any)._guide || t === hoverHL) return
   if (fc.getActiveObject() === t) return           // skip active selection
-
-  const box = t.getBoundingRect(true, true)
-  hoverHL.set({
-    width : box.width  + PAD * 2,
-    height: box.height + PAD * 2,
-    left  : box.left  - PAD,
-    top   : box.top   - PAD,
-    visible: true,
-  })
-  hoverHL.setCoords()
-  hoverHL.bringToFront()
-  fc.requestRenderAll()
+  hoverDomRef.current && (() => {
+    drawOverlay(t, hoverDomRef.current as HTMLDivElement & { _object?: fabric.Object | null })
+    ;(hoverDomRef.current as any)._object = t
+    hoverDomRef.current.style.display = 'block'
+    hoverScrollHandler = () => {
+      fc.calcOffset()
+      syncHover()
+    }
+    window.addEventListener('scroll', hoverScrollHandler, { passive: true, capture: true })
+    window.addEventListener('resize', hoverScrollHandler)
+    containerRef.current?.addEventListener('scroll', hoverScrollHandler, { passive: true, capture: true })
+  })()
 })
 .on('mouse:out', () => {
   hoverHL.visible = false
+  hoverDomRef.current && (() => {
+    hoverDomRef.current.style.display = 'none'
+    ;(hoverDomRef.current as any)._object = null
+    if (hoverScrollHandler) {
+      window.removeEventListener('scroll', hoverScrollHandler)
+      window.removeEventListener('resize', hoverScrollHandler)
+      containerRef.current?.removeEventListener('scroll', hoverScrollHandler)
+      hoverScrollHandler = null
+    }
+  })()
   fc.requestRenderAll()
 })
 
@@ -939,6 +1396,7 @@ addGuides(fc, mode)                           // add guides based on mode
 /* ───────────────── clipboard & keyboard shortcuts ────────────────── */
 
 const onKey = (e: KeyboardEvent) => {
+  if (useEditor.getState().activePage !== pageIdx) return
   const active = fc.getActiveObject() as fabric.Object | undefined
   const cmd    = e.metaKey || e.ctrlKey
 
@@ -1047,19 +1505,66 @@ window.addEventListener('keydown', onKey)
       if (scrollHandler) window.removeEventListener('scroll', scrollHandler)
       window.removeEventListener('scroll', updateOffset)
       window.removeEventListener('resize', updateOffset)
+      containerRef.current?.removeEventListener('scroll', updateOffset)
       // tidy up crop‑tool listeners
       fc.off('mouse:dblclick', dblHandler);
       window.removeEventListener('keydown', keyCropHandler);
       fc.off('before:transform', startCrop);
       fc.off('object:scaling', duringCrop);
       fc.off('object:scaled', endCrop);
+      fc.off('after:render', handleAfterRender);
+      selEl.removeEventListener('pointerdown', onSelDown)
+      cropEl.removeEventListener('pointerdown', onCropDown)
+      selEl.removeEventListener('pointerenter', raiseSel)
+      cropEl.removeEventListener('pointerenter', raiseCrop)
       onReady(null)
       cropToolRef.current?.abort()
+      isolateCrop(false)
       fc.dispose()
+      hoverDomRef.current?.remove()
+      selDomRef.current?.remove()
+      cropDomRef.current?.remove()
+      if (scrollHandler) {
+        window.removeEventListener('scroll', scrollHandler)
+        window.removeEventListener('resize', scrollHandler)
+        containerRef.current?.removeEventListener('scroll', scrollHandler)
+      }
+      if (hoverScrollHandler) {
+        window.removeEventListener('scroll', hoverScrollHandler)
+        window.removeEventListener('resize', hoverScrollHandler)
+        containerRef.current?.removeEventListener('scroll', hoverScrollHandler)
+      }
     }
 // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [])
 /* ---------- END mount once ----------------------------------- */
+
+  /* ---------- apply zoom -------------------------------------- */
+  useEffect(() => {
+    const fc = fcRef.current
+    const canvas = canvasRef.current
+    if (!fc || !canvas) return
+
+    const container = canvas.parentElement as HTMLElement | null
+    if (container) {
+      const pad = 4 * zoom
+      container.style.width = `${PREVIEW_W * zoom}px`
+      container.style.height = `${PREVIEW_H * zoom}px`
+      container.style.maxWidth = `${PREVIEW_W * zoom}px`
+      container.style.maxHeight = `${PREVIEW_H * zoom}px`
+      container.style.padding = `${pad}px`
+      container.style.overflow = 'visible'
+    }
+
+    fc.setWidth(PREVIEW_W * zoom)
+    fc.setHeight(PREVIEW_H * zoom)
+    canvas.style.width = `${PREVIEW_W * zoom}px`
+    canvas.style.height = `${PREVIEW_H * zoom}px`
+
+    fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
+    if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
+    fc.requestRenderAll()
+  }, [zoom])
 
   /* ---------- crop mode toggle ------------------------------ */
   useEffect(() => {
@@ -1144,10 +1649,11 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
           })
 
           /* ---------- AI placeholder extras -------------------------------- */
-if (raw._type === 'aiLayer') {
-  const spec = raw.source
-  const locked = !!ly.locked
-  img.set({ selectable: !locked, evented: !locked, hasControls: !locked })
+          let doSync: (() => void) | undefined
+          if (raw._type === 'aiLayer') {
+            const spec = raw.source
+            const locked = !!ly.locked
+            img.set({ selectable: !locked, evented: !locked, hasControls: !locked })
 
  
             // ─── open the Selfie Drawer on click ─────────────────────────
@@ -1186,13 +1692,18 @@ img.on('mouseup', () => {
               img.on('mouseout',  () => { ghost!.style.opacity = '0' })
             }
 
-            const doSync = () => canvasRef.current && ghost && syncGhost(img, ghost, canvasRef.current)
+doSync = () =>
+  canvasRef.current && ghost && (() => {
+    fc.calcOffset()
+    syncGhost(img, ghost, canvasRef.current)
+  })()
             doSync()
             img.on('moving',   doSync)
                .on('scaling',  doSync)
                .on('rotating', doSync)
-               window.addEventListener('scroll', doSync, { passive: true })
+               window.addEventListener('scroll', doSync, { passive: true, capture: true })
                window.addEventListener('resize', doSync)
+               fc.on('after:render', doSync)
                
 
             /* hide overlay when actively selected */
@@ -1209,6 +1720,7 @@ img.on('mouseup', () => {
             img.on('removed', () => {
               window.removeEventListener('scroll', doSync)
               window.removeEventListener('resize', doSync)
+              fc.off('after:render', doSync)
               ghost?.remove()
             })
           }
@@ -1218,6 +1730,7 @@ img.on('mouseup', () => {
           fc.insertAt(img, idx, false)
           img.setCoords()
           fc.requestRenderAll()
+          doSync?.()
           document.dispatchEvent(
             new CustomEvent('card-canvas-rendered', {
               detail: { pageIdx, canvas: fc },
@@ -1267,15 +1780,19 @@ img.on('mouseup', () => {
     <>
       <canvas
         ref={canvasRef}
-        width={PREVIEW_W}
-        height={PREVIEW_H}
-        style={{ width: PREVIEW_W, height: PREVIEW_H }}   // lock CSS size
-        className="border shadow rounded"
+        width={PREVIEW_W * zoom}
+        height={PREVIEW_H * zoom}
+        style={{ width: PREVIEW_W * zoom, height: PREVIEW_H * zoom }}
+        className={`border shadow rounded ${className}`}
+      />
+      <QuickActionBar
+        pos={actionPos}
+        onAction={handleMenuAction}
+        onMenu={p => setMenuPos(p)}
       />
       {menuPos && (
         <ContextMenu
           pos={menuPos}
-          locked={!!(fcRef.current?.getActiveObject() as any)?.locked}
           onAction={handleMenuAction}
           onClose={() => setMenuPos(null)}
         />

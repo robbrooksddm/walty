@@ -29,7 +29,7 @@
 body {
   background : var(--background);
   color      : var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-ambit), Arial, Helvetica, sans-serif;
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -68,7 +68,16 @@ html {
 }
 
 /* Fabric preview wrapper — clips the ghost */
-.canvas-wrap { @apply relative overflow-hidden; }
+.canvas-wrap {
+  @apply relative;
+  overflow: visible !important;
+}
+
+/* allow Fabric selection boxes outside the canvas bounds */
+.canvas-container {
+  /* allow Fabric selection boxes outside the canvas bounds */
+  overflow: visible !important;
+}
 
 /* Center icon + helper text */
 .ai-ghost__center {
@@ -89,3 +98,68 @@ html {
   height:36px;
   margin-bottom:4px;
 }
+
+/* === DOM selection overlay ==================================== */
+@layer utilities {
+  .sel-overlay {
+    @apply absolute pointer-events-none box-border z-40;
+    border:2px solid #2EC4B6; /* SEL_COLOR */
+  }
+  .sel-overlay.interactive {
+    @apply pointer-events-none;
+  }
+  .sel-overlay .handle {
+    position:absolute;
+    box-sizing:border-box;
+    width:16px;
+    height:16px;
+    background:#fff;
+    border:1px solid rgba(128,128,128,0.5);
+    border-radius:50%;
+    box-shadow:0 1px 2px rgba(0,0,0,0.25);
+    transform:translate(-50%,-50%);
+    pointer-events:auto;
+  }
+  .sel-overlay .handle.side {
+    width:7px;
+    height:21px;
+    border-radius:3px;
+  }
+  .sel-overlay .handle.mt,
+  .sel-overlay .handle.mb {
+    width:21px;
+    height:7px;
+    border-radius:3px;
+  }
+  .sel-overlay .handle.tl,
+  .sel-overlay .handle.br { cursor:nwse-resize; }
+  .sel-overlay .handle.tr,
+  .sel-overlay .handle.bl { cursor:nesw-resize; }
+  .sel-overlay .handle.ml,
+  .sel-overlay .handle.mr { cursor:ew-resize; }
+  .sel-overlay .handle.mt,
+  .sel-overlay .handle.mb { cursor:ns-resize; }
+
+  /* ── NEW from stable-3-july-2025 ───────────────────────────── */
+  .size-bubble {
+    @apply absolute text-white text-xs px-2 py-1 rounded-md bg-neutral-800/90 whitespace-nowrap pointer-events-none;
+  }
+
+  /* ── NEW from stable-4-july-2025 ───────────────────────────── */
+  /* crop window corner “L” handles */
+  .sel-overlay.crop-window .handle.corner {
+    width:17px;
+    height:17px;
+    background:#fff;
+    border:1px solid rgba(128,128,128,0.8);
+    border-radius:3px;
+    box-shadow:0 2px 2px rgba(0,0,0,0.5);
+    transform-origin:4px 4px;
+    clip-path:polygon(0 0,100% 0,100% 4px,4px 4px,4px 100%,0 100%);
+    transform:translate(-4px,-4px);
+  }
+  .sel-overlay.crop-window .handle.tr { transform:rotate(90deg)  translate(-4px, 7px); }
+  .sel-overlay.crop-window .handle.br { transform:rotate(180deg) translate( 7px, 7px); }
+  .sel-overlay.crop-window .handle.bl { transform:rotate(270deg) translate( 7px,-4px); }
+}
+

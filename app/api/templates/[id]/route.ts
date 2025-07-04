@@ -72,14 +72,23 @@ export async function PATCH(
     /* ---------- 2 ▸ draft id ---------------------------------- */
     const draftId = `drafts.${params.id}`
 
-    /* ---------- 3 ▸ create-or-patch in one transaction -------- */
+    /* ---------- 3 ▸ base doc ----------------------------------- */
+    const published = await sanity.getDocument(params.id) as Record<string, any> | null
+    let baseDoc: Record<string, any>
+    if (published) {
+      const { _id: _ignore, _rev, _createdAt, _updatedAt, ...rest } = published
+      baseDoc = rest
+    } else {
+      baseDoc = { title: '(untitled)', pages: [] }
+    }
+
+    /* ---------- 4 ▸ create-or-patch in one transaction --------- */
     await sanity
       .transaction()
       .createIfNotExists({
         _id  : draftId,
         _type: 'cardTemplate',
-        title: '(untitled)',   // minimal stub so Studio is happy
-        pages: [],
+        ...baseDoc,
       })
       .patch(draftId, p =>
         p.set({

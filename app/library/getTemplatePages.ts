@@ -4,7 +4,7 @@
  * convert every layer with `fromSanity`.
  *********************************************************************/
 
-import { sanityPreview } from '@/sanity/lib/client'
+import { sanityPreview, sanity } from '@/sanity/lib/client'
 import { urlFor } from '@/sanity/lib/image'
 import { fromSanity } from '@/app/library/layerAdapters'
 import type { TemplatePage, PrintSpec, PreviewSpec } from '@/app/components/FabricCanvas'
@@ -85,7 +85,8 @@ export async function getTemplatePages(
     draftKey: idOrSlug.startsWith('drafts.') ? idOrSlug : `drafts.${idOrSlug}`,
   }
 
-  const raw = await sanityPreview.fetch<{
+  const client = process.env.SANITY_READ_TOKEN ? sanityPreview : sanity
+  const raw = await client.fetch<{
     pages?: any[]
     coverImage?: any
     previewSpec?: PreviewSpec
