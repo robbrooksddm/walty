@@ -1241,11 +1241,11 @@ const hideRotBubble = () => {
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
+  syncSel()
   selDomRef.current && (selDomRef.current.style.display = 'block')
   if (croppingRef.current && cropDomRef.current) {
     cropDomRef.current.style.display = 'block'
   }
-  syncSel()
   requestAnimationFrame(syncSel)
   scrollHandler = () => {
     fc.calcOffset()
@@ -1287,6 +1287,7 @@ fc.on('object:moving', () => {
     actionTimerRef.current = null;
   }
   syncSel();
+  requestAnimationFrame(syncSel);
   hideSizeBubble();                  // moving never shows the bubble
   hideRotBubble();
 })
@@ -1299,6 +1300,7 @@ fc.on('object:moving', () => {
     actionTimerRef.current = null;
   }
   syncSel();
+  requestAnimationFrame(syncSel);
   showSizeBubble(e.target as fabric.Object, e);   // live size read-out
   hideRotBubble();
 })
@@ -1311,6 +1313,7 @@ fc.on('object:moving', () => {
     actionTimerRef.current = null;
   }
   syncSel();
+  requestAnimationFrame(syncSel);
   hideSizeBubble();                  // hide during rotation
   showRotBubble(e.target as fabric.Object, e);
 })
