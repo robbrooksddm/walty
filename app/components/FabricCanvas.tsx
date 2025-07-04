@@ -75,7 +75,7 @@ function recompute() {
   PREVIEW_W = currentPreview.previewWidthPx
   PREVIEW_H = currentPreview.previewHeightPx
   SCALE = PREVIEW_W / PAGE_W
-  PAD = 4 / SCALE
+  PAD = 0
   // compute safe-zone after scaling so rounding happens in preview pixels
   const safeXPreview = safeInsetXIn * currentSpec.dpi * SCALE
   const safeYPreview = safeInsetYIn * currentSpec.dpi * SCALE
@@ -114,7 +114,8 @@ let PAGE_W = 0
 let PAGE_H = 0
 let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
-let PAD = 4
+let PAD = 0
+const SEL_BORDER = 2
 
 recompute()
 
@@ -660,17 +661,23 @@ useEffect(() => {
   const handleMap: Record<string, HTMLDivElement> = {};
   corners.forEach(c => {
     const h = document.createElement('div');
-    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
+    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c;
     selEl.appendChild(h);
     handleMap[c] = h;
   });
   (selEl as any)._handles = handleMap;
 
+  const sizeBubble = document.createElement('div');
+  sizeBubble.className = 'size-bubble';
+  sizeBubble.style.display = 'none';
+  selEl.appendChild(sizeBubble);
+  (selEl as any)._sizeBubble = sizeBubble;
+
   const cropHandles: Record<string, HTMLDivElement> = {};
   corners.forEach(c => {
     const h = document.createElement('div');
-    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : ''} ${c}`;
+    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c;
     cropEl.appendChild(h);
     cropHandles[c] = h;
@@ -1065,16 +1072,21 @@ const drawOverlay = (
   el._object = obj
   if (el._handles) {
     const h = el._handles
-    const midX = width / 2
-    const midY = height / 2
-    h.tl.style.left = '0px';      h.tl.style.top = '0px'
-    h.tr.style.left = `${width}px`; h.tr.style.top = '0px'
-    h.br.style.left = `${width}px`; h.br.style.top = `${height}px`
-    h.bl.style.left = '0px';      h.bl.style.top = `${height}px`
-    h.ml.style.left = '0px';      h.ml.style.top = `${midY}px`
-    h.mr.style.left = `${width}px`; h.mr.style.top = `${midY}px`
-    h.mt.style.left = `${midX}px`; h.mt.style.top = '0px'
-    h.mb.style.left = `${midX}px`; h.mb.style.top = `${height}px`
+    const half  = SEL_BORDER / 2
+    const midX  = Math.round(width  / 2)
+    const midY  = Math.round(height / 2)
+    const leftX = Math.round(half)
+    const rightX = Math.round(width - half)
+    const topY   = Math.round(half)
+    const botY   = Math.round(height - half)
+    h.tl.style.left = `${leftX}px`;  h.tl.style.top = `${topY}px`
+    h.tr.style.left = `${rightX}px`; h.tr.style.top = `${topY}px`
+    h.br.style.left = `${rightX}px`; h.br.style.top = `${botY}px`
+    h.bl.style.left = `${leftX}px`;  h.bl.style.top = `${botY}px`
+    h.ml.style.left = `${leftX}px`;  h.ml.style.top = `${midY}px`
+    h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
+    h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
+    h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
   }
   return { left, top, width, height }
 }
@@ -1095,34 +1107,58 @@ const syncSel = () => {
     if (obj === frame) {
       drawOverlay(frame, selEl)
       selEl._object = frame
+      selEl.classList.add('crop-window')
       if (cropEl) {
         cropEl.style.display = 'block'
         drawOverlay(img, cropEl)
         cropEl._object = img
+        cropEl.classList.remove('crop-window')
       }
     } else {
       drawOverlay(img, selEl)
       selEl._object = img
+      selEl.classList.remove('crop-window')
       if (cropEl) {
         cropEl.style.display = 'block'
         drawOverlay(frame, cropEl)
         cropEl._object = frame
+        cropEl.classList.add('crop-window')
       }
     }
+    if (selEl._handles)
+      ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'none')
+    if (cropEl && cropEl._handles)
+      ['ml','mr','mt','mb'].forEach(k => cropEl._handles![k].style.display = 'none')
     selEl.style.display = 'block'
     setActionPos(null)
     return
   }
 
-  cropEl && (cropEl.style.display = 'none', cropEl._object = null)
-  if (!obj) return
-  const box = drawOverlay(obj, selEl)
-  selEl._object = obj
-  if (transformingRef.current) {
-    setActionPos(null)
-  } else {
-    setActionPos({ x: box.left + box.width / 2, y: box.top - 8 })
-  }
+  selEl.classList.remove('crop-window')
+  cropEl && cropEl.classList.remove('crop-window')
+
+cropEl && (cropEl.style.display = 'none', cropEl._object = null);
+if (!obj) return;
+
+const box = drawOverlay(obj, selEl);   // redraw green outline
+selEl._object = obj;
+
+/* ── quick-action overlay ──────────────────────────── */
+if (transformingRef.current) {
+  setActionPos(null);                 // hide while dragging
+} else {
+  setActionPos({                      // centre the toolbar
+    x: box.left + box.width / 2,
+    y: box.top - 8,
+  });
+}
+
+/* ── stable branch: keep side-handles visible ──────── */
+if (selEl._handles) {
+  ['ml', 'mr', 'mt', 'mb'].forEach(k =>
+    selEl._handles![k].style.display = 'block',
+  );
+}
 }
 
 const syncHover = () => {
@@ -1130,6 +1166,26 @@ const syncHover = () => {
   const obj = (hoverDomRef.current as any)._object as fabric.Object | null
   if (!obj) return
   drawOverlay(obj, hoverDomRef.current as HTMLDivElement & { _object?: fabric.Object | null })
+}
+
+  const showSizeBubble = (obj: fabric.Object | undefined, ev: fabric.IEvent | undefined) => {
+    if (!obj || !selDomRef.current || !ev) return
+    const bubble = (selDomRef.current as any)._sizeBubble as HTMLDivElement | undefined
+    if (!bubble) return
+    bubble.textContent = `w:${Math.round(obj.getScaledWidth())} h:${Math.round(obj.getScaledHeight())}`
+    const rect = selDomRef.current.getBoundingClientRect()
+    const e = ev.e as MouseEvent | PointerEvent | undefined
+    const x = e?.clientX ?? 0
+    const y = e?.clientY ?? 0
+    bubble.style.left = `${x - rect.left + 30}px`
+    bubble.style.top = `${y - rect.top + 30}px`
+    bubble.style.display = 'block'
+  }
+
+const hideSizeBubble = () => {
+  if (!selDomRef.current) return
+  const bubble = (selDomRef.current as any)._sizeBubble as HTMLDivElement | undefined
+  if (bubble) bubble.style.display = 'none'
 }
 
 fc.on('selection:created', () => {
@@ -1151,17 +1207,19 @@ fc.on('selection:created', () => {
   containerRef.current?.addEventListener('scroll', scrollHandler, { passive: true, capture: true })
 })
   .on('selection:updated', syncSel)
-  .on('selection:cleared', () => {
+.on('selection:cleared', () => {
   if (scrollHandler) {
-    window.removeEventListener('scroll', scrollHandler)
-    window.removeEventListener('resize', scrollHandler)
-    containerRef.current?.removeEventListener('scroll', scrollHandler)
-    scrollHandler = null
+    window.removeEventListener('scroll', scrollHandler);
+    window.removeEventListener('resize', scrollHandler);
+    containerRef.current?.removeEventListener('scroll', scrollHandler);
+    scrollHandler = null;
   }
-    selDomRef.current && (selDomRef.current.style.display = 'none')
-    cropDomRef.current && (cropDomRef.current.style.display = 'none')
-    setActionPos(null)
-  })
+  selDomRef.current  && (selDomRef.current.style.display  = 'none');
+  cropDomRef.current && (cropDomRef.current.style.display = 'none');
+  setActionPos(null);     // from quick-action branch
+  hideSizeBubble();       // from stable branch
+})
+
 
 /* also hide hover during any transform of the active object */
 const handleAfterRender = () => {
@@ -1170,37 +1228,45 @@ const handleAfterRender = () => {
   syncHover()
 }
 
-fc.on('object:moving',   () => {
-    hoverHL.visible = false
-    transformingRef.current = true
-    if (actionTimerRef.current) {
-      clearTimeout(actionTimerRef.current)
-      actionTimerRef.current = null
-    }
-    syncSel()
-  })
-  .on('object:scaling',  () => {
-    hoverHL.visible = false
-    transformingRef.current = true
-    if (actionTimerRef.current) {
-      clearTimeout(actionTimerRef.current)
-      actionTimerRef.current = null
-    }
-    syncSel()
-  })
-  .on('object:rotating', () => {
-    hoverHL.visible = false
-    transformingRef.current = true
-    if (actionTimerRef.current) {
-      clearTimeout(actionTimerRef.current)
-      actionTimerRef.current = null
-    }
-    syncSel()
-  })
-  .on('object:scaled',   () => {
-    hoverHL.visible = false
-    requestAnimationFrame(() => requestAnimationFrame(syncSel))
-  })
+fc.on('object:moving', () => {
+  hoverHL.visible         = false;
+  transformingRef.current = true;
+  if (actionTimerRef.current) {
+    clearTimeout(actionTimerRef.current);
+    actionTimerRef.current = null;
+  }
+  syncSel();
+  hideSizeBubble();                  // moving never shows the bubble
+})
+
+.on('object:scaling', e => {
+  hoverHL.visible         = false;
+  transformingRef.current = true;
+  if (actionTimerRef.current) {
+    clearTimeout(actionTimerRef.current);
+    actionTimerRef.current = null;
+  }
+  syncSel();
+  showSizeBubble(e.target as fabric.Object, e);   // live size read-out
+})
+
+.on('object:rotating', () => {
+  hoverHL.visible         = false;
+  transformingRef.current = true;
+  if (actionTimerRef.current) {
+    clearTimeout(actionTimerRef.current);
+    actionTimerRef.current = null;
+  }
+  syncSel();
+  hideSizeBubble();                  // hide during rotation
+})
+
+.on('object:scaled', e => {
+  hoverHL.visible = false;
+  hideSizeBubble();
+  requestAnimationFrame(() => requestAnimationFrame(syncSel));
+})
+
   .on('object:modified', () => {
     if (transformingRef.current) {
       transformingRef.current = false

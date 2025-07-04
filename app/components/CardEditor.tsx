@@ -867,7 +867,7 @@ const handleProofAll = async () => {
             <div
               className={section === 'front' ? box : 'hidden'}
               style={{ width: boxWidth }}
-              onClick={() => gotoPage(0)}
+              onClick={() => activeIdx !== 0 && gotoPage(0)}
             >
               <FabricCanvas
                 pageIdx={0}
@@ -887,7 +887,7 @@ const handleProofAll = async () => {
               <div
                 className={`${box} mr-[-1px]`}
                 style={{ width: boxWidth }}
-                onClick={() => gotoPage(1)}
+                onClick={() => activeIdx !== 1 && gotoPage(1)}
               >
                 <FabricCanvas
                   pageIdx={1}
@@ -906,7 +906,7 @@ const handleProofAll = async () => {
               <div
                 className={box}
                 style={{ width: boxWidth }}
-                onClick={() => gotoPage(2)}
+                onClick={() => activeIdx !== 2 && gotoPage(2)}
               >
                 <FabricCanvas
                   pageIdx={2}
@@ -927,7 +927,7 @@ const handleProofAll = async () => {
             <div
               className={section === 'back' ? box : 'hidden'}
               style={{ width: boxWidth }}
-              onClick={() => gotoPage(3)}
+              onClick={() => activeIdx !== 3 && gotoPage(3)}
             >
               <FabricCanvas
                 pageIdx={3}
@@ -950,7 +950,7 @@ const handleProofAll = async () => {
               <button
                 key={lbl}
                 className={`thumb ${activeIdx === i ? 'thumb-active' : ''}`}
-                onClick={() => gotoPage(i as PageIdx)}
+                onClick={() => activeIdx !== i && gotoPage(i as PageIdx)}
               >
                 {thumbs[i] ? (
                   <img
