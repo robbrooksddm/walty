@@ -657,11 +657,14 @@ useEffect(() => {
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
-  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const cropCorners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const selCorners  = [...cropCorners, 'rot'] as const;
+
   const handleMap: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  selCorners.forEach(c => {
     const h = document.createElement('div');
-    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
+    const base = ['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner';
+    h.className = `handle ${base} ${c}`;
     h.dataset.corner = c;
     selEl.appendChild(h);
     handleMap[c] = h;
@@ -675,7 +678,7 @@ useEffect(() => {
   (selEl as any)._sizeBubble = sizeBubble;
 
   const cropHandles: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  cropCorners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c;
@@ -715,8 +718,20 @@ useEffect(() => {
     const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const scale = vt[0]
     const offset = PAD * scale
-    const dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
-    const dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+    const dx = corner === 'rot'
+      ? 0
+      : corner?.includes('l')
+        ? offset
+        : corner?.includes('r')
+          ? -offset
+          : 0
+    const dy = corner === 'rot'
+      ? 0
+      : corner?.includes('t')
+        ? offset
+        : corner?.includes('b')
+          ? -offset
+          : 0
 
     const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
@@ -1087,6 +1102,11 @@ const drawOverlay = (
     h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
     h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+    if (h.rot) {
+      const off = 30 * scale;
+      h.rot.style.left = `${midX}px`;
+      h.rot.style.top  = `${topY - off}px`;
+    }
   }
   return { left, top, width, height }
 }
