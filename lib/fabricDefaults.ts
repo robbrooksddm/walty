@@ -18,6 +18,7 @@ export const HANDLE_BLUR   = 1 / SCALE;
 (fabric.Object.prototype as any).transparentCorners= true;
 (fabric.Object.prototype as any).hasBorders        = false;
 (fabric.Object.prototype as any).cornerStyle       = 'circle';
+(fabric.Object.prototype as any).rotatingPointOffset = 28;
 
 /* ───────────────── helpers ──────────────────────────────── */
 
