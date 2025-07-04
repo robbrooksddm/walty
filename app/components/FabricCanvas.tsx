@@ -1167,10 +1167,15 @@ const syncSel = () => {
   cropEl && cropEl.classList.remove('crop-window')
 
 cropEl && (cropEl.style.display = 'none', cropEl._object = null);
-if (!obj) return;
+if (!obj) {
+  selEl.style.display = 'none'
+  return
+}
 
+selEl.style.display = 'none'
 const box = drawOverlay(obj, selEl);   // redraw green outline
 selEl._object = obj;
+selEl.style.display = 'block'
 
 /* ── quick-action overlay ──────────────────────────── */
 if (transformingRef.current) {
