@@ -507,9 +507,6 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
     if (!fc) return
     const active = fc.getActiveObject() as fabric.Object | undefined
     switch (a) {
-      case 'add':
-        useEditor.getState().addText()
-        break
       case 'cut':
         if (active) {
           clip.json = [active.toJSON(PROPS)]
@@ -571,6 +568,46 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
           }, '')
         }
         break
+      case 'bring-forward':
+        if (active) {
+          fc.bringForward(active)
+          fc.requestRenderAll()
+          syncLayersFromCanvas(fc, pageIdx)
+        }
+        break
+      case 'send-backward':
+        if (active) {
+          fc.sendBackwards(active)
+          fc.requestRenderAll()
+          syncLayersFromCanvas(fc, pageIdx)
+        }
+        break
+      case 'bring-to-front':
+        if (active) {
+          fc.bringToFront(active)
+          fc.requestRenderAll()
+          syncLayersFromCanvas(fc, pageIdx)
+        }
+        break
+      case 'send-to-back':
+        if (active) {
+          fc.sendToBack(active)
+          fc.requestRenderAll()
+          syncLayersFromCanvas(fc, pageIdx)
+        }
+        break
+      case 'align':
+        if (active) {
+          const zoom = fc.viewportTransform?.[0] ?? 1
+          const fcH = (fc.getHeight() ?? 0) / zoom
+          const fcW = (fc.getWidth()  ?? 0) / zoom
+          const { width, height } = active.getBoundingRect(true, true)
+          active.set({ left: fcW / 2 - width / 2, top: fcH / 2 - height / 2 })
+          active.setCoords()
+          fc.requestRenderAll()
+          syncLayersFromCanvas(fc, pageIdx)
+        }
+        break
       case 'delete':
         if (active) {
           allObjs(active).forEach(o => fc.remove(o))
@@ -579,21 +616,6 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
         break
       case 'crop':
         document.dispatchEvent(new Event('start-crop'))
-        break
-      case 'lock':
-        if (active) {
-          const next = !(active as any).locked
-          ;(active as any).locked = next
-          active.set({
-            lockMovementX: next,
-            lockMovementY: next,
-            lockScalingX : next,
-            lockScalingY : next,
-            lockRotation : next,
-          })
-          fc.requestRenderAll()
-          updateLayer(pageIdx, (active as any).layerIdx, { locked: next })
-        }
         break
     }
     setMenuPos(null)
@@ -641,6 +663,12 @@ useEffect(() => {
     handleMap[c] = h;
   });
   (selEl as any)._handles = handleMap;
+
+  const sizeBubble = document.createElement('div');
+  sizeBubble.className = 'size-bubble';
+  sizeBubble.style.display = 'none';
+  selEl.appendChild(sizeBubble);
+  (selEl as any)._sizeBubble = sizeBubble;
 
   const cropHandles: Record<string, HTMLDivElement> = {};
   corners.forEach(c => {
@@ -740,9 +768,13 @@ useEffect(() => {
   const ctxMenu = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    const target = fc.findTarget(e, true) as fabric.Object | null;
+    if (target) fc.setActiveObject(target);
     setMenuPos({ x: e.clientX, y: e.clientY });
   };
   fc.upperCanvasEl.addEventListener('contextmenu', ctxMenu);
+  selEl.addEventListener('contextmenu', ctxMenu);
+  cropEl.addEventListener('contextmenu', ctxMenu);
  
 /* --- keep Fabric’s wrapper the same size as the visible preview --- */
 const container = canvasRef.current!.parentElement as HTMLElement | null;
@@ -1114,6 +1146,26 @@ const syncHover = () => {
   drawOverlay(obj, hoverDomRef.current as HTMLDivElement & { _object?: fabric.Object | null })
 }
 
+  const showSizeBubble = (obj: fabric.Object | undefined, ev: fabric.IEvent | undefined) => {
+    if (!obj || !selDomRef.current || !ev) return
+    const bubble = (selDomRef.current as any)._sizeBubble as HTMLDivElement | undefined
+    if (!bubble) return
+    bubble.textContent = `w:${Math.round(obj.getScaledWidth())} h:${Math.round(obj.getScaledHeight())}`
+    const rect = selDomRef.current.getBoundingClientRect()
+    const e = ev.e as MouseEvent | PointerEvent | undefined
+    const x = e?.clientX ?? 0
+    const y = e?.clientY ?? 0
+    bubble.style.left = `${x - rect.left + 30}px`
+    bubble.style.top = `${y - rect.top + 30}px`
+    bubble.style.display = 'block'
+  }
+
+const hideSizeBubble = () => {
+  if (!selDomRef.current) return
+  const bubble = (selDomRef.current as any)._sizeBubble as HTMLDivElement | undefined
+  if (bubble) bubble.style.display = 'none'
+}
+
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
@@ -1142,6 +1194,7 @@ fc.on('selection:created', () => {
   }
   selDomRef.current && (selDomRef.current.style.display = 'none')
   cropDomRef.current && (cropDomRef.current.style.display = 'none')
+  hideSizeBubble()
 })
 
 /* also hide hover during any transform of the active object */
@@ -1151,10 +1204,11 @@ const handleAfterRender = () => {
   syncHover()
 }
 
-fc.on('object:moving',   () => { hoverHL.visible = false; syncSel() })
-  .on('object:scaling',  () => { hoverHL.visible = false; syncSel() })
-  .on('object:scaled',   () => {
+fc.on('object:moving',   () => { hoverHL.visible = false; syncSel(); hideSizeBubble() })
+  .on('object:scaling',  e => { hoverHL.visible = false; syncSel(); showSizeBubble(e.target as fabric.Object, e) })
+  .on('object:scaled',   e => {
     hoverHL.visible = false
+    hideSizeBubble()
     requestAnimationFrame(() => requestAnimationFrame(syncSel))
   })
   .on('object:rotating', () => { hoverHL.visible = false; syncSel() })
@@ -1663,7 +1717,6 @@ doSync = () =>
       {menuPos && (
         <ContextMenu
           pos={menuPos}
-          locked={!!(fcRef.current?.getActiveObject() as any)?.locked}
           onAction={handleMenuAction}
           onClose={() => setMenuPos(null)}
         />
