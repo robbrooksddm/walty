@@ -117,6 +117,7 @@ let SCALE = 1
 let PAD = 0
 const ROT_OFF = 40
 const SEL_BORDER = 2
+const BUBBLE_OFFSET = 30
 
 recompute()
 
@@ -1206,8 +1207,8 @@ const syncHover = () => {
     const e = ev.e as MouseEvent | PointerEvent | undefined
     const x = e?.clientX ?? 0
     const y = e?.clientY ?? 0
-    bubble.style.left = `${x - rect.left + 30}px`
-    bubble.style.top = `${y - rect.top + 30}px`
+    bubble.style.left = `${x - rect.left + BUBBLE_OFFSET}px`
+    bubble.style.top = `${y - rect.top + BUBBLE_OFFSET}px`
     bubble.style.display = 'block'
   }
 
@@ -1231,8 +1232,8 @@ const showRotBubble = (obj: fabric.Object | undefined, ev: fabric.IEvent | undef
   const e = ev.e as MouseEvent | PointerEvent | undefined
   const x = e?.clientX ?? 0
   const y = e?.clientY ?? 0
-  bubble.style.left = `${x - rect.left + 30}px`
-  bubble.style.top = `${y - rect.top + 30}px`
+  bubble.style.left = `${x - rect.left + BUBBLE_OFFSET}px`
+  bubble.style.top = `${y - rect.top + BUBBLE_OFFSET}px`
   bubble.style.display = 'block'
 }
 
