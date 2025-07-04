@@ -1094,7 +1094,7 @@ const drawOverlay = (
     h.mb.style.left  = `${midX}px`;   h.mb.style.top  = `${botY}px`
     if (h.rot) {
       h.rot.style.left = `${midX}px`
-      h.rot.style.top  = `${topY - ROT_OFF}px`
+      h.rot.style.top  = `${topY - ROT_OFF * scale}px`
     }
   }
   return { left, top, width, height }
