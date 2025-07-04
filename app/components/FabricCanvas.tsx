@@ -1322,7 +1322,8 @@ fc.on('object:moving', () => {
   requestAnimationFrame(() => requestAnimationFrame(syncSel));
 })
 
-  .on('object:modified', () => {
+.on('object:modified', () => {
+    syncSel() // ensure overlay hugs the element immediately
     if (transformingRef.current) {
       transformingRef.current = false
       setActionPos(null)
@@ -1334,6 +1335,7 @@ fc.on('object:moving', () => {
     hideRotBubble()
   })
   .on('mouse:up', () => {
+    syncSel() // refresh overlay after drag/crop release
     if (transformingRef.current) {
       transformingRef.current = false
       setActionPos(null)
