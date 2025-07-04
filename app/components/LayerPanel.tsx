@@ -40,7 +40,7 @@ function Row({ id, idx }: { id: string; idx: number }) {
   } = useSortable({ id });
 
   const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
   };
 
@@ -50,7 +50,7 @@ function Row({ id, idx }: { id: string; idx: number }) {
     <li
       ref={setNodeRef}
       style={style}
-      className="group flex items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 py-1 text-sm hover:bg-walty-orange/10"
+      className="group flex h-14 items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 text-sm hover:bg-walty-orange/10"
 
     >
       {/* drag handle */}
@@ -62,20 +62,34 @@ function Row({ id, idx }: { id: string; idx: number }) {
         <GripVertical className="h-4 w-4" />
       </button>
 
-      {/* name */}
-      <span className="flex-1 truncate text-walty-teal">
-        {layer.type === "text" ? (
-          (layer.text ?? "text").slice(0, 20)
+      {/* name / preview */}
+      <span
+        className="flex-1 truncate"
+        style={
+          layer.type === 'text'
+            ? {
+                fontFamily: layer.fontFamily,
+                fontWeight: layer.fontWeight as React.CSSProperties['fontWeight'],
+                fontStyle: layer.fontStyle as React.CSSProperties['fontStyle'],
+                textDecoration: layer.underline ? 'underline' : undefined,
+                color: layer.fill,
+                textAlign: layer.textAlign as React.CSSProperties['textAlign'],
+              }
+            : undefined
+        }
+      >
+        {layer.type === 'text' ? (
+          (layer.text ?? 'text').slice(0, 20)
         ) : (
           <img
             src={
               layer.srcUrl ||
-              (typeof layer.src === "string" ? layer.src : undefined)
+              (typeof layer.src === 'string' ? layer.src : undefined)
             }
             alt="layer"
             width={48}
             height={48}
-            className="inline-block h-12 w-12 object-cover rounded"
+            className="inline-block h-12 w-12 rounded object-cover"
           />
         )}
       </span>
