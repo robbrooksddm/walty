@@ -75,7 +75,7 @@ function recompute() {
   PREVIEW_W = currentPreview.previewWidthPx
   PREVIEW_H = currentPreview.previewHeightPx
   SCALE = PREVIEW_W / PAGE_W
-  PAD = 0
+  PAD = ROT_OFFSET
   // compute safe-zone after scaling so rounding happens in preview pixels
   const safeXPreview = safeInsetXIn * currentSpec.dpi * SCALE
   const safeYPreview = safeInsetYIn * currentSpec.dpi * SCALE
@@ -114,7 +114,8 @@ let PAGE_W = 0
 let PAGE_H = 0
 let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
-let PAD = 0
+const ROT_OFFSET = 40
+let PAD = ROT_OFFSET
 const SEL_BORDER = 2
 
 recompute()
@@ -657,11 +658,17 @@ useEffect(() => {
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
-  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const selCorners  = ['tl','tr','br','bl','ml','mr','mt','mb','mtr'] as const;
+  const cropCorners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  selCorners.forEach(c => {
+    const type = ['ml','mr','mt','mb'].includes(c)
+      ? 'side'
+      : c === 'mtr'
+        ? 'rotate'
+        : 'corner';
     const h = document.createElement('div');
-    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
+    h.className = `handle ${type} ${c}`;
     h.dataset.corner = c;
     selEl.appendChild(h);
     handleMap[c] = h;
@@ -675,7 +682,7 @@ useEffect(() => {
   (selEl as any)._sizeBubble = sizeBubble;
 
   const cropHandles: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  cropCorners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c;
@@ -715,8 +722,14 @@ useEffect(() => {
     const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const scale = vt[0]
     const offset = PAD * scale
-    const dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
-    const dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+    let dx = 0
+    let dy = 0
+    if (corner === 'mtr') {
+      dy = offset
+    } else {
+      dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
+      dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
+    }
 
     const down = new MouseEvent('mousedown', forward(e, dx, dy))
     fc.upperCanvasEl.dispatchEvent(down)
@@ -1087,6 +1100,10 @@ const drawOverlay = (
     h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
     h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
     h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+    if (h.mtr) {
+      h.mtr.style.left = `${midX}px`
+      h.mtr.style.top  = `${topY}px`
+    }
   }
   return { left, top, width, height }
 }
@@ -1126,7 +1143,7 @@ const syncSel = () => {
       }
     }
     if (selEl._handles)
-      ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'none')
+      ['ml','mr','mt','mb','mtr'].forEach(k => selEl._handles![k].style.display = 'none')
     if (cropEl && cropEl._handles)
       ['ml','mr','mt','mb'].forEach(k => cropEl._handles![k].style.display = 'none')
     selEl.style.display = 'block'
@@ -1155,7 +1172,7 @@ if (transformingRef.current) {
 
 /* ── stable branch: keep side-handles visible ──────── */
 if (selEl._handles) {
-  ['ml', 'mr', 'mt', 'mb'].forEach(k =>
+  ['ml', 'mr', 'mt', 'mb', 'mtr'].forEach(k =>
     selEl._handles![k].style.display = 'block',
   );
 }
