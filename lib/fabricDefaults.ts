@@ -104,6 +104,7 @@ const utils = (fabric as any).controlsUtils;   // hidden Fabric helpers
   Math.round((fabric.Object.prototype as any).cornerSize * 1.3);
 (fabric.Object.prototype as any).controls.mtr.sizeY =
   Math.round((fabric.Object.prototype as any).cornerSize * 1.3);
+(fabric.Object.prototype as any).controls.mtr.visible = false;
 
 // corner circles
 ['tl','tr','bl','br'].forEach(pos => {
