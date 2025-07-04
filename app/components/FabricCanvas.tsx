@@ -1188,6 +1188,12 @@ const hideSizeBubble = () => {
   if (bubble) bubble.style.display = 'none'
 }
 
+const rafSyncSel = () => {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(syncSel)
+  })
+}
+
 fc.on('selection:created', () => {
   hoverHL.visible = false
   fc.requestRenderAll()
@@ -1196,7 +1202,7 @@ fc.on('selection:created', () => {
     cropDomRef.current.style.display = 'block'
   }
   syncSel()
-  requestAnimationFrame(syncSel)
+  rafSyncSel()
   scrollHandler = () => {
     fc.calcOffset()
     syncSel()
@@ -1264,7 +1270,7 @@ fc.on('object:moving', () => {
 .on('object:scaled', e => {
   hoverHL.visible = false;
   hideSizeBubble();
-  requestAnimationFrame(() => requestAnimationFrame(syncSel));
+  rafSyncSel();
 })
 
   .on('object:modified', () => {
@@ -1272,9 +1278,7 @@ fc.on('object:moving', () => {
       transformingRef.current = false
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
-      actionTimerRef.current = window.setTimeout(() => {
-        requestAnimationFrame(() => requestAnimationFrame(syncSel))
-      }, 250)
+      actionTimerRef.current = window.setTimeout(rafSyncSel, 250)
     }
   })
   .on('mouse:up', () => {
@@ -1282,7 +1286,7 @@ fc.on('object:moving', () => {
       transformingRef.current = false
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
-      actionTimerRef.current = window.setTimeout(syncSel, 250)
+      actionTimerRef.current = window.setTimeout(rafSyncSel, 250)
     }
   })
   .on('after:render',    handleAfterRender)
@@ -1694,8 +1698,12 @@ img.on('mouseup', () => {
 
 doSync = () =>
   canvasRef.current && ghost && (() => {
-    fc.calcOffset()
-    syncGhost(img, ghost, canvasRef.current)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        fc.calcOffset()
+        syncGhost(img, ghost, canvasRef.current!)
+      })
+    })
   })()
             doSync()
             img.on('moving',   doSync)
