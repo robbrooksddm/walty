@@ -843,6 +843,7 @@ if (container) {
   const crop = new CropTool(fc, SCALE, SEL_COLOR, state => {
     croppingRef.current = state
     isolateCrop(state)
+    hideSel()
     hideHover()
     hoverHL.visible = false
     onCroppingChange?.(state)
@@ -1190,6 +1191,12 @@ const hideSizeBubble = () => {
   if (bubble) bubble.style.display = 'none'
 }
 
+const hideSel = () => {
+  if (!selDomRef.current) return
+  selDomRef.current.style.display = 'none'
+  ;(selDomRef.current as any)._object = null
+}
+
 const hideHover = () => {
   if (!hoverDomRef.current) return
   hoverDomRef.current.style.display = 'none'
@@ -1285,6 +1292,7 @@ fc.on('object:moving', () => {
       transformingRef.current = false
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+      hideSel()
       hideHover()
       actionTimerRef.current = window.setTimeout(() => {
         requestAnimationFrame(() => requestAnimationFrame(syncSel))
@@ -1296,6 +1304,7 @@ fc.on('object:moving', () => {
       transformingRef.current = false
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+      hideSel()
       hideHover()
       actionTimerRef.current = window.setTimeout(syncSel, 250)
     }
