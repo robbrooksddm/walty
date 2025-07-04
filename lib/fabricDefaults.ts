@@ -78,6 +78,45 @@ const pillControlV: fabric.Control['render'] = function (
   ctx.restore();
 };
 
+// circular rotation handle with arrow icon
+const rotationControl: fabric.Control['render'] = function (
+  this: fabric.Control,
+  ctx, left, top, style: any, obj,
+) {
+  style = style || {};
+  const s = this.sizeX || style.cornerSize || obj.cornerSize;
+  const r = s / 2;
+  ctx.save();
+  ctx.translate(left, top);
+  ctx.rotate(fabric.util.degreesToRadians(obj.angle ?? 0));
+  ctx.fillStyle   = style.cornerColor       || obj.cornerColor;
+  ctx.strokeStyle = style.cornerStrokeColor || obj.cornerStrokeColor;
+  ctx.lineWidth   = 1;
+
+  // outer circle
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, 2 * Math.PI);
+  (ctx as any)[obj.transparentCorners ? 'stroke' : 'fill']();
+  if (!obj.transparentCorners) ctx.stroke();
+
+  // rotation arrow
+  const arrowR = r * 0.6;
+  const start = -Math.PI / 2;
+  const end   = start + 1.5 * Math.PI;
+  ctx.beginPath();
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 1.5 / SCALE;
+  ctx.arc(0, 0, arrowR, start, end);
+  const hx = arrowR * Math.cos(end);
+  const hy = arrowR * Math.sin(end);
+  ctx.moveTo(hx, hy);
+  ctx.lineTo(hx - 3, hy - 3);
+  ctx.moveTo(hx, hy);
+  ctx.lineTo(hx + 1, hy - 4);
+  ctx.stroke();
+  ctx.restore();
+};
+
 /* ───────────────── wire everything once ─────────────────── */
 
 const utils = (fabric as any).controlsUtils;   // hidden Fabric helpers
@@ -95,8 +134,15 @@ const utils = (fabric as any).controlsUtils;   // hidden Fabric helpers
 });
 
 // rotation handle
-(fabric.Object.prototype as any).controls.mtr.render =
-  withShadow(utils.renderCircleControl);
+(fabric.Object.prototype as any).controls.mtr = {
+  ...((fabric.Object.prototype as any).controls.mtr),
+  x: 0,
+  y: 0.5,
+  offsetY: 40,
+  sizeX: Math.round(5 / SCALE),
+  sizeY: Math.round(5 / SCALE),
+  render: withShadow(rotationControl),
+};
 
 // corner circles
 ['tl','tr','bl','br'].forEach(pos => {
