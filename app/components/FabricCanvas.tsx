@@ -1327,6 +1327,10 @@ fc.on('object:moving', () => {
       transformingRef.current = false
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+      selDomRef.current && (selDomRef.current.style.display = 'none')
+      if (croppingRef.current && cropDomRef.current) {
+        cropDomRef.current.style.display = 'none'
+      }
       actionTimerRef.current = window.setTimeout(() => {
         requestAnimationFrame(() => requestAnimationFrame(syncSel))
       }, 250)
@@ -1338,6 +1342,10 @@ fc.on('object:moving', () => {
       transformingRef.current = false
       setActionPos(null)
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
+      selDomRef.current && (selDomRef.current.style.display = 'none')
+      if (croppingRef.current && cropDomRef.current) {
+        cropDomRef.current.style.display = 'none'
+      }
       actionTimerRef.current = window.setTimeout(syncSel, 250)
     }
     hideSizeBubble()
