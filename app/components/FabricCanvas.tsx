@@ -115,6 +115,7 @@ let PAGE_H = 0
 let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
 let PAD = 0
+const ROT_OFF = 40
 const SEL_BORDER = 2
 
 recompute()
@@ -657,12 +658,16 @@ useEffect(() => {
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
-  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const selCorners  = ['tl','tr','br','bl','ml','mr','mt','mb','rot'] as const;
+  const cropCorners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  selCorners.forEach(c => {
     const h = document.createElement('div');
-    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
-    h.dataset.corner = c;
+    h.className =
+      c === 'rot'
+        ? 'handle rot'
+        : `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
+    h.dataset.corner = c === 'rot' ? 'mtr' : c;
     selEl.appendChild(h);
     handleMap[c] = h;
   });
@@ -675,7 +680,7 @@ useEffect(() => {
   (selEl as any)._sizeBubble = sizeBubble;
 
   const cropHandles: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  cropCorners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c;
@@ -1052,7 +1057,10 @@ let hoverScrollHandler: (() => void) | null = null
 
 const drawOverlay = (
   obj: fabric.Object,
-  el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
+  el: HTMLDivElement & {
+    _handles?: Record<string, HTMLDivElement>
+    _object?: fabric.Object | null
+  }
 ) => {
   const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
@@ -1085,8 +1093,20 @@ const drawOverlay = (
     h.bl.style.left = `${leftX}px`;  h.bl.style.top = `${botY}px`
     h.ml.style.left = `${leftX}px`;  h.ml.style.top = `${midY}px`
     h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
-    h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
-    h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+    h.mt.style.left  = `${midX}px`;   h.mt.style.top  = `${topY}px`
+    h.mb.style.left  = `${midX}px`;   h.mb.style.top  = `${botY}px`
+    if (h.rot) {
+      const angle = (obj.angle || 0) * Math.PI / 180
+      const offset = obj.getScaledHeight() / 2 + ROT_OFF / scale
+      const cx = box.left + box.width / 2
+      const cy = box.top  + box.height / 2
+      const x = cx + offset * Math.sin(angle)
+      const y = cy - offset * Math.cos(angle)
+      const relX = Math.round((x - (box.left - PAD)) * scale)
+      const relY = Math.round((y - (box.top  - PAD)) * scale)
+      h.rot.style.left = `${relX}px`
+      h.rot.style.top  = `${relY}px`
+    }
   }
   return { left, top, width, height }
 }
@@ -1126,7 +1146,7 @@ const syncSel = () => {
       }
     }
     if (selEl._handles)
-      ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'none')
+      ['ml','mr','mt','mb','rot'].forEach(k => selEl._handles![k].style.display = 'none')
     if (cropEl && cropEl._handles)
       ['ml','mr','mt','mb'].forEach(k => cropEl._handles![k].style.display = 'none')
     selEl.style.display = 'block'
@@ -1155,8 +1175,8 @@ if (transformingRef.current) {
 
 /* ── stable branch: keep side-handles visible ──────── */
 if (selEl._handles) {
-  ['ml', 'mr', 'mt', 'mb'].forEach(k =>
-    selEl._handles![k].style.display = 'block',
+  ['ml', 'mr', 'mt', 'mb', 'rot'].forEach(k =>
+    selEl._handles![k].style.display = 'block'
   );
 }
 }
