@@ -111,9 +111,13 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
       lockScalingX : next,
       lockScalingY : next,
       lockRotation : next,
+      selectable   : !next,
+      evented      : !next,
+      hasControls  : !next,
     });
     fc.requestRenderAll();
     updateLayer(activePage, (img as any).layerIdx, { locked: next });
+    force({});
   };
 
   /* layer order helpers */
