@@ -35,8 +35,8 @@ function Row({ id, idx }: { id: string; idx: number }) {
     useSortable({ id, disabled: !!layer?.locked });
 
   const style: React.CSSProperties = {
-    transform: CSS.Translate.toString(transform),
-    transition,
+    transform: !layer?.locked ? CSS.Translate.toString(transform) : undefined,
+    transition: !layer?.locked ? transition : undefined,
   };
 
   if (!layer) return null;
@@ -46,15 +46,15 @@ function Row({ id, idx }: { id: string; idx: number }) {
       ref={setNodeRef}
       style={style}
       {...attributes}
+      {...(!layer?.locked ? listeners : {})}
       className={`relative group flex h-14 items-center gap-2 rounded-lg
                   border-2 border-walty-teal/40 px-2 text-sm
                   hover:bg-walty-orange/10
-                  ${layer.locked ? "cursor-default" : "cursor-grab"}`}
+                  ${layer?.locked ? "cursor-default" : "cursor-grab"}`}
     >
       {/* drag handle */}
       <button
-        {...(!layer.locked ? listeners : {})}
-        disabled={layer.locked}
+        disabled={layer?.locked}
         className="text-walty-teal hover:text-walty-orange
                    disabled:opacity-40 disabled:cursor-not-allowed"
       >
