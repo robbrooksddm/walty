@@ -134,6 +134,8 @@ export const EXPORT_MULT = () => {
 // 4 CSS-px padding used by the hover outline
 const dash = (gap: number) => [gap / SCALE, (gap - 2) / SCALE];
 
+const makeId = () => Math.random().toString(36).slice(2, 9);
+
 /* ---------- shared clipboard helpers ------------------------------ */
 type Clip = { json: any[]; nudge: number };
 export const clip: Clip = { json: [], nudge: 0 };
@@ -176,6 +178,8 @@ export type ImageSrc = string | SanityImageRef | null
 
 /** A single canvas layer (image | text) */
 export interface Layer {
+  /** stable ID used for drag‑and‑drop */
+  uid?: string
   /* ---- layer kind ------------------------------------------------ */
   type: 'image' | 'text'
 
@@ -310,6 +314,7 @@ const objToLayer = (o: fabric.Object): Layer => {
   if ((o as any).type === 'textbox') {
     const t = o as fabric.Textbox
     return {
+      uid      : (t as any).uid || makeId(),
       type      : 'text',
       text      : t.text || '',
       x         : t.left || 0,
@@ -339,6 +344,7 @@ const objToLayer = (o: fabric.Object): Layer => {
   const assetId = (i as any).assetId as string | undefined
 
   const layer: Layer = {
+    uid   : (i as any).uid || makeId(),
     type   : 'image',
     src    : assetId
                ? { _type:'image', asset:{ _type:'reference', _ref: assetId } }
@@ -1849,6 +1855,7 @@ doSync = () =>
 
           /* keep z-order */
           ;(img as any).layerIdx = idx
+          ;(img as any).uid = ly.uid
           fc.insertAt(img, idx, false)
           img.setCoords()
           fc.requestRenderAll()
@@ -1892,6 +1899,7 @@ doSync = () =>
           })
         }
         ;(tb as any).layerIdx = idx
+        ;(tb as any).uid = ly.uid
         fc.insertAt(tb, idx, false)
       }
     }
