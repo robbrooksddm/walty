@@ -115,6 +115,7 @@ let PAGE_H = 0
 let PREVIEW_H = currentPreview.previewHeightPx
 let SCALE = 1
 let PAD = 0
+const ROT_OFF = 32
 const SEL_BORDER = 2
 
 recompute()
@@ -657,12 +658,16 @@ useEffect(() => {
   cropDomRef.current = cropEl;
   (cropEl as any)._object = null;
 
-  const corners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
+  const selCorners  = ['tl','tr','br','bl','ml','mr','mt','mb','rot'] as const;
+  const cropCorners = ['tl','tr','br','bl','ml','mr','mt','mb'] as const;
   const handleMap: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  selCorners.forEach(c => {
     const h = document.createElement('div');
-    h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
-    h.dataset.corner = c;
+    h.className =
+      c === 'rot'
+        ? 'handle rot'
+        : `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
+    h.dataset.corner = c === 'rot' ? 'mtr' : c;
     selEl.appendChild(h);
     handleMap[c] = h;
   });
@@ -671,11 +676,17 @@ useEffect(() => {
   const sizeBubble = document.createElement('div');
   sizeBubble.className = 'size-bubble';
   sizeBubble.style.display = 'none';
-  selEl.appendChild(sizeBubble);
+  document.body.appendChild(sizeBubble);
   (selEl as any)._sizeBubble = sizeBubble;
 
+  const rotBubble = document.createElement('div');
+  rotBubble.className = 'rot-bubble';
+  rotBubble.style.display = 'none';
+  document.body.appendChild(rotBubble);
+  (selEl as any)._rotBubble = rotBubble;
+
   const cropHandles: Record<string, HTMLDivElement> = {};
-  corners.forEach(c => {
+  cropCorners.forEach(c => {
     const h = document.createElement('div');
     h.className = `handle ${['ml','mr','mt','mb'].includes(c) ? 'side' : 'corner'} ${c}`;
     h.dataset.corner = c;
@@ -1052,23 +1063,35 @@ let hoverScrollHandler: (() => void) | null = null
 
 const drawOverlay = (
   obj: fabric.Object,
-  el: HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
+  el: HTMLDivElement & {
+    _handles?: Record<string, HTMLDivElement>
+    _object?: fabric.Object | null
+  }
 ) => {
   const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
-  const vt   = fc.viewportTransform || [1,0,0,1,0,0]
+  const vt   = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
   const scale = vt[0]
   const c = containerRef.current
-  const scrollX = (c?.scrollLeft ?? 0)
-  const scrollY = (c?.scrollTop  ?? 0)
-  const left   = window.scrollX + scrollX + rect.left + vt[4] + (box.left - PAD) * scale
-  const top    = window.scrollY + scrollY + rect.top  + vt[5] + (box.top - PAD) * scale
-  const width  = (box.width  + PAD * 2) * scale
-  const height = (box.height + PAD * 2) * scale
+  const scrollX = c?.scrollLeft ?? 0
+  const scrollY = c?.scrollTop ?? 0
+
+  const cx = box.left + box.width / 2
+  const cy = box.top + box.height / 2
+  const w = obj.getScaledWidth() + PAD * 2
+  const h = obj.getScaledHeight() + PAD * 2
+  const left =
+    window.scrollX + scrollX + rect.left + vt[4] + (cx - w / 2) * scale
+  const top =
+    window.scrollY + scrollY + rect.top + vt[5] + (cy - h / 2) * scale
+  const width = w * scale
+  const height = h * scale
   el.style.left   = `${left}px`
   el.style.top    = `${top}px`
   el.style.width  = `${width}px`
   el.style.height = `${height}px`
+  el.style.transformOrigin = '50% 50%'
+  el.style.transform = `rotate(${obj.angle || 0}deg)`
   el._object = obj
   if (el._handles) {
     const h = el._handles
@@ -1085,8 +1108,14 @@ const drawOverlay = (
     h.bl.style.left = `${leftX}px`;  h.bl.style.top = `${botY}px`
     h.ml.style.left = `${leftX}px`;  h.ml.style.top = `${midY}px`
     h.mr.style.left = `${rightX}px`; h.mr.style.top = `${midY}px`
-    h.mt.style.left = `${midX}px`;   h.mt.style.top = `${topY}px`
-    h.mb.style.left = `${midX}px`;   h.mb.style.top = `${botY}px`
+    h.mt.style.left  = `${midX}px`
+    h.mt.style.top   = `${topY}px`
+    h.mb.style.left  = `${midX}px`
+    h.mb.style.top   = `${botY}px`
+    if (h.rot) {
+      h.rot.style.left = `${midX}px`
+      h.rot.style.top  = `${Math.round(botY + ROT_OFF)}px`
+    }
   }
   return { left, top, width, height }
 }
@@ -1126,7 +1155,7 @@ const syncSel = () => {
       }
     }
     if (selEl._handles)
-      ['ml','mr','mt','mb'].forEach(k => selEl._handles![k].style.display = 'none')
+      ['ml','mr','mt','mb','rot'].forEach(k => selEl._handles![k].style.display = 'none')
     if (cropEl && cropEl._handles)
       ['ml','mr','mt','mb'].forEach(k => cropEl._handles![k].style.display = 'none')
     selEl.style.display = 'block'
@@ -1155,8 +1184,8 @@ if (transformingRef.current) {
 
 /* ── stable branch: keep side-handles visible ──────── */
 if (selEl._handles) {
-  ['ml', 'mr', 'mt', 'mb'].forEach(k =>
-    selEl._handles![k].style.display = 'block',
+  ['ml', 'mr', 'mt', 'mb', 'rot'].forEach(k =>
+    selEl._handles![k].style.display = 'block'
   );
 }
 }
@@ -1173,18 +1202,39 @@ const syncHover = () => {
     const bubble = (selDomRef.current as any)._sizeBubble as HTMLDivElement | undefined
     if (!bubble) return
     bubble.textContent = `w:${Math.round(obj.getScaledWidth())} h:${Math.round(obj.getScaledHeight())}`
-    const rect = selDomRef.current.getBoundingClientRect()
     const e = ev.e as MouseEvent | PointerEvent | undefined
     const x = e?.clientX ?? 0
     const y = e?.clientY ?? 0
-    bubble.style.left = `${x - rect.left + 30}px`
-    bubble.style.top = `${y - rect.top + 30}px`
+    bubble.style.left = `${x + 30}px`
+    bubble.style.top = `${y + 30}px`
     bubble.style.display = 'block'
   }
 
 const hideSizeBubble = () => {
   if (!selDomRef.current) return
   const bubble = (selDomRef.current as any)._sizeBubble as HTMLDivElement | undefined
+  if (bubble) bubble.style.display = 'none'
+}
+
+const showRotBubble = (obj: fabric.Object | undefined, ev: fabric.IEvent | undefined) => {
+  if (!obj || !selDomRef.current || !ev) return
+  const bubble = (selDomRef.current as any)._rotBubble as HTMLDivElement | undefined
+  if (!bubble) return
+  let angle = obj.angle || 0
+  angle = ((angle % 360) + 360) % 360
+  if (angle > 180) angle -= 360
+  bubble.textContent = `${Math.round(angle)}\u00B0`
+  const e = ev.e as MouseEvent | PointerEvent | undefined
+  const x = e?.clientX ?? 0
+  const y = e?.clientY ?? 0
+  bubble.style.left = `${x + 30}px`
+  bubble.style.top = `${y + 30}px`
+  bubble.style.display = 'block'
+}
+
+const hideRotBubble = () => {
+  if (!selDomRef.current) return
+  const bubble = (selDomRef.current as any)._rotBubble as HTMLDivElement | undefined
   if (bubble) bubble.style.display = 'none'
 }
 
@@ -1218,14 +1268,17 @@ fc.on('selection:created', () => {
   cropDomRef.current && (cropDomRef.current.style.display = 'none');
   setActionPos(null);     // from quick-action branch
   hideSizeBubble();       // from stable branch
+  hideRotBubble();
 })
 
 
 /* also hide hover during any transform of the active object */
 const handleAfterRender = () => {
   fc.calcOffset()
-  syncSel()
-  syncHover()
+  requestAnimationFrame(() => {
+    syncSel()
+    syncHover()
+  })
 }
 
 fc.on('object:moving', () => {
@@ -1235,8 +1288,9 @@ fc.on('object:moving', () => {
     clearTimeout(actionTimerRef.current);
     actionTimerRef.current = null;
   }
-  syncSel();
+  requestAnimationFrame(syncSel);
   hideSizeBubble();                  // moving never shows the bubble
+  hideRotBubble();
 })
 
 .on('object:scaling', e => {
@@ -1246,24 +1300,27 @@ fc.on('object:moving', () => {
     clearTimeout(actionTimerRef.current);
     actionTimerRef.current = null;
   }
-  syncSel();
+  requestAnimationFrame(syncSel);
   showSizeBubble(e.target as fabric.Object, e);   // live size read-out
+  hideRotBubble();
 })
 
-.on('object:rotating', () => {
+.on('object:rotating', e => {
   hoverHL.visible         = false;
   transformingRef.current = true;
   if (actionTimerRef.current) {
     clearTimeout(actionTimerRef.current);
     actionTimerRef.current = null;
   }
-  syncSel();
+  requestAnimationFrame(syncSel);
   hideSizeBubble();                  // hide during rotation
+  showRotBubble(e.target as fabric.Object, e);
 })
 
 .on('object:scaled', e => {
   hoverHL.visible = false;
   hideSizeBubble();
+  hideRotBubble();
   requestAnimationFrame(() => requestAnimationFrame(syncSel));
 })
 
@@ -1276,6 +1333,7 @@ fc.on('object:moving', () => {
         requestAnimationFrame(() => requestAnimationFrame(syncSel))
       }, 250)
     }
+    hideRotBubble()
   })
   .on('mouse:up', () => {
     if (transformingRef.current) {
@@ -1284,6 +1342,8 @@ fc.on('object:moving', () => {
       if (actionTimerRef.current) clearTimeout(actionTimerRef.current)
       actionTimerRef.current = window.setTimeout(syncSel, 250)
     }
+    hideSizeBubble()
+    hideRotBubble()
   })
   .on('after:render',    handleAfterRender)
 
@@ -1323,6 +1383,7 @@ fc.on('mouse:over', e => {
 addGuides(fc, mode)                           // add guides based on mode
   /* ── 4.5 ▸ Fabric ➜ Zustand sync ──────────────────────────── */
   fc.on('object:modified', e=>{
+    hideRotBubble()
     isEditing.current = true
     const t = e.target as any
     if (t?.layerIdx === undefined) return
@@ -1524,6 +1585,8 @@ window.addEventListener('keydown', onKey)
       hoverDomRef.current?.remove()
       selDomRef.current?.remove()
       cropDomRef.current?.remove()
+      sizeBubble.remove()
+      rotBubble.remove()
       if (scrollHandler) {
         window.removeEventListener('scroll', scrollHandler)
         window.removeEventListener('resize', scrollHandler)

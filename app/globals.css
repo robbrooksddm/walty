@@ -102,11 +102,11 @@ html {
 /* === DOM selection overlay ==================================== */
 @layer utilities {
   .sel-overlay {
-    @apply absolute pointer-events-none box-border z-40;
+    @apply absolute pointer-events-none box-border z-40 overflow-visible;
     border:2px solid #2EC4B6; /* SEL_COLOR */
   }
   .sel-overlay.interactive {
-    @apply pointer-events-none;
+    @apply pointer-events-auto;
   }
   .sel-overlay .handle {
     position:absolute;
@@ -139,10 +139,26 @@ html {
   .sel-overlay .handle.mr { cursor:ew-resize; }
   .sel-overlay .handle.mt,
   .sel-overlay .handle.mb { cursor:ns-resize; }
+  .sel-overlay .handle.rot {
+    width:27px;
+    height:27px;
+    cursor:grab;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background-image:url('/icons/rotate.svg');
+    background-repeat:no-repeat;
+    background-position:center;
+    background-size:16px;
+  }
 
   /* ── NEW from stable-3-july-2025 ───────────────────────────── */
   .size-bubble {
-    @apply absolute text-white text-xs px-2 py-1 rounded-md bg-neutral-800/90 whitespace-nowrap pointer-events-none;
+    @apply fixed text-white text-xs px-2 py-1 rounded-md bg-neutral-800/90 whitespace-nowrap pointer-events-none;
+  }
+
+  .rot-bubble {
+    @apply fixed text-white text-xs px-2 py-1 rounded-md bg-neutral-800/90 whitespace-nowrap pointer-events-none;
   }
 
   /* ── NEW from stable-4-july-2025 ───────────────────────────── */

@@ -4,7 +4,7 @@
  * LayerPanel.tsx – Walty‑styled sidebar: upload, add text/image, reorder
  *********************************************************************/
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -27,7 +27,17 @@ import {
 import { useEditor } from "./EditorStore";
 
 /*────────────────────────────    Sortable row    ──*/
-function Row({ id, idx }: { id: string; idx: number }) {
+function Row({
+  id,
+  idx,
+  dropIndex,
+  setDropIndex,
+}: {
+  id: string;
+  idx: number;
+  dropIndex: number | null;
+  setDropIndex: (i: number | null) => void;
+}) {
   const layer = useEditor((s) => s.pages[s.activePage]?.layers[idx]);
   const remove = useEditor((s) => s.deleteLayer);
 
@@ -37,12 +47,28 @@ function Row({ id, idx }: { id: string; idx: number }) {
     setNodeRef,
     transform,
     transition,
+    isDragging,
+    index,
+    newIndex,
   } = useSortable({ id });
 
   const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
   };
+
+  const total = useEditor((s) => s.pages[s.activePage]?.layers.length || 0);
+
+  useEffect(() => {
+    if (isDragging) setDropIndex(newIndex);
+  }, [isDragging, newIndex, setDropIndex]);
+
+  const dropLine =
+    dropIndex !== null &&
+    dropIndex > 0 &&
+    dropIndex < total - 1 &&
+    index === dropIndex - 1 &&
+    !isDragging;
 
   if (!layer) return null;
 
@@ -50,9 +76,11 @@ function Row({ id, idx }: { id: string; idx: number }) {
     <li
       ref={setNodeRef}
       style={style}
-      className="group flex items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 py-1 text-sm hover:bg-walty-orange/10"
-
+      className="relative group flex h-14 items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 text-sm hover:bg-walty-orange/10"
     >
+      {dropLine && (
+        <div className="pointer-events-none absolute inset-x-0 -bottom-7 h-[3px] bg-walty-orange" />
+      )}
       {/* drag handle */}
       <button
         {...listeners}
@@ -62,20 +90,34 @@ function Row({ id, idx }: { id: string; idx: number }) {
         <GripVertical className="h-4 w-4" />
       </button>
 
-      {/* name */}
-      <span className="flex-1 truncate text-walty-teal">
-        {layer.type === "text" ? (
-          (layer.text ?? "text").slice(0, 20)
+      {/* name / preview */}
+      <span
+        className="flex-1 truncate text-center"
+        style={
+          layer.type === 'text'
+            ? {
+                fontFamily: layer.fontFamily,
+                fontWeight: layer.fontWeight as React.CSSProperties['fontWeight'],
+                fontStyle: layer.fontStyle as React.CSSProperties['fontStyle'],
+                textDecoration: layer.underline ? 'underline' : undefined,
+                color: layer.fill,
+                textAlign: layer.textAlign as React.CSSProperties['textAlign'],
+              }
+            : undefined
+        }
+      >
+        {layer.type === 'text' ? (
+          (layer.text ?? 'text').slice(0, 20)
         ) : (
           <img
             src={
               layer.srcUrl ||
-              (typeof layer.src === "string" ? layer.src : undefined)
+              (typeof layer.src === 'string' ? layer.src : undefined)
             }
             alt="layer"
             width={48}
             height={48}
-            className="inline-block h-12 w-12 object-cover rounded"
+            className="inline-block h-12 w-12 rounded object-cover mx-auto"
           />
         )}
       </span>
@@ -98,6 +140,7 @@ export default function LayerPanel() {
   const addImage = useEditor((s) => s.addImage);
   const addText = useEditor((s) => s.addText);
   const [open, setOpen] = useState(true);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
 
   if (!pages[activePage]) return null;
   const layerOrder = pages[activePage].layers.map((_, i) => pages[activePage].layers.length - 1 - i);
@@ -108,6 +151,7 @@ export default function LayerPanel() {
   const onDragEnd = (e: DragEndEvent) => {
     if (e.over && e.active.id !== e.over.id)
       reorder(+e.active.id, +e.over.id);
+    setDropIndex(null);
   };
 
   return (
@@ -153,7 +197,13 @@ export default function LayerPanel() {
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           <ul className="scrollbar-hidden flex h-[calc(100%-330px)] flex-col gap-1 overflow-y-auto px-4 pb-6">
             {layerOrder.map((idx) => (
-              <Row key={idx} id={idx.toString()} idx={idx} />
+              <Row
+                key={idx}
+                id={idx.toString()}
+                idx={idx}
+                dropIndex={dropIndex}
+                setDropIndex={setDropIndex}
+              />
             ))}
           </ul>
         </SortableContext>
