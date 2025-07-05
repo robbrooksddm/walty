@@ -97,14 +97,14 @@ export default function TextToolbar (props: Props) {
   const fcW  = (fc.getWidth()  ?? 0) / zoom
 
   const cycleVertical = () => {
-    if (!tb) return
+    if (!tb || locked) return
     const { top, height } = tb.getBoundingRect(true, true)
     const pos = [0, fcH / 2 - height / 2, fcH - height]
     mutate({ top: pos[(pos.findIndex(p => Math.abs(top - p) < 1) + 1) % 3] })
   }
 
   const cycleHorizontal = () => {
-    if (!tb) return
+    if (!tb || locked) return
     const { left, width } = tb.getBoundingRect(true, true)
     const pos = [0, fcW / 2 - width / 2, fcW - width]
     mutate({ left: pos[(pos.findIndex(p => Math.abs(left - p) < 1) + 1) % 3] })
@@ -124,16 +124,19 @@ export default function TextToolbar (props: Props) {
       lockScalingX : next,
       lockScalingY : next,
       lockRotation : next,
+      hasControls  : !next,
     })
     fc.requestRenderAll()
     updateLayer(activePage, (tb as any).layerIdx, { locked: next })
   }
 
   const sendBackward = () => {
+    if (locked) return
     const idx = (tb as any).layerIdx ?? 0
     if (idx < layerCount - 1) reorder(idx, idx + 1)
   }
   const bringForward = () => {
+    if (locked) return
     const idx = (tb as any).layerIdx ?? 0
     if (idx > 0 && idx <= layerCount - 1) reorder(idx, idx - 1)
   }
@@ -142,7 +145,7 @@ export default function TextToolbar (props: Props) {
   /* 6.  mutate helper – keeps focus & fires Fabric events              */
   /* ------------------------------------------------------------------ */
   const mutate = (p: Partial<fabric.Textbox>) => {
-    if (!tb) return
+    if (!tb || locked) return
     tb.set(p); tb.setCoords()
     fc.setActiveObject(tb); fc.requestRenderAll()
     tb.fire('modified'); fc.fire('object:modified', { target: tb })
@@ -172,18 +175,18 @@ export default function TextToolbar (props: Props) {
         >
           {/* ───────── Font family & size (no captions) ───────── */}
           <FontFamilySelect
-            disabled={!tb}
+            disabled={!tb || locked}
             value={tb?.fontFamily ?? 'Arial'}
             onChange={(v: string) => mutate({ fontFamily: v })}
           />
           <FontSizeStepper
-            disabled={!tb}
+            disabled={!tb || locked}
             value={tb?.fontSize ?? 12}
             onChange={(v: number) => mutate({ fontSize: v })}
           />
 
           {/* colour picker */}
-          <ToolTextColorPicker tb={tb} canvas={fc} mutate={mutate} />
+          <ToolTextColorPicker tb={tb} canvas={fc} mutate={mutate} disabled={locked} />
 
           {/* centre on page */}
           <IconButton 
@@ -191,14 +194,14 @@ export default function TextToolbar (props: Props) {
             label="Center vertical"
             caption="Center Y"
             onClick={cycleVertical}
-            disabled={!tb}
+            disabled={!tb || locked}
           />
           <IconButton 
             Icon={AlignToPageHorizontal}
             label="Center horizontal"
             caption="Center X"
             onClick={cycleHorizontal}
-            disabled={!tb}
+            disabled={!tb || locked}
           />
 
           {/* lock / unlock */}
@@ -216,14 +219,14 @@ export default function TextToolbar (props: Props) {
             label="Send backward"
             caption="Send ↓"
             onClick={sendBackward}
-            disabled={!tb}
+            disabled={!tb || locked}
           />
           <IconButton 
             Icon={ArrowUpToLine}
             label="Bring forward"
             caption="Bring ↑"
             onClick={bringForward}
-            disabled={!tb}
+            disabled={!tb || locked}
           />
 
           {/* B / I / U */}
@@ -233,7 +236,7 @@ export default function TextToolbar (props: Props) {
             onClick={() =>
               mutate({ fontWeight: tb!.fontWeight === 'bold' ? 'normal' : 'bold' })}
             active={tb?.fontWeight === 'bold'}
-            disabled={!tb}
+            disabled={!tb || locked}
           />
           <IconButton 
             Icon={Italic}
@@ -241,14 +244,14 @@ export default function TextToolbar (props: Props) {
             onClick={() =>
               mutate({ fontStyle: tb!.fontStyle === 'italic' ? 'normal' : 'italic' })}
             active={tb?.fontStyle === 'italic'}
-            disabled={!tb}
+            disabled={!tb || locked}
           />
           <IconButton 
             Icon={Underline}
             label="Underline"
             onClick={() => mutate({ underline: !tb!.underline })}
             active={!!tb?.underline}
-            disabled={!tb}
+            disabled={!tb || locked}
           />
 
           {/* text-case cycle */}
@@ -263,7 +266,7 @@ export default function TextToolbar (props: Props) {
             label="Change case"
             caption="Case"
             onClick={() => {
-              if (!tb) return
+              if (!tb || locked) return
               if (caseState === 'upper') {
                 mutate({ text: tb.text!.toUpperCase() })
                 setCaseState('title')
@@ -275,7 +278,7 @@ export default function TextToolbar (props: Props) {
                 setCaseState('upper')
               }
             }}
-            disabled={!tb}
+            disabled={!tb || locked}
           />
 
           {/* align cycle */}
@@ -291,12 +294,12 @@ export default function TextToolbar (props: Props) {
             }
             label="Align"
             onClick={cycleAlign}
-            disabled={!tb}
+            disabled={!tb || locked}
           />
 
           {/* line-height input */}
           <input
-            disabled={!tb}
+            disabled={!tb || locked}
             type="number"
             step={0.1}
             min={0.5}
@@ -312,7 +315,7 @@ export default function TextToolbar (props: Props) {
           />
 
           {/* opacity slider */}
-          <ToolTextOpacitySlider tb={tb} mutate={mutate} />
+          <ToolTextOpacitySlider tb={tb} mutate={mutate} disabled={locked} />
 
         </div>
       )}

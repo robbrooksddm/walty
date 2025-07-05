@@ -8,9 +8,10 @@ import IconButton from "./IconButton";
 interface Props {
   tb: fabric.Textbox | null;
   mutate: (p: Partial<fabric.Textbox>) => void;
+  disabled?: boolean;
 }
 
-export default function ToolTextOpacitySlider({ tb, mutate }: Props) {
+export default function ToolTextOpacitySlider({ tb, mutate, disabled = false }: Props) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
 
@@ -26,11 +27,11 @@ export default function ToolTextOpacitySlider({ tb, mutate }: Props) {
         Icon={Droplet}
         label="Opacity"
         active={open}
-        disabled={!tb}
-        onClick={() => tb && setOpen(o => !o)}
+        disabled={!tb || disabled}
+        onClick={() => tb && !disabled && setOpen(o => !o)}
       />
 
-      <Popover anchor={btnRef.current} open={open && !!tb} onClose={() => setOpen(false)}>
+      <Popover anchor={btnRef.current} open={open && !!tb && !disabled} onClose={() => setOpen(false)}>
         <label htmlFor="text-opacity-slider" className="sr-only">
           Text opacity
         </label>

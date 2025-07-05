@@ -511,9 +511,10 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
     const fc = fcRef.current
     if (!fc) return
     const active = fc.getActiveObject() as fabric.Object | undefined
+    const locked = active && (active as any).locked
     switch (a) {
       case 'cut':
-        if (active) {
+        if (active && !locked) {
           clip.json = [active.toJSON(PROPS)]
           clip.nudge = 0
           allObjs(active).forEach(o => fc.remove(o))
@@ -550,7 +551,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
         }
         break
       case 'duplicate':
-        if (active) {
+        if (active && !locked) {
           clip.json = [active.toJSON(PROPS)]
           clip.nudge += 10
           fabric.util.enlivenObjects(clip.json, (objs: fabric.Object[]) => {
@@ -574,35 +575,35 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
         }
         break
       case 'bring-forward':
-        if (active) {
+        if (active && !locked) {
           fc.bringForward(active)
           fc.requestRenderAll()
           syncLayersFromCanvas(fc, pageIdx)
         }
         break
       case 'send-backward':
-        if (active) {
+        if (active && !locked) {
           fc.sendBackwards(active)
           fc.requestRenderAll()
           syncLayersFromCanvas(fc, pageIdx)
         }
         break
       case 'bring-to-front':
-        if (active) {
+        if (active && !locked) {
           fc.bringToFront(active)
           fc.requestRenderAll()
           syncLayersFromCanvas(fc, pageIdx)
         }
         break
       case 'send-to-back':
-        if (active) {
+        if (active && !locked) {
           fc.sendToBack(active)
           fc.requestRenderAll()
           syncLayersFromCanvas(fc, pageIdx)
         }
         break
       case 'align':
-        if (active) {
+        if (active && !locked) {
           const zoom = fc.viewportTransform?.[0] ?? 1
           const fcH = (fc.getHeight() ?? 0) / zoom
           const fcW = (fc.getWidth()  ?? 0) / zoom
@@ -614,13 +615,13 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
         }
         break
       case 'delete':
-        if (active) {
+        if (active && !locked) {
           allObjs(active).forEach(o => fc.remove(o))
           syncLayersFromCanvas(fc, pageIdx)
         }
         break
       case 'crop':
-        document.dispatchEvent(new Event('start-crop'))
+        if (!locked) document.dispatchEvent(new Event('start-crop'))
         break
     }
     setMenuPos(null)
