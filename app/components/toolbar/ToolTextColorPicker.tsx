@@ -93,9 +93,10 @@ interface Props {
   tb: fabric.Textbox | null;
   canvas: fabric.Canvas | null;
   mutate: (p: Partial<fabric.Textbox>) => void;
+  disabled?: boolean;
 }
 
-export default function ToolTextColorPicker({ tb, canvas, mutate }: Props) {
+export default function ToolTextColorPicker({ tb, canvas, mutate, disabled }: Props) {
   const [open, setOpen] = useState(false);
   const [color, setColor] = useState("#000000");
   const [hsv, setHsv] = useState<[number, number, number]>([0, 0, 0]);
@@ -147,13 +148,13 @@ export default function ToolTextColorPicker({ tb, canvas, mutate }: Props) {
         ref={btnRef}
         type="button"
         aria-label="Text colour"
-        disabled={!tb}
-        onClick={() => tb && setOpen(o => !o)}
+        disabled={!tb || disabled}
+        onClick={() => tb && !disabled && setOpen(o => !o)}
         className="h-12 w-12 rounded-lg border border-teal-800/10 shadow disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50"
         style={{ backgroundColor: tb ? (tb.fill as string) : "#000" }}
       />
 
-      <Popover anchor={btnRef.current} open={open && !!tb} onClose={() => setOpen(false)}>
+      <Popover anchor={btnRef.current} open={open && !!tb && !disabled} onClose={() => setOpen(false)}>
         <div className="space-y-3 w-52" onKeyDown={e => e.stopPropagation()}>
           <ColorArea hsv={hsv} onChange={nv => {
             setHsv(nv);
