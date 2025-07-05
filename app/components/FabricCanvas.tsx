@@ -1275,8 +1275,10 @@ fc.on('selection:created', () => {
 /* also hide hover during any transform of the active object */
 const handleAfterRender = () => {
   fc.calcOffset()
-  syncSel()
-  syncHover()
+  requestAnimationFrame(() => {
+    syncSel()
+    syncHover()
+  })
 }
 
 fc.on('object:moving', () => {
@@ -1286,7 +1288,7 @@ fc.on('object:moving', () => {
     clearTimeout(actionTimerRef.current);
     actionTimerRef.current = null;
   }
-  syncSel();
+  requestAnimationFrame(syncSel);
   hideSizeBubble();                  // moving never shows the bubble
   hideRotBubble();
 })
@@ -1298,7 +1300,7 @@ fc.on('object:moving', () => {
     clearTimeout(actionTimerRef.current);
     actionTimerRef.current = null;
   }
-  syncSel();
+  requestAnimationFrame(syncSel);
   showSizeBubble(e.target as fabric.Object, e);   // live size read-out
   hideRotBubble();
 })
@@ -1310,7 +1312,7 @@ fc.on('object:moving', () => {
     clearTimeout(actionTimerRef.current);
     actionTimerRef.current = null;
   }
-  syncSel();
+  requestAnimationFrame(syncSel);
   hideSizeBubble();                  // hide during rotation
   showRotBubble(e.target as fabric.Object, e);
 })
