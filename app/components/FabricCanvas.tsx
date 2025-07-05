@@ -1121,6 +1121,8 @@ const drawOverlay = (
 }
 
 const syncSel = () => {
+  // keep Fabric's notion of the canvas position in sync
+  fc.calcOffset()
   const obj = fc.getActiveObject() as fabric.Object | undefined
   if (!selDomRef.current || !canvasRef.current) return
   const selEl  = selDomRef.current as HTMLDivElement & { _handles?: Record<string, HTMLDivElement>; _object?: fabric.Object | null }
