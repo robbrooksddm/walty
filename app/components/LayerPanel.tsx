@@ -27,17 +27,7 @@ import {
 import { useEditor } from "./EditorStore";
 
 /*────────────────────────────    Sortable row    ──*/
-function Row({
-  id,
-  idx,
-  dropIndex,
-  setDropIndex,
-}: {
-  id: string;
-  idx: number;
-  dropIndex: number | null;
-  setDropIndex: (i: number | null) => void;
-}) {
+function Row({ id, idx }: { id: string; idx: number }) {
   const layer = useEditor((s) => s.pages[s.activePage]?.layers[idx]);
   const remove = useEditor((s) => s.deleteLayer);
 
@@ -47,9 +37,7 @@ function Row({
     setNodeRef,
     transform,
     transition,
-    isDragging,
     index,
-    newIndex,
   } = useSortable({ id });
 
   const style: React.CSSProperties = {
@@ -57,36 +45,18 @@ function Row({
     transition,
   };
 
-  const total = useEditor((s) => s.pages[s.activePage]?.layers.length || 0);
-
-  useEffect(() => {
-    if (isDragging) setDropIndex(newIndex);
-  }, [isDragging, newIndex, setDropIndex]);
-
-  const dropLine =
-    dropIndex !== null &&
-    dropIndex > 0 &&
-    dropIndex < total - 1 &&
-    index === dropIndex - 1 &&
-    !isDragging;
-
   if (!layer) return null;
 
   return (
     <li
       ref={setNodeRef}
       style={style}
-      className="relative group flex h-14 items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 text-sm hover:bg-walty-orange/10"
+      {...listeners}
+      {...attributes}
+      className="relative group flex h-14 items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 text-sm hover:bg-walty-orange/10 cursor-grab"
     >
-      {dropLine && (
-        <div className="pointer-events-none absolute inset-x-0 -bottom-7 h-[3px] bg-walty-orange" />
-      )}
       {/* drag handle */}
-      <button
-        {...listeners}
-        {...attributes}
-        className="cursor-grab text-walty-teal hover:text-walty-orange"
-      >
+      <button className="text-walty-teal hover:text-walty-orange" disabled>
         <GripVertical className="h-4 w-4" />
       </button>
 
@@ -101,7 +71,7 @@ function Row({
                 fontStyle: layer.fontStyle as React.CSSProperties['fontStyle'],
                 textDecoration: layer.underline ? 'underline' : undefined,
                 color: layer.fill,
-                textAlign: layer.textAlign as React.CSSProperties['textAlign'],
+                textAlign: 'center',
               }
             : undefined
         }
@@ -140,22 +110,24 @@ export default function LayerPanel() {
   const addImage = useEditor((s) => s.addImage);
   const addText = useEditor((s) => s.addText);
   const [open, setOpen] = useState(true);
-  const [dropIndex, setDropIndex] = useState<number | null>(null);
 
   if (!pages[activePage]) return null;
   const layerOrder = pages[activePage].layers.map((_, i) => pages[activePage].layers.length - 1 - i);
-  const ids = layerOrder.map(i => i.toString());
+  const ids = layerOrder.map(i => pages[activePage].layers[i].uid);
 
   /* drag‑and‑drop */
   const sensors = useSensors(useSensor(PointerSensor));
   const onDragEnd = (e: DragEndEvent) => {
-    if (e.over && e.active.id !== e.over.id)
-      reorder(+e.active.id, +e.over.id);
-    setDropIndex(null);
+    if (e.over && e.active.id !== e.over.id) {
+      const from = pages[activePage].layers.findIndex(l => l.uid === e.active.id);
+      const to   = pages[activePage].layers.findIndex(l => l.uid === e.over.id);
+      if (from !== -1 && to !== -1) reorder(from, to);
+    }
   };
 
   return (
         <aside
+        data-layer-panel
         className={`fixed left-0 z-20
                       w-54 sm:w-60 md:w-64 lg:w-70 xl:w-74
                       rounded-r-2xl bg-white shadow-xl ring-2 ring-walty-teal/40
@@ -198,11 +170,9 @@ export default function LayerPanel() {
           <ul className="scrollbar-hidden flex h-[calc(100%-330px)] flex-col gap-1 overflow-y-auto px-4 pb-6">
             {layerOrder.map((idx) => (
               <Row
-                key={idx}
-                id={idx.toString()}
+                key={pages[activePage].layers[idx].uid}
+                id={pages[activePage].layers[idx].uid}
                 idx={idx}
-                dropIndex={dropIndex}
-                setDropIndex={setDropIndex}
               />
             ))}
           </ul>
