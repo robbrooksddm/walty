@@ -25,6 +25,7 @@ export class CropTool {
   /** canvas size before cropping */
   private baseW = 0;
   private baseH = 0;
+  private baseZoom = 1;
   private panX = 0;
   private panY = 0;
   private wrapStyles: { w:string; h:string; mw:string; mh:string; transform:string } | null = null;
@@ -125,6 +126,7 @@ export class CropTool {
     /* temporarily enlarge the canvas so the full image stays visible */
     this.baseW = this.fc.getWidth()
     this.baseH = this.fc.getHeight()
+    this.baseZoom = this.fc.getZoom()
     const wrapper = (this.fc as any).wrapperEl as HTMLElement | undefined
     if (wrapper) {
       this.wrapper = wrapper
@@ -741,18 +743,24 @@ export class CropTool {
     if (!keep) this.fc.discardActiveObject()
     this.fc.requestRenderAll()
     if (this.baseW && this.baseH) {
-      this.fc.setWidth(this.baseW)
-      this.fc.setHeight(this.baseH)
+      const zoomRatio = this.fc.getZoom() / this.baseZoom
+      this.fc.setWidth(this.baseW * zoomRatio)
+      this.fc.setHeight(this.baseH * zoomRatio)
       const wrap = (this.fc as any).wrapperEl as HTMLElement | undefined
       if (wrap && this.wrapStyles) {
-        wrap.style.width = this.wrapStyles.w
-        wrap.style.height = this.wrapStyles.h
-        wrap.style.maxWidth = this.wrapStyles.mw
-        wrap.style.maxHeight = this.wrapStyles.mh
+        const w  = parseFloat(this.wrapStyles.w)  || 0
+        const h  = parseFloat(this.wrapStyles.h)  || 0
+        const mw = parseFloat(this.wrapStyles.mw) || 0
+        const mh = parseFloat(this.wrapStyles.mh) || 0
+        if (w)  wrap.style.width = `${w * zoomRatio}px`
+        if (h)  wrap.style.height = `${h * zoomRatio}px`
+        if (mw) wrap.style.maxWidth = `${mw * zoomRatio}px`
+        if (mh) wrap.style.maxHeight = `${mh * zoomRatio}px`
         wrap.style.transform = this.wrapStyles.transform
       }
       this.baseW = 0
       this.baseH = 0
+      this.baseZoom = 1
       this.wrapStyles = null
     }
     if (this.panX || this.panY) {
