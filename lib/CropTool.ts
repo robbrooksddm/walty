@@ -55,6 +55,22 @@ export class CropTool {
     }
   }
 
+  /** Update stored canvas/base dimensions when zoom changes */
+  public updateBase () {
+    this.baseW = this.fc.getWidth()
+    this.baseH = this.fc.getHeight()
+    const wrapper = (this.fc as any).wrapperEl as HTMLElement | undefined
+    if (wrapper) {
+      this.wrapStyles = {
+        w:  wrapper.style.width,
+        h:  wrapper.style.height,
+        mw: wrapper.style.maxWidth,
+        mh: wrapper.style.maxHeight,
+        transform: wrapper.style.transform,
+      }
+    }
+  }
+
   /* ─────────────── public API ──────────────────────────────────── */
   public begin (img: fabric.Image) {
     if (this.isActive) return
