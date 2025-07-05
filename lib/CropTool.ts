@@ -182,10 +182,18 @@ export class CropTool {
     img.borderDashArray = []           // solid border
 
     /* ② persistent crop window */
-    const fx = (img.left ?? 0) + cropX * (img.scaleX ?? 1)
-    const fy = (img.top  ?? 0) + cropY * (img.scaleY ?? 1)
-    const fw =  width    * (img.scaleX ?? 1)
-    const fh =  height   * (img.scaleY ?? 1)
+    const angle = img.angle || 0
+    const rad   = fabric.util.degreesToRadians(angle)
+    const sX    = img.scaleX ?? 1
+    const sY    = img.scaleY ?? 1
+    const offX  = cropX * sX
+    const offY  = cropY * sY
+    const cos   = Math.cos(rad)
+    const sin   = Math.sin(rad)
+    const fx = (img.left ?? 0) + offX * cos - offY * sin
+    const fy = (img.top  ?? 0) + offX * sin + offY * cos
+    const fw =  width    * sX
+    const fh =  height   * sY
 
     const grid = { stroke:'#ffffff22', strokeWidth:1/this.SCALE,
                    selectable:false, evented:false }
@@ -198,7 +206,7 @@ export class CropTool {
         stroke:'transparent', strokeWidth:0,
         strokeUniform:true }),
     ],{
-      left:fx, top:fy, originX:'left', originY:'top',
+      left:fx, top:fy, originX:'left', originY:'top', angle,
       selectable:true, evented:true,  lockRotation:true,   // controls work; interior clicks fall through
       hasBorders:false, 
       lockMovementX:true,  lockMovementY:true,   // window position stays fixed
@@ -700,8 +708,14 @@ export class CropTool {
       const { img, frame } = this;
       const sX = img.scaleX ?? 1;
       const sY = img.scaleY ?? 1;
-      const cropX = (frame.left! - img.left!) / sX;
-      const cropY = (frame.top!  - img.top!)  / sY;
+      const angle = img.angle || 0;
+      const rad   = fabric.util.degreesToRadians(angle);
+      const cos   = Math.cos(rad);
+      const sin   = Math.sin(rad);
+      const dx    = frame.left! - img.left!;
+      const dy    = frame.top!  - img.top!;
+      const cropX = (dx * cos + dy * sin) / sX;
+      const cropY = (-dx * sin + dy * cos) / sY;
       const cropW = frame.width!  * frame.scaleX! / sX;
       const cropH = frame.height! * frame.scaleY! / sY;
 
