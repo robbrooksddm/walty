@@ -751,6 +751,25 @@ const handleProofAll = async () => {
     }
   }, [activeFc, handleZoomIn, handleZoomOut, setZoomSmooth])
 
+  // allow clicking anywhere within the editor (outside the canvases)
+  // to clear the current Fabric selection
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const fc = activeFc
+      const container = containerRef.current
+      if (!fc || !container) return
+      if (!container.contains(e.target as Node)) return
+      const target = e.target as HTMLElement | null
+      if (!target) return
+      if (target.closest('canvas')) return
+      if (target.closest('.sel-overlay')) return
+      fc.discardActiveObject()
+      fc.requestRenderAll()
+    }
+    document.addEventListener('mousedown', handler, true)
+    return () => document.removeEventListener('mousedown', handler, true)
+  }, [activeFc])
+
   /* 8 ─ loader guard --------------------------------------------- */
   if (pages.length !== 4) {
     return (
