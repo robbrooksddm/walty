@@ -37,6 +37,10 @@ function Row({ id, idx }: { id: string; idx: number }) {
     setNodeRef,
     transform,
     transition,
+    isOver,
+    isDragging,
+    index,
+    newIndex,
   } = useSortable({ id });
 
   const style: React.CSSProperties = {
@@ -44,15 +48,23 @@ function Row({ id, idx }: { id: string; idx: number }) {
     transition,
   };
 
+  const dropBefore = isOver && !isDragging && newIndex < index;
+  const dropAfter = isOver && !isDragging && newIndex > index;
+
   if (!layer) return null;
 
   return (
     <li
       ref={setNodeRef}
       style={style}
-      className="group flex h-14 items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 text-sm hover:bg-walty-orange/10"
-
+      className="relative group flex h-14 items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 text-sm hover:bg-walty-orange/10"
     >
+      {dropBefore && (
+        <div className="pointer-events-none absolute inset-x-0 -top-px h-0.5 bg-walty-orange" />
+      )}
+      {dropAfter && (
+        <div className="pointer-events-none absolute inset-x-0 -bottom-px h-0.5 bg-walty-orange" />
+      )}
       {/* drag handle */}
       <button
         {...listeners}
@@ -64,7 +76,7 @@ function Row({ id, idx }: { id: string; idx: number }) {
 
       {/* name / preview */}
       <span
-        className="flex-1 truncate"
+        className="flex-1 truncate text-center"
         style={
           layer.type === 'text'
             ? {
@@ -89,7 +101,7 @@ function Row({ id, idx }: { id: string; idx: number }) {
             alt="layer"
             width={48}
             height={48}
-            className="inline-block h-12 w-12 rounded object-cover"
+            className="inline-block h-12 w-12 rounded object-cover mx-auto"
           />
         )}
       </span>
