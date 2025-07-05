@@ -1286,7 +1286,7 @@ fc.on('object:moving', () => {
     clearTimeout(actionTimerRef.current);
     actionTimerRef.current = null;
   }
-  syncSel();
+  requestAnimationFrame(syncSel);
   hideSizeBubble();                  // moving never shows the bubble
   hideRotBubble();
 })
@@ -1298,7 +1298,7 @@ fc.on('object:moving', () => {
     clearTimeout(actionTimerRef.current);
     actionTimerRef.current = null;
   }
-  syncSel();
+  requestAnimationFrame(syncSel);
   showSizeBubble(e.target as fabric.Object, e);   // live size read-out
   hideRotBubble();
 })
@@ -1310,7 +1310,7 @@ fc.on('object:moving', () => {
     clearTimeout(actionTimerRef.current);
     actionTimerRef.current = null;
   }
-  syncSel();
+  requestAnimationFrame(syncSel);
   hideSizeBubble();                  // hide during rotation
   showRotBubble(e.target as fabric.Object, e);
 })
