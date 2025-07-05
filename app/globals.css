@@ -161,6 +161,11 @@ html {
     @apply fixed text-white text-xs px-2 py-1 rounded-md bg-neutral-800/90 whitespace-nowrap pointer-events-none;
   }
 
+  /* marquee for multi-select starting outside canvas */
+  .drag-box {
+    @apply fixed pointer-events-none z-30 border-2 border-dashed border-[--walty-teal] bg-[--walty-teal]/10;
+  }
+
   /* ── NEW from stable-4-july-2025 ───────────────────────────── */
   /* crop window corner “L” handles */
   .sel-overlay.crop-window .handle.corner {

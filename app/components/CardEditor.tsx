@@ -751,6 +751,80 @@ const handleProofAll = async () => {
     }
   }, [activeFc, handleZoomIn, handleZoomOut, setZoomSmooth])
 
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el || !activeFc) return
+
+    const fc = activeFc
+    const canvas = fc.upperCanvasEl
+
+    const marquee = document.createElement('div')
+    marquee.className = 'drag-box'
+    marquee.style.display = 'none'
+    document.body.appendChild(marquee)
+
+    const forward = (ev: PointerEvent | MouseEvent) => ({
+      clientX: ev.clientX,
+      clientY: ev.clientY,
+      button: ev.button,
+      buttons: 'buttons' in ev ? (ev as any).buttons : 0,
+      ctrlKey: ev.ctrlKey,
+      shiftKey: ev.shiftKey,
+      altKey: ev.altKey,
+      metaKey: ev.metaKey,
+      bubbles: true,
+      cancelable: true,
+    })
+
+    const handler = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null
+      if (!target) return
+      if (target.closest('canvas')) return
+      if (target.closest('button, input, textarea, select, label, a')) return
+
+      fc.discardActiveObject()
+      fc.requestRenderAll()
+
+      const startX = e.clientX
+      const startY = e.clientY
+
+      marquee.style.left = `${startX}px`
+      marquee.style.top = `${startY}px`
+      marquee.style.width = '0px'
+      marquee.style.height = '0px'
+      marquee.style.display = 'block'
+
+      const down = new MouseEvent('mousedown', forward(e))
+      canvas.dispatchEvent(down)
+
+      const move = (ev: PointerEvent) => {
+        const x = ev.clientX
+        const y = ev.clientY
+        marquee.style.left = `${Math.min(startX, x)}px`
+        marquee.style.top = `${Math.min(startY, y)}px`
+        marquee.style.width = `${Math.abs(x - startX)}px`
+        marquee.style.height = `${Math.abs(y - startY)}px`
+        canvas.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
+      }
+
+      const up = (ev: PointerEvent) => {
+        marquee.style.display = 'none'
+        canvas.dispatchEvent(new MouseEvent('mouseup', forward(ev)))
+        document.removeEventListener('pointermove', move)
+        document.removeEventListener('pointerup', up)
+      }
+
+      document.addEventListener('pointermove', move)
+      document.addEventListener('pointerup', up)
+    }
+
+    el.addEventListener('pointerdown', handler)
+    return () => {
+      el.removeEventListener('pointerdown', handler)
+      marquee.remove()
+    }
+  }, [activeFc])
+
   /* 8 ─ loader guard --------------------------------------------- */
   if (pages.length !== 4) {
     return (
