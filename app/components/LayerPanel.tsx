@@ -60,10 +60,16 @@ function Row({ id, idx }: { id: string; idx: number }) {
       className="relative group flex h-14 items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 text-sm hover:bg-walty-orange/10"
     >
       {dropBefore && (
-        <div className="pointer-events-none absolute inset-x-0 -top-px h-0.5 bg-walty-orange" />
+        <div
+          className="pointer-events-none absolute inset-x-0 bg-walty-orange h-[3px]"
+          style={{ top: "-4px" }}
+        />
       )}
       {dropAfter && (
-        <div className="pointer-events-none absolute inset-x-0 -bottom-px h-0.5 bg-walty-orange" />
+        <div
+          className="pointer-events-none absolute inset-x-0 bg-walty-orange h-[3px]"
+          style={{ top: "calc(100% + 1px)" }}
+        />
       )}
       {/* drag handle */}
       <button
