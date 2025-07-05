@@ -409,6 +409,26 @@ const exitCrop = (commit: boolean) => {
   }
   setCropping(prev => { const n = [...prev] as typeof prev; n[activeIdx] = false; return n })
   setCropMode(false)
+
+  // restore canvas size in case zoom changed while cropping
+  if (fc) {
+    const z = zoomRef.current
+    const w = previewW() * z
+    const h = previewH() * z
+    fc.setWidth(w)
+    fc.setHeight(h)
+    const container = fc.upperCanvasEl.parentElement as HTMLElement | null
+    if (container) {
+      const pad = 4 * z
+      container.style.width = `${w}px`
+      container.style.height = `${h}px`
+      container.style.maxWidth = `${w}px`
+      container.style.maxHeight = `${h}px`
+      container.style.padding = `${pad}px`
+      container.style.overflow = 'visible'
+    }
+    fc.requestRenderAll()
+  }
 }
 
 const setCropRatio = (r: number | null) => {
