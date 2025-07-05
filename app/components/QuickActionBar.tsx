@@ -1,5 +1,12 @@
 import React from 'react'
-import { Scissors, Copy, CopyPlus, Trash2, MoreHorizontal } from 'lucide-react'
+import {
+  Scissors,
+  Copy,
+  CopyPlus,
+  Trash2,
+  MoreHorizontal,
+  Lock,
+} from 'lucide-react'
 import type { MenuAction } from './ContextMenu'
 
 interface Props {
@@ -7,9 +14,10 @@ interface Props {
   onAction: (a: MenuAction) => void
   onMenu: (pos: { x: number; y: number }) => void
   locked?: boolean
+  onToggleLock?: () => void
 }
 
-export default function QuickActionBar({ pos, onAction, onMenu, locked }: Props) {
+export default function QuickActionBar({ pos, onAction, onMenu, locked, onToggleLock }: Props) {
   if (!pos) return null
 
   const openMenu = (e: React.MouseEvent) => {
@@ -29,6 +37,25 @@ export default function QuickActionBar({ pos, onAction, onMenu, locked }: Props)
       <Icon className="w-5 h-5" />
     </button>
   )
+
+  if (locked) {
+    return (
+      <div
+        className="fixed z-50 pointer-events-auto flex items-center bg-white border border-[rgba(0,91,85,.2)] shadow-lg rounded-full p-0"
+        style={{ top: pos.y, left: pos.x, transform: 'translate(-50%, -100%)' }}
+      >
+        <button
+          type="button"
+          aria-label="Unlock layer"
+          title="Unlock layer"
+          onClick={onToggleLock}
+          className="h-8 w-8 flex items-center justify-center rounded-lg text-[--walty-teal] hover:bg-[--walty-orange]/10 hover:text-[--walty-orange] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50"
+        >
+          <Lock className="w-5 h-5" />
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div

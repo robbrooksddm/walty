@@ -509,6 +509,25 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const setPageLayers = useEditor(s => s.setPageLayers)
   const updateLayer   = useEditor(s => s.updateLayer)
 
+  const toggleActiveLock = () => {
+    const fc = fcRef.current
+    if (!fc) return
+    const obj = fc.getActiveObject() as fabric.Object | undefined
+    if (!obj) return
+    const next = !(obj as any).locked
+    ;(obj as any).locked = next
+    obj.set({
+      lockMovementX: next,
+      lockMovementY: next,
+      lockScalingX: next,
+      lockScalingY: next,
+      lockRotation: next,
+    })
+    fc.requestRenderAll()
+    if ((obj as any).layerIdx !== undefined)
+      updateLayer(pageIdx, (obj as any).layerIdx, { locked: next })
+  }
+
   const handleMenuAction = (a: import('./ContextMenu').MenuAction) => {
     const fc = fcRef.current
     if (!fc) return
@@ -1878,6 +1897,7 @@ doSync = () =>
         onAction={handleMenuAction}
         onMenu={p => setMenuPos(p)}
         locked={Boolean(fcRef.current?.getActiveObject() && (fcRef.current!.getActiveObject() as any).locked)}
+        onToggleLock={toggleActiveLock}
       />
       {menuPos && (
         <ContextMenu
