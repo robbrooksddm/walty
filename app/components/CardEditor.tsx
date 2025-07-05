@@ -751,6 +751,54 @@ const handleProofAll = async () => {
     }
   }, [activeFc, handleZoomIn, handleZoomOut, setZoomSmooth])
 
+  useEffect(() => {
+    const root = containerRef.current
+    const fc = activeFc
+    if (!root || !fc) return
+    const canvasEl = fc.upperCanvasEl
+
+    const forward = (ev: PointerEvent | MouseEvent) => ({
+      clientX   : ev.clientX,
+      clientY   : ev.clientY,
+      button    : ev.button,
+      buttons   : 'buttons' in ev ? ev.buttons : 0,
+      ctrlKey   : ev.ctrlKey,
+      shiftKey  : ev.shiftKey,
+      altKey    : ev.altKey,
+      metaKey   : ev.metaKey,
+      bubbles   : true,
+      cancelable: true,
+    })
+
+    const start = (e: PointerEvent) => {
+      const rect = canvasEl.getBoundingClientRect()
+      if (
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom
+      )
+        return
+
+      fc.discardActiveObject()
+      fc.requestRenderAll()
+
+      canvasEl.dispatchEvent(new MouseEvent('mousedown', forward(e)))
+      const move = (ev: PointerEvent) =>
+        canvasEl.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
+      const up = (ev: PointerEvent) => {
+        canvasEl.dispatchEvent(new MouseEvent('mouseup', forward(ev)))
+        document.removeEventListener('pointermove', move)
+        document.removeEventListener('pointerup', up)
+      }
+      document.addEventListener('pointermove', move)
+      document.addEventListener('pointerup', up)
+    }
+
+    root.addEventListener('pointerdown', start)
+    return () => root.removeEventListener('pointerdown', start)
+  }, [activeFc])
+
   /* 8 ─ loader guard --------------------------------------------- */
   if (pages.length !== 4) {
     return (
