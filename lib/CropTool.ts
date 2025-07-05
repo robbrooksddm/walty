@@ -31,6 +31,7 @@ export class CropTool {
   private wrapper: HTMLElement | null = null;
   private scrollLeft = 0;
   private scrollTop = 0;
+  private prevControls: Record<string, boolean> | null = null;
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
 
@@ -106,6 +107,13 @@ export class CropTool {
     const prevLockUniScaling = img.lockUniScaling
     const prevCenteredScaling = img.centeredScaling
     const prevHasBorders = img.hasBorders
+    this.prevControls = {
+      mtr: img.isControlVisible('mtr'),
+      ml : img.isControlVisible('ml'),
+      mr : img.isControlVisible('mr'),
+      mt : img.isControlVisible('mt'),
+      mb : img.isControlVisible('mb'),
+    }
     img.set({
       left  : (img.left ?? 0) - cropX * (img.scaleX ?? 1),
       top   : (img.top  ?? 0) - cropY * (img.scaleY ?? 1),
@@ -170,6 +178,7 @@ export class CropTool {
       img.lockUniScaling  = prevLockUniScaling
       img.centeredScaling = prevCenteredScaling
       img.hasBorders      = prevHasBorders
+      if (this.prevControls) img.setControlsVisibility(this.prevControls)
     })
     /* hide the rotate ("mtr") and side controls while cropping */
     img.setControlsVisibility({
@@ -780,6 +789,7 @@ export class CropTool {
       // allow free resizing again
       this.img.minScaleLimit = 0
     }
+    this.prevControls = null
     this.frame    = null
     this.img      = null
     this.orig     = null
