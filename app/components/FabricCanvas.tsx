@@ -645,7 +645,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
         }
         break
       case 'crop':
-        document.dispatchEvent(new Event('start-crop'))
+        if (!locked) document.dispatchEvent(new Event('start-crop'))
         break
     }
     setMenuPos(null)
@@ -887,11 +887,11 @@ if (container) {
 
   // double‑click on an <image> starts cropping
   const dblHandler = (e: fabric.IEvent) => {
-    const tgt = e.target as fabric.Object | undefined;
-    if (tgt && (tgt as any).type === 'image') {
-      cropToolRef.current?.begin(tgt as fabric.Image);
+    const tgt = e.target as fabric.Object | undefined
+    if (tgt && (tgt as any).type === 'image' && !(tgt as any).locked) {
+      cropToolRef.current?.begin(tgt as fabric.Image)
     }
-  };
+  }
   fc.on('mouse:dblclick', dblHandler);
 
   // ESC cancels, ENTER commits
@@ -1263,7 +1263,29 @@ const hideRotBubble = () => {
   if (bubble) bubble.style.display = 'none'
 }
 
+const filterLockedSelection = () => {
+  const fc = fcRef.current
+  if (!fc) return
+  const active = fc.getActiveObject() as fabric.Object | undefined
+  if (active && (active as any).type === 'activeSelection') {
+    const objs = (active as any)._objects as fabric.Object[]
+    const unlocked = objs.filter(o => !(o as any).locked)
+    if (unlocked.length !== objs.length) {
+      if (unlocked.length === 0) {
+        fc.discardActiveObject()
+      } else if (unlocked.length === 1) {
+        fc.setActiveObject(unlocked[0])
+      } else {
+        const sel = new fabric.ActiveSelection(unlocked, { canvas: fc } as any)
+        fc.setActiveObject(sel)
+      }
+      fc.requestRenderAll()
+    }
+  }
+}
+
 fc.on('selection:created', () => {
+  filterLockedSelection()
   hoverHL.visible = false
   fc.requestRenderAll()
   selDomRef.current && (selDomRef.current.style.display = 'block')
@@ -1281,7 +1303,7 @@ fc.on('selection:created', () => {
   window.addEventListener('resize', scrollHandler)
   containerRef.current?.addEventListener('scroll', scrollHandler, { passive: true, capture: true })
 })
-  .on('selection:updated', syncSel)
+  .on('selection:updated', e => { filterLockedSelection(); syncSel() })
 .on('selection:cleared', () => {
   if (scrollHandler) {
     window.removeEventListener('scroll', scrollHandler);
@@ -1662,7 +1684,7 @@ window.addEventListener('keydown', onKey)
 
     if (isCropping && !croppingRef.current) {
       const act = fc.getActiveObject() as fabric.Object | undefined
-      if (act && (act as any).type === 'image') {
+      if (act && (act as any).type === 'image' && !(act as any).locked) {
         document.dispatchEvent(new Event('start-crop'))
       }
     }
