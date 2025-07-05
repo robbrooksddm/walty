@@ -144,13 +144,16 @@ export default function LayerPanel() {
 
   if (!pages[activePage]) return null;
   const layerOrder = pages[activePage].layers.map((_, i) => pages[activePage].layers.length - 1 - i);
-  const ids = layerOrder.map(i => i.toString());
+  const ids = layerOrder.map(i => pages[activePage].layers[i].uid);
 
   /* drag‑and‑drop */
   const sensors = useSensors(useSensor(PointerSensor));
   const onDragEnd = (e: DragEndEvent) => {
-    if (e.over && e.active.id !== e.over.id)
-      reorder(+e.active.id, +e.over.id);
+    if (e.over && e.active.id !== e.over.id) {
+      const from = pages[activePage].layers.findIndex(l => l.uid === e.active.id);
+      const to   = pages[activePage].layers.findIndex(l => l.uid === e.over.id);
+      if (from !== -1 && to !== -1) reorder(from, to);
+    }
     setDropIndex(null);
   };
 
@@ -198,8 +201,8 @@ export default function LayerPanel() {
           <ul className="scrollbar-hidden flex h-[calc(100%-330px)] flex-col gap-1 overflow-y-auto px-4 pb-6">
             {layerOrder.map((idx) => (
               <Row
-                key={idx}
-                id={idx.toString()}
+                key={pages[activePage].layers[idx].uid}
+                id={pages[activePage].layers[idx].uid}
                 idx={idx}
                 dropIndex={dropIndex}
                 setDropIndex={setDropIndex}
