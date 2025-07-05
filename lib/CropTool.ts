@@ -182,8 +182,13 @@ export class CropTool {
     img.borderDashArray = []           // solid border
 
     /* ② persistent crop window */
-    const fx = (img.left ?? 0) + cropX * (img.scaleX ?? 1)
-    const fy = (img.top  ?? 0) + cropY * (img.scaleY ?? 1)
+    const angle = img.angle || 0
+    const rad   = fabric.util.degreesToRadians(angle)
+    const offX  = cropX * (img.scaleX ?? 1)
+    const offY  = cropY  * (img.scaleY ?? 1)
+
+    const fx = (img.left ?? 0) + offX * Math.cos(rad) - offY * Math.sin(rad)
+    const fy = (img.top  ?? 0) + offX * Math.sin(rad) + offY * Math.cos(rad)
     const fw =  width    * (img.scaleX ?? 1)
     const fh =  height   * (img.scaleY ?? 1)
 
@@ -198,7 +203,7 @@ export class CropTool {
         stroke:'transparent', strokeWidth:0,
         strokeUniform:true }),
     ],{
-      left:fx, top:fy, originX:'left', originY:'top',
+      left:fx, top:fy, originX:'left', originY:'top', angle,
       selectable:true, evented:true,  lockRotation:true,   // controls work; interior clicks fall through
       hasBorders:false, 
       lockMovementX:true,  lockMovementY:true,   // window position stays fixed
@@ -700,8 +705,11 @@ export class CropTool {
       const { img, frame } = this;
       const sX = img.scaleX ?? 1;
       const sY = img.scaleY ?? 1;
-      const cropX = (frame.left! - img.left!) / sX;
-      const cropY = (frame.top!  - img.top!)  / sY;
+      const rad = fabric.util.degreesToRadians(img.angle || 0);
+      const dx  = frame.left! - img.left!;
+      const dy  = frame.top!  - img.top!;
+      const cropX = (dx * Math.cos(rad) + dy * Math.sin(rad)) / sX;
+      const cropY = (-dx * Math.sin(rad) + dy * Math.cos(rad)) / sY;
       const cropW = frame.width!  * frame.scaleX! / sX;
       const cropH = frame.height! * frame.scaleY! / sY;
 
@@ -854,12 +862,12 @@ export class CropTool {
     const w = this.fc.getWidth()  / zoom
     const h = this.fc.getHeight() / zoom
 
-    const fL = this.frame.left!
-    const fT = this.frame.top!
-    const fW = this.frame.width!  * this.frame.scaleX!
-    const fH = this.frame.height! * this.frame.scaleY!
-    const fR = fL + fW
-    const fB = fT + fH
+    const br = this.frame.getBoundingRect(true, true)
+    const fL = br.left
+    const fT = br.top
+    const fR = br.left + br.width
+    const fB = br.top  + br.height
+    const fH = br.height
 
     const clamp = (x: number) => Math.max(0, x)
 
