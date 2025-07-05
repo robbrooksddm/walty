@@ -370,7 +370,7 @@ useEffect(() => {
     const fc = canvasMap[activeIdx]
     if (!fc) return
     const obj = fc.getActiveObject() as any
-    if (!obj || obj.type !== 'image') return
+    if (!obj || obj.type !== 'image' || obj.locked) return
     const tool = (fc as any)._cropTool as CropTool | undefined
     if (tool && !tool.isActive) {
       tool.begin(obj)
@@ -718,8 +718,6 @@ const handleProofAll = async () => {
   }, [])
 
   useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
     const wheel = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) {
         const fc = activeFc
@@ -744,10 +742,10 @@ const handleProofAll = async () => {
         }
       }
     }
-    el.addEventListener('wheel', wheel, { passive: false })
+    window.addEventListener('wheel', wheel, { passive: false })
     window.addEventListener('keydown', key)
     return () => {
-      el.removeEventListener('wheel', wheel)
+      window.removeEventListener('wheel', wheel)
       window.removeEventListener('keydown', key)
     }
   }, [activeFc, handleZoomIn, handleZoomOut, setZoomSmooth])
@@ -810,6 +808,7 @@ const handleProofAll = async () => {
       if (!target) return
       if (target.closest('canvas')) return
       if (target.closest('button, input, textarea, select, label, a')) return
+      if (target.closest('[data-layer-panel]')) return
 
       startX = e.clientX
       startY = e.clientY

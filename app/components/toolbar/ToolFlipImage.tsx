@@ -12,9 +12,10 @@ import { MirrorH, MirrorV } from "./icons";      // export them from one place
 interface Props {
   img: fabric.Image;
   mutate: (p: Partial<fabric.Image>) => void;
+  disabled?: boolean;
 }
 
-export default function ToolFlipImage({ img, mutate }: Props) {
+export default function ToolFlipImage({ img, mutate, disabled }: Props) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
 
@@ -25,12 +26,13 @@ export default function ToolFlipImage({ img, mutate }: Props) {
         ref={btnRef}
         Icon={MirrorH}
         label="Flip image"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => !disabled && setOpen(o => !o)}
         active={open}
+        disabled={disabled}
       />
 
 {/* pop-over content */}
-<Popover anchor={btnRef.current} open={open} onClose={() => setOpen(false)}>
+<Popover anchor={btnRef.current} open={open && !disabled} onClose={() => setOpen(false)}>
   <button
     className="flex w-full items-center gap-2 rounded-lg px-3 py-2
                text-sm hover:bg-walty-orange/10 focus:outline-none

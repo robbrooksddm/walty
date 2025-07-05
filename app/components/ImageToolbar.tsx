@@ -79,6 +79,7 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
 
   /* helper: mutate + refresh */
   const mutate = (p: Partial<fabric.Image>) => {
+    if (locked) return
     img.set(p).setCoords();
     fc.setActiveObject(img);
     fc.requestRenderAll();
@@ -118,16 +119,19 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
 
   /* layer order helpers */
   const sendBackward = () => {
+    if (locked) return
     const idx = (img as any).layerIdx ?? 0;
     if (idx < layerCount - 1) reorder(idx, idx + 1);
   };
   const bringForward = () => {
+    if (locked) return
     const idx = (img as any).layerIdx ?? 0;
     if (idx > 0 && idx <= layerCount - 1) reorder(idx, idx - 1);
   };
 
   /* remove active image */
   const deleteCurrent = () => {
+    if (locked) return
     fc.remove(img);
     fc.requestRenderAll();
   };
@@ -148,16 +152,16 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
                    bg-white shadow-lg rounded-xl
                    border border-[rgba(0,91,85,.2)] px-4 py-3 max-w-[720px] w-[calc(100%-6rem)]"
       >
-        <IconButton Icon={Crop} label="Crop" onClick={() => document.dispatchEvent(new Event("start-crop"))} />
-        <ToolFlipImage img={img} mutate={mutate} />
-        <ToolOpacitySlider img={img} mutate={mutate} />
-        <IconButton Icon={AlignToPageVertical}   label="Center vertical" caption="Center Y" onClick={cycleVertical} />
-        <IconButton Icon={AlignToPageHorizontal} label="Center horizontal" caption="Center X" onClick={cycleHorizontal} />
-        <IconButton Icon={Eraser} label="Remove background" caption="BG Erase" onClick={() => alert("TODO: remove background") } />
+        <IconButton Icon={Crop} label="Crop" onClick={() => document.dispatchEvent(new Event("start-crop"))} disabled={locked} />
+        <ToolFlipImage img={img} mutate={mutate} disabled={locked} />
+        <ToolOpacitySlider img={img} mutate={mutate} disabled={locked} />
+        <IconButton Icon={AlignToPageVertical}   label="Center vertical" caption="Center Y" onClick={cycleVertical} disabled={locked} />
+        <IconButton Icon={AlignToPageHorizontal} label="Center horizontal" caption="Center X" onClick={cycleHorizontal} disabled={locked} />
+        <IconButton Icon={Eraser} label="Remove background" caption="BG Erase" onClick={() => alert("TODO: remove background") } disabled={locked} />
         <IconButton Icon={locked ? Lock : Unlock} label={locked ? "Unlock layer" : "Lock layer"} active={locked} onClick={toggleLock} />
-        <IconButton Icon={ArrowDownToLine} label="Send backward" caption="Send ↓" onClick={sendBackward} />
-        <IconButton Icon={ArrowUpToLine}   label="Bring forward" caption="Bring ↑" onClick={bringForward} />
-        <IconButton Icon={Trash2} label="Delete image" caption="Delete" onClick={deleteCurrent} />
+        <IconButton Icon={ArrowDownToLine} label="Send backward" caption="Send ↓" onClick={sendBackward} disabled={locked} />
+        <IconButton Icon={ArrowUpToLine}   label="Bring forward" caption="Bring ↑" onClick={bringForward} disabled={locked} />
+        <IconButton Icon={Trash2} label="Delete image" caption="Delete" onClick={deleteCurrent} disabled={locked} />
       </div>
 
     </div>

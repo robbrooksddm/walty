@@ -32,8 +32,11 @@ recompute()
 /* ---------- helpers ------------------------------------------------ */
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v))
 
+const makeId = () => Math.random().toString(36).slice(2, 9)
+
 /* ---------- extra editor-only fields ------------------------------- */
 export type EditorLayer = Layer & {
+  uid: string
   /** blob: URL shown while an upload is in-flight                   */
   srcUrl?: string
   /** `true` between upload POST → success                           */
@@ -141,7 +144,11 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   /* ───── generic setters ───── */
   setPages: pages => {
-    set({ pages })
+    const withIds = pages.map(p => ({
+      ...p,
+      layers: p.layers.map(l => ({ ...l, uid: l.uid || makeId() }))
+    }))
+    set({ pages: withIds })
     /* initialise history once we know the starting template          */
     if (get().history.length === 0) get().pushHistory()
   },
@@ -157,7 +164,10 @@ export const useEditor = create<EditorState>((set, get) => ({
       set(state => {
         const pages = [...state.pages]
         if (!pages[pageIdx]) return { pages }
-        pages[pageIdx] = { ...pages[pageIdx], layers }
+        pages[pageIdx] = {
+          ...pages[pageIdx],
+          layers: layers.map(l => ({ ...l, uid: l.uid || makeId() }))
+        }
         return { pages }
       }),
 
@@ -167,6 +177,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     const nextPages = clone(pages)
 
     nextPages[activePage].layers.push({
+      uid  : makeId(),
       type : 'text',
       text : 'New text',
       x    : 100,
@@ -195,6 +206,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     const blobUrl  = URL.createObjectURL(file)
     const nextPages= clone(pages)
     nextPages[activePage].layers.push({
+      uid     : makeId(),
       type     : 'image',
       x        : 100,
       y        : 100,
@@ -260,6 +272,11 @@ export const useEditor = create<EditorState>((set, get) => ({
   /* drag-to-reorder in LayerPanel --------------------------------- */
   reorder: (from, to) => {
     const { activePage, pages, pushHistory } = get()
+    const currentLayers = pages[activePage]?.layers ?? []
+    const fromLayer = currentLayers[from]
+    const toLayer   = currentLayers[to]
+    if (fromLayer?.locked || toLayer?.locked) return
+
     const nextPages = clone(pages)
     const [moved]   = nextPages[activePage].layers.splice(from, 1)
     nextPages[activePage].layers.splice(to, 0, moved)
@@ -271,6 +288,8 @@ export const useEditor = create<EditorState>((set, get) => ({
   /* delete layer (sidebar OR ⌫ key) ------------------------------- */
   deleteLayer: idx => {
     const { activePage, pages, pushHistory } = get()
+    const layer = pages[activePage]?.layers[idx]
+    if (layer?.locked) return
     const nextPages = clone(pages)
     nextPages[activePage].layers.splice(idx, 1)
 
