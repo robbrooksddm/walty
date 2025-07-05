@@ -808,6 +808,7 @@ const handleProofAll = async () => {
       if (!target) return
       if (target.closest('canvas')) return
       if (target.closest('button, input, textarea, select, label, a')) return
+      if (target.closest('[data-layer-panel]')) return
 
       startX = e.clientX
       startY = e.clientY
