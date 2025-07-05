@@ -31,6 +31,7 @@ import { CropTool }                     from '@/lib/CropTool'
 import WaltyEditorHeader                from './WaltyEditorHeader'
 import type { TemplatePage }            from './FabricCanvas'
 import type { TemplateProduct }         from '@/app/library/getTemplatePages'
+import { SEL_COLOR }                    from '@/lib/fabricDefaults'
 
 
 /* ---------- helpers ------------------------------------------------ */
@@ -750,6 +751,96 @@ const handleProofAll = async () => {
       window.removeEventListener('keydown', key)
     }
   }, [activeFc, handleZoomIn, handleZoomOut, setZoomSmooth])
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el || !activeFc) return
+
+    const fc = activeFc
+    const canvas = fc.upperCanvasEl
+
+    let box: HTMLDivElement | null = null
+    let startX = 0
+    let startY = 0
+
+    const createBox = (x: number, y: number) => {
+      box = document.createElement('div')
+      box.style.position = 'fixed'
+      box.style.pointerEvents = 'none'
+      box.style.zIndex = '40'
+      box.style.border = `1px dashed ${SEL_COLOR}`
+      box.style.background = 'rgba(46,196,182,0.05)'
+      box.style.left = `${x}px`
+      box.style.top = `${y}px`
+      document.body.appendChild(box)
+    }
+
+    const updateBox = (x: number, y: number) => {
+      if (!box) return
+      const left = Math.min(startX, x)
+      const top = Math.min(startY, y)
+      const w = Math.abs(x - startX)
+      const h = Math.abs(y - startY)
+      box.style.left = `${left}px`
+      box.style.top = `${top}px`
+      box.style.width = `${w}px`
+      box.style.height = `${h}px`
+    }
+
+    const removeBox = () => {
+      box?.remove()
+      box = null
+    }
+
+    const forward = (ev: PointerEvent | MouseEvent) => ({
+      clientX: ev.clientX,
+      clientY: ev.clientY,
+      button: ev.button,
+      buttons: 'buttons' in ev ? (ev as any).buttons : 0,
+      ctrlKey: ev.ctrlKey,
+      shiftKey: ev.shiftKey,
+      altKey: ev.altKey,
+      metaKey: ev.metaKey,
+      bubbles: true,
+      cancelable: true,
+    })
+
+    const handler = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null
+      if (!target) return
+      if (target.closest('canvas')) return
+      if (target.closest('button, input, textarea, select, label, a')) return
+
+      startX = e.clientX
+      startY = e.clientY
+      createBox(startX, startY)
+
+      fc.discardActiveObject()
+      fc.requestRenderAll()
+
+      const down = new MouseEvent('mousedown', forward(e))
+      canvas.dispatchEvent(down)
+
+      const move = (ev: PointerEvent) => {
+        canvas.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
+        updateBox(ev.clientX, ev.clientY)
+      }
+      const up = (ev: PointerEvent) => {
+        canvas.dispatchEvent(new MouseEvent('mouseup', forward(ev)))
+        removeBox()
+        document.removeEventListener('pointermove', move)
+        document.removeEventListener('pointerup', up)
+      }
+      document.addEventListener('pointermove', move)
+      document.addEventListener('pointerup', up)
+    }
+
+    el.addEventListener('pointerdown', handler)
+    return () => {
+      el.removeEventListener('pointerdown', handler)
+      removeBox()
+    }
+  }, [activeFc])
 
   /* 8 ─ loader guard --------------------------------------------- */
   if (pages.length !== 4) {
