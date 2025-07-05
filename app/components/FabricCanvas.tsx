@@ -1602,8 +1602,7 @@ window.addEventListener('keydown', onKey)
 }, [])
 /* ---------- END mount once ----------------------------------- */
 
-  /* ---------- apply zoom -------------------------------------- */
-  useEffect(() => {
+  const applyZoom = useCallback(() => {
     const fc = fcRef.current
     const canvas = canvasRef.current
     if (!fc || !canvas) return
@@ -1628,6 +1627,16 @@ window.addEventListener('keydown', onKey)
     if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
     fc.requestRenderAll()
   }, [zoom])
+
+  /* ---------- apply zoom -------------------------------------- */
+  useEffect(() => {
+    applyZoom()
+  }, [zoom, applyZoom])
+
+  /* ---------- reset zoom after crop ---------------------------- */
+  useEffect(() => {
+    if (!isCropping) applyZoom()
+  }, [isCropping, applyZoom])
 
   /* ---------- crop mode toggle ------------------------------ */
   useEffect(() => {
