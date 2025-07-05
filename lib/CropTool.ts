@@ -17,7 +17,7 @@ export class CropTool {
   private onChange?: (state: boolean) => void
   private img     : fabric.Image | null = null
   private frame   : fabric.Group | null = null
-  private masks   : fabric.Rect[] = [];      // 4‑piece dim overlay
+  private masks   : fabric.Object[] = [];    // dark overlay
   private frameScaling = false;              // TRUE only while frame is being resized
   private ratio: number | null = null
   /** original bitmap state before cropping */
@@ -199,6 +199,7 @@ export class CropTool {
         strokeUniform:true }),
     ],{
       left:fx, top:fy, originX:'left', originY:'top',
+      angle: img.angle || 0,              // match image rotation
       selectable:true, evented:true,  lockRotation:true,   // controls work; interior clicks fall through
       hasBorders:false, 
       lockMovementX:true,  lockMovementY:true,   // window position stays fixed
@@ -260,15 +261,14 @@ export class CropTool {
     /* ③ add both to canvas and keep z‑order intuitive              */
     this.fc.add(this.frame)
     /* 2‑b ─ dim everything outside the crop window -------------------- */
-    const mkMask = () => new fabric.Rect({
-      left: 0, top: 0, width: this.fc.width!, height: this.fc.height!,
+    const mask = new fabric.Path('M 0 0 Z', {
       fill: 'rgba(0,0,0,0.4)', selectable: false, evented: false,
-      originX: 'left',
-      originY: 'top',
+      originX: 'left', originY: 'top',
+      absolutePositioned: true, fillRule: 'evenodd',
       excludeFromExport: true,
     });
-    this.masks = [mkMask(), mkMask(), mkMask(), mkMask()];
-    this.masks.forEach(r => this.fc.add(r));
+    this.masks = [mask];
+    this.fc.add(mask);
     // make sure crop elements stay on top
     this.frame.bringToFront();
     this.updateMasks();
@@ -819,31 +819,60 @@ export class CropTool {
   private clampFrame = () => {
     if (!this.img || !this.frame) return
     const { img, frame } = this
-    const iw = img.getScaledWidth()
-    const ih = img.getScaledHeight()
 
-    const minL = img.left!, minT = img.top!
-    const maxR = minL + iw, maxB = minT + ih
+    const angle = (img.angle || 0) * Math.PI / 180
+    const cos = Math.cos(angle)
+    const sin = Math.sin(angle)
 
-    if (frame.left! < minL) frame.left = minL
-    if (frame.top!  < minT) frame.top  = minT
+    const iw = img.width! * img.scaleX!
+    const ih = img.height! * img.scaleY!
 
-    const fw = frame.width!*frame.scaleX!, fh = frame.height!*frame.scaleY!
-    if (frame.left! + fw > maxR)
-      frame.scaleX = (maxR - frame.left!) / frame.width!
-    if (frame.top! + fh > maxB)
-      frame.scaleY = (maxB - frame.top!) / frame.height!
+    const local = (x: number, y: number) => {
+      const dx = x - img.left!
+      const dy = y - img.top!
+      return { x: dx * cos + dy * sin, y: -dx * sin + dy * cos }
+    }
+    const world = (x: number, y: number) => {
+      const dx = x * cos - y * sin
+      const dy = x * sin + y * cos
+      return { x: img.left! + dx, y: img.top! + dy }
+    }
+
+    const fl = frame.left!
+    const ft = frame.top!
+    const fw = frame.width! * frame.scaleX!
+    const fh = frame.height! * frame.scaleY!
+
+    let pos = local(fl, ft)
+    let changedPos = false
+    if (pos.x < 0) { pos.x = 0; changedPos = true }
+    if (pos.y < 0) { pos.y = 0; changedPos = true }
+
+    if (pos.x + fw > iw) {
+      const newW = iw - pos.x
+      frame.scaleX! *= newW / fw
+    }
+    if (pos.y + fh > ih) {
+      const newH = ih - pos.y
+      frame.scaleY! *= newH / fh
+    }
+
+    if (changedPos) {
+      const p = world(pos.x, pos.y)
+      frame.left = p.x
+      frame.top  = p.y
+    }
 
     // Update bitmap's minimum scale so it can never shrink smaller
-    const minSX = frame.width! * frame.scaleX! / img.width!
-    const minSY = frame.height! * frame.scaleY! / img.height!
+    const minSX = (frame.width! * frame.scaleX!) / img.width!
+    const minSY = (frame.height! * frame.scaleY!) / img.height!
     img.minScaleLimit = Math.max(minSX, minSY)
-    
+
     frame.setCoords()
   }
 
   private updateMasks = () => {
-    if (!this.frame) return
+    if (!this.frame || this.masks.length === 0) return
 
     const vpt = this.fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const zoom = vpt[0] || 1
@@ -854,21 +883,45 @@ export class CropTool {
     const w = this.fc.getWidth()  / zoom
     const h = this.fc.getHeight() / zoom
 
-    const fL = this.frame.left!
-    const fT = this.frame.top!
-    const fW = this.frame.width!  * this.frame.scaleX!
-    const fH = this.frame.height! * this.frame.scaleY!
-    const fR = fL + fW
-    const fB = fT + fH
+    const f = this.frame
+    const angle = (f.angle || 0) * Math.PI / 180
+    const cos = Math.cos(angle)
+    const sin = Math.sin(angle)
+    const fw = f.width! * f.scaleX!
+    const fh = f.height! * f.scaleY!
+    const fx = f.left!
+    const fy = f.top!
 
-    const clamp = (x: number) => Math.max(0, x)
+    const tl = { x: fx,             y: fy }
+    const tr = { x: fx + fw * cos,  y: fy + fw * sin }
+    const bl = { x: fx - fh * sin,  y: fy + fh * cos }
+    const br = { x: tr.x - fh * sin, y: tr.y + fh * cos }
 
-    this.masks[0].set({ left:viewLeft, top:viewTop, width:w, height: clamp(fT - viewTop) })
-    this.masks[1].set({ left:fR, top:fT, width: clamp(viewLeft + w - fR), height:fH })
-    this.masks[2].set({ left:viewLeft, top:fB, width:w, height: clamp(viewTop + h - fB) })
-    this.masks[3].set({ left:viewLeft, top:fT, width: clamp(fL - viewLeft), height:fH })
+    const path = [
+      `M ${viewLeft} ${viewTop}`,
+      `L ${viewLeft + w} ${viewTop}`,
+      `L ${viewLeft + w} ${viewTop + h}`,
+      `L ${viewLeft} ${viewTop + h}`,
+      'Z',
+      `M ${tl.x} ${tl.y}`,
+      `L ${tr.x} ${tr.y}`,
+      `L ${br.x} ${br.y}`,
+      `L ${bl.x} ${bl.y}`,
+      'Z'
+    ].join(' ')
 
-    this.masks.forEach(m => m.setCoords())
+    // replace existing mask with updated path
+    this.fc.remove(this.masks[0])
+    const mask = new fabric.Path(path, {
+      fill: 'rgba(0,0,0,0.4)',
+      originX: 'left', originY: 'top',
+      absolutePositioned: true,
+      selectable: false, evented: false,
+      fillRule: 'evenodd', excludeFromExport: true,
+    })
+    this.masks[0] = mask
+    this.fc.add(mask)
+    this.frame.bringToFront()
   }
 
     /** Minimum uniform scale so the image fully covers the crop window,
