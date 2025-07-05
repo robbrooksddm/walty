@@ -34,6 +34,25 @@ export class CropTool {
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
 
+  /** Update the stored base canvas size and wrapper styles */
+  public updateBase () {
+    this.baseW = this.fc.getWidth();
+    this.baseH = this.fc.getHeight();
+    const wrap = (this.fc as any).wrapperEl as HTMLElement | undefined;
+    if (wrap) {
+      this.wrapper = wrap;
+      this.scrollLeft = wrap.scrollLeft;
+      this.scrollTop  = wrap.scrollTop;
+      this.wrapStyles = {
+        w: wrap.style.width,
+        h: wrap.style.height,
+        mw: wrap.style.maxWidth,
+        mh: wrap.style.maxHeight,
+        transform: wrap.style.transform,
+      };
+    }
+  }
+
   constructor (fc: fabric.Canvas, scale: number, selColour: string,
                onChange?: (state: boolean) => void) {
     this.fc      = fc
