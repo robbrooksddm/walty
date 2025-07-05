@@ -17,7 +17,7 @@ export class CropTool {
   private onChange?: (state: boolean) => void
   private img     : fabric.Image | null = null
   private frame   : fabric.Group | null = null
-  private masks   : fabric.Rect[] = [];      // 4‑piece dim overlay
+  private masks   : fabric.Rect[] = [];      // dim overlay clipped to frame
   private frameScaling = false;              // TRUE only while frame is being resized
   private ratio: number | null = null
   /** original bitmap state before cropping */
@@ -199,6 +199,7 @@ export class CropTool {
         strokeUniform:true }),
     ],{
       left:fx, top:fy, originX:'left', originY:'top',
+      angle: img.angle || 0,              // match image rotation
       selectable:true, evented:true,  lockRotation:true,   // controls work; interior clicks fall through
       hasBorders:false, 
       lockMovementX:true,  lockMovementY:true,   // window position stays fixed
@@ -259,16 +260,25 @@ export class CropTool {
 
     /* ③ add both to canvas and keep z‑order intuitive              */
     this.fc.add(this.frame)
+
     /* 2‑b ─ dim everything outside the crop window -------------------- */
-    const mkMask = () => new fabric.Rect({
-      left: 0, top: 0, width: this.fc.width!, height: this.fc.height!,
-      fill: 'rgba(0,0,0,0.4)', selectable: false, evented: false,
+    const overlay = new fabric.Rect({
+      left: 0,
+      top: 0,
+      width: this.fc.width!,
+      height: this.fc.height!,
+      fill: 'rgba(0,0,0,0.4)',
+      selectable: false,
+      evented: false,
       originX: 'left',
       originY: 'top',
       excludeFromExport: true,
-    });
-    this.masks = [mkMask(), mkMask(), mkMask(), mkMask()];
-    this.masks.forEach(r => this.fc.add(r));
+    })
+    overlay.clipPath = this.frame
+    ;(overlay.clipPath as any).inverted = true
+    ;(overlay.clipPath as any).absolutePositioned = true
+    this.masks = [overlay]
+    this.fc.add(overlay)
     // make sure crop elements stay on top
     this.frame.bringToFront();
     this.updateMasks();
@@ -819,20 +829,20 @@ export class CropTool {
   private clampFrame = () => {
     if (!this.img || !this.frame) return
     const { img, frame } = this
-    const iw = img.getScaledWidth()
-    const ih = img.getScaledHeight()
+    const iBr = img.getBoundingRect(true, true)
+    const fBr = frame.getBoundingRect(true, true)
 
-    const minL = img.left!, minT = img.top!
-    const maxR = minL + iw, maxB = minT + ih
+    const minL = iBr.left, minT = iBr.top
+    const maxR = iBr.left + iBr.width, maxB = iBr.top + iBr.height
 
-    if (frame.left! < minL) frame.left = minL
-    if (frame.top!  < minT) frame.top  = minT
+    if (fBr.left < minL) frame.left += minL - fBr.left
+    if (fBr.top  < minT) frame.top  += minT - fBr.top
 
     const fw = frame.width!*frame.scaleX!, fh = frame.height!*frame.scaleY!
-    if (frame.left! + fw > maxR)
-      frame.scaleX = (maxR - frame.left!) / frame.width!
-    if (frame.top! + fh > maxB)
-      frame.scaleY = (maxB - frame.top!) / frame.height!
+    if (fBr.left + fBr.width > maxR)
+      frame.scaleX = Math.min(frame.scaleX!, (maxR - frame.left!) / frame.width!)
+    if (fBr.top  + fBr.height > maxB)
+      frame.scaleY = Math.min(frame.scaleY!, (maxB - frame.top!) / frame.height!)
 
     // Update bitmap's minimum scale so it can never shrink smaller
     const minSX = frame.width! * frame.scaleX! / img.width!
@@ -843,7 +853,7 @@ export class CropTool {
   }
 
   private updateMasks = () => {
-    if (!this.frame) return
+    if (!this.frame || !this.masks[0]) return
 
     const vpt = this.fc.viewportTransform || [1, 0, 0, 1, 0, 0]
     const zoom = vpt[0] || 1
@@ -854,21 +864,8 @@ export class CropTool {
     const w = this.fc.getWidth()  / zoom
     const h = this.fc.getHeight() / zoom
 
-    const fL = this.frame.left!
-    const fT = this.frame.top!
-    const fW = this.frame.width!  * this.frame.scaleX!
-    const fH = this.frame.height! * this.frame.scaleY!
-    const fR = fL + fW
-    const fB = fT + fH
-
-    const clamp = (x: number) => Math.max(0, x)
-
-    this.masks[0].set({ left:viewLeft, top:viewTop, width:w, height: clamp(fT - viewTop) })
-    this.masks[1].set({ left:fR, top:fT, width: clamp(viewLeft + w - fR), height:fH })
-    this.masks[2].set({ left:viewLeft, top:fB, width:w, height: clamp(viewTop + h - fB) })
-    this.masks[3].set({ left:viewLeft, top:fT, width: clamp(fL - viewLeft), height:fH })
-
-    this.masks.forEach(m => m.setCoords())
+    this.masks[0].set({ left:viewLeft, top:viewTop, width:w, height:h })
+    this.masks[0].setCoords()
   }
 
     /** Minimum uniform scale so the image fully covers the crop window,
