@@ -331,6 +331,7 @@ const objToLayer = (o: fabric.Object): Layer => {
       scaleX    : t.scaleX,
       scaleY    : t.scaleY,
       lines     : t.textLines as string[],
+      locked    : (t as any).locked,
     }
   }
   const i = o as fabric.Image
@@ -357,6 +358,7 @@ const objToLayer = (o: fabric.Object): Layer => {
     scaleY : i.scaleY,
     flipX  : (i as any).flipX,
     flipY  : (i as any).flipY,
+    locked : (i as any).locked,
   }
 
   if (i.cropX != null) layer.cropX = i.cropX
@@ -1711,6 +1713,17 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
             flipY     : ly.flipY ?? false,
           })
 
+          ;(img as any).locked = ly.locked
+          if (ly.locked) {
+            img.set({
+              lockMovementX: true,
+              lockMovementY: true,
+              lockScalingX : true,
+              lockScalingY : true,
+              lockRotation : true,
+            })
+          }
+
           /* ---------- AI placeholder extras -------------------------------- */
           let doSync: (() => void) | undefined
           if (raw._type === 'aiLayer') {
@@ -1816,12 +1829,22 @@ doSync = () =>
           fill: hex(ly.fill ?? '#000'),
           textAlign: ly.textAlign ?? 'left',
           lineHeight: ly.lineHeight ?? 1.16,
-          opacity: ly.opacity ?? 1,
-          selectable: ly.selectable ?? true,
-          editable: ly.editable ?? true,
-          scaleX: ly.scaleX ?? 1, scaleY: ly.scaleY ?? 1,
-          lockScalingFlip: true,
-        })
+      opacity: ly.opacity ?? 1,
+      selectable: ly.selectable ?? true,
+      editable: ly.editable ?? true,
+      scaleX: ly.scaleX ?? 1, scaleY: ly.scaleY ?? 1,
+      lockScalingFlip: true,
+    })
+        ;(tb as any).locked = ly.locked
+        if (ly.locked) {
+          tb.set({
+            lockMovementX: true,
+            lockMovementY: true,
+            lockScalingX : true,
+            lockScalingY : true,
+            lockRotation : true,
+          })
+        }
         ;(tb as any).layerIdx = idx
         fc.insertAt(tb, idx, false)
       }
