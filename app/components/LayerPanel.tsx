@@ -27,17 +27,7 @@ import {
 import { useEditor } from "./EditorStore";
 
 /*────────────────────────────    Sortable row    ──*/
-function Row({
-  id,
-  idx,
-  dropIndex,
-  setDropIndex,
-}: {
-  id: string;
-  idx: number;
-  dropIndex: number | null;
-  setDropIndex: (i: number | null) => void;
-}) {
+function Row({ id, idx }: { id: string; idx: number }) {
   const layer = useEditor((s) => s.pages[s.activePage]?.layers[idx]);
   const remove = useEditor((s) => s.deleteLayer);
 
@@ -48,8 +38,6 @@ function Row({
     transform,
     transition,
     isDragging,
-    index,
-    newIndex,
   } = useSortable({ id });
 
   const style: React.CSSProperties = {
@@ -57,18 +45,11 @@ function Row({
     transition,
   };
 
-  const total = useEditor((s) => s.pages[s.activePage]?.layers.length || 0);
-
   useEffect(() => {
-    if (isDragging) setDropIndex(newIndex);
-  }, [isDragging, newIndex, setDropIndex]);
-
-  const dropLine =
-    dropIndex !== null &&
-    dropIndex > 0 &&
-    dropIndex < total - 1 &&
-    index === dropIndex - 1 &&
-    !isDragging;
+    document.querySelectorAll('.sel-overlay').forEach(el => {
+      (el as HTMLElement).style.display = isDragging ? 'none' : '';
+    });
+  }, [isDragging]);
 
   if (!layer) return null;
 
@@ -80,9 +61,6 @@ function Row({
       {...attributes}
       className="relative group flex h-14 items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 text-sm hover:bg-walty-orange/10 cursor-grab"
     >
-      {dropLine && (
-        <div className="pointer-events-none absolute inset-x-0 -bottom-7 h-[3px] bg-walty-orange" />
-      )}
       {/* drag handle */}
       <button className="text-walty-teal hover:text-walty-orange" disabled>
         <GripVertical className="h-4 w-4" />
@@ -138,7 +116,6 @@ export default function LayerPanel() {
   const addImage = useEditor((s) => s.addImage);
   const addText = useEditor((s) => s.addText);
   const [open, setOpen] = useState(true);
-  const [dropIndex, setDropIndex] = useState<number | null>(null);
 
   if (!pages[activePage]) return null;
   const layerOrder = pages[activePage].layers.map((_, i) => pages[activePage].layers.length - 1 - i);
@@ -152,7 +129,6 @@ export default function LayerPanel() {
       const to   = pages[activePage].layers.findIndex(l => l.uid === e.over.id);
       if (from !== -1 && to !== -1) reorder(from, to);
     }
-    setDropIndex(null);
   };
 
   return (
@@ -202,8 +178,6 @@ export default function LayerPanel() {
                 key={pages[activePage].layers[idx].uid}
                 id={pages[activePage].layers[idx].uid}
                 idx={idx}
-                dropIndex={dropIndex}
-                setDropIndex={setDropIndex}
               />
             ))}
           </ul>
