@@ -769,6 +769,18 @@ const handleProofAll = async () => {
       ref={containerRef}
       className="flex flex-col h-screen box-border"
       style={{ paddingTop: "calc(var(--walty-header-h) + var(--walty-toolbar-h))" }}
+      onPointerDown={e => {
+        const fc = activeFc
+        const canvas = (fc as any)?.upperCanvasEl as HTMLCanvasElement | undefined
+        if (!fc || !canvas) return
+        if (!canvas.contains(e.target as Node)) {
+          fc.discardActiveObject()
+          fc.requestRenderAll()
+          if (e.target === e.currentTarget) {
+            startBridge(e.nativeEvent as PointerEvent, fc)
+          }
+        }
+      }}
     >
       <WaltyEditorHeader                     /* ② mount new component */
         onPreview={handlePreview}
@@ -855,10 +867,11 @@ const handleProofAll = async () => {
             className={`flex-1 flex justify-center items-start bg-[--walty-cream] pt-6 gap-6 ${
               isCropMode ? 'overflow-visible' : 'overflow-auto'
             }`}
-            onMouseDown={e => {
+            onPointerDown={e => {
               if (e.target === e.currentTarget && activeFc) {
-                activeFc.discardActiveObject();
-                activeFc.requestRenderAll();
+                activeFc.discardActiveObject()
+                activeFc.requestRenderAll()
+                startBridge(e.nativeEvent as PointerEvent, activeFc)
               }
             }}
           >
@@ -999,4 +1012,36 @@ const handleProofAll = async () => {
       </div>
     </div>
   )
+}
+
+/* ---------- event bridging helpers ------------------------------ */
+function forward(ev: PointerEvent | MouseEvent) {
+  return {
+    clientX: ev.clientX,
+    clientY: ev.clientY,
+    button: ev.button,
+    buttons: 'buttons' in ev ? ev.buttons : 0,
+    ctrlKey: ev.ctrlKey,
+    shiftKey: ev.shiftKey,
+    altKey: ev.altKey,
+    metaKey: ev.metaKey,
+    bubbles: true,
+    cancelable: true,
+  }
+}
+
+function startBridge(ev: PointerEvent, fc: fabric.Canvas) {
+  const canvas = (fc as any).upperCanvasEl as HTMLCanvasElement | undefined
+  if (!canvas) return
+  const down = new MouseEvent('mousedown', forward(ev))
+  canvas.dispatchEvent(down)
+  const move = (e: PointerEvent) => canvas.dispatchEvent(new MouseEvent('mousemove', forward(e)))
+  const up = (e: PointerEvent) => {
+    canvas.dispatchEvent(new MouseEvent('mouseup', forward(e)))
+    document.removeEventListener('pointermove', move)
+    document.removeEventListener('pointerup', up)
+  }
+  document.addEventListener('pointermove', move)
+  document.addEventListener('pointerup', up)
+  ev.preventDefault()
 }
