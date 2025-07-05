@@ -1275,8 +1275,10 @@ fc.on('selection:created', () => {
 /* also hide hover during any transform of the active object */
 const handleAfterRender = () => {
   fc.calcOffset()
-  syncSel()
-  syncHover()
+  if (!transformingRef.current) {
+    syncSel()
+    syncHover()
+  }
 }
 
 fc.on('object:moving', () => {
