@@ -199,6 +199,7 @@ export class CropTool {
         strokeUniform:true }),
     ],{
       left:fx, top:fy, originX:'left', originY:'top',
+      angle: img.angle || 0,              // match image rotation
       selectable:true, evented:true,  lockRotation:true,   // controls work; interior clicks fall through
       hasBorders:false, 
       lockMovementX:true,  lockMovementY:true,   // window position stays fixed
