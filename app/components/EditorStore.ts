@@ -271,6 +271,8 @@ export const useEditor = create<EditorState>((set, get) => ({
   /* delete layer (sidebar OR ⌫ key) ------------------------------- */
   deleteLayer: idx => {
     const { activePage, pages, pushHistory } = get()
+    const layer = pages[activePage]?.layers[idx]
+    if (layer?.locked) return
     const nextPages = clone(pages)
     nextPages[activePage].layers.splice(idx, 1)
 
