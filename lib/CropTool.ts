@@ -22,6 +22,8 @@ export class CropTool {
   private ratio: number | null = null
   /** original bitmap state before cropping */
   private orig: { left:number; top:number; cropX:number; cropY:number; width:number; height:number; } | null = null;
+  /** store control visibility so it can be restored */
+  private prevControls: Record<string, boolean> | null = null;
   /** canvas size before cropping */
   private baseW = 0;
   private baseH = 0;
@@ -106,6 +108,7 @@ export class CropTool {
     const prevLockUniScaling = img.lockUniScaling
     const prevCenteredScaling = img.centeredScaling
     const prevHasBorders = img.hasBorders
+    const prevLockRotation = img.lockRotation
     img.set({
       left  : (img.left ?? 0) - cropX * (img.scaleX ?? 1),
       top   : (img.top  ?? 0) - cropY * (img.scaleY ?? 1),
@@ -170,8 +173,17 @@ export class CropTool {
       img.lockUniScaling  = prevLockUniScaling
       img.centeredScaling = prevCenteredScaling
       img.hasBorders      = prevHasBorders
+      img.lockRotation    = prevLockRotation
     })
     /* hide the rotate ("mtr") and side controls while cropping */
+    const vis = (img as any)._controlsVisibility || {}
+    this.prevControls = {
+      mtr: vis.mtr ?? true,
+      ml : vis.ml  ?? true,
+      mr : vis.mr  ?? true,
+      mt : vis.mt  ?? true,
+      mb : vis.mb  ?? true,
+    }
     img.setControlsVisibility({
       mtr: false,          // hide rotation
       ml : false, mr : false,      // hide middle-left / middle-right
@@ -775,6 +787,10 @@ export class CropTool {
     if (ctx) this.fc.clearContext(ctx)
 
     if (this.img) {
+      if (this.prevControls) {
+        this.img.setControlsVisibility(this.prevControls)
+        this.prevControls = null
+      }
       this.img.lockMovementX = false
       this.img.lockMovementY = false
       // allow free resizing again
