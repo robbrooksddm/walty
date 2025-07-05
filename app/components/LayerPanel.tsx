@@ -76,17 +76,15 @@ function Row({
     <li
       ref={setNodeRef}
       style={style}
-      className="relative group flex h-14 items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 text-sm hover:bg-walty-orange/10"
+      {...listeners}
+      {...attributes}
+      className="relative group flex h-14 items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 text-sm hover:bg-walty-orange/10 cursor-grab"
     >
       {dropLine && (
         <div className="pointer-events-none absolute inset-x-0 -bottom-7 h-[3px] bg-walty-orange" />
       )}
       {/* drag handle */}
-      <button
-        {...listeners}
-        {...attributes}
-        className="cursor-grab text-walty-teal hover:text-walty-orange"
-      >
+      <button className="text-walty-teal hover:text-walty-orange" disabled>
         <GripVertical className="h-4 w-4" />
       </button>
 
@@ -101,7 +99,7 @@ function Row({
                 fontStyle: layer.fontStyle as React.CSSProperties['fontStyle'],
                 textDecoration: layer.underline ? 'underline' : undefined,
                 color: layer.fill,
-                textAlign: layer.textAlign as React.CSSProperties['textAlign'],
+                textAlign: 'center',
               }
             : undefined
         }
