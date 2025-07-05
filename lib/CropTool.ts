@@ -34,6 +34,27 @@ export class CropTool {
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
 
+  /**
+   * Update stored canvas dimensions while cropping is active.
+   * Called when the parent component changes zoom so we can
+   * restore the correct size on cancel.
+   */
+  public syncSize () {
+    if (!this.isActive) return;
+    this.baseW = this.fc.getWidth();
+    this.baseH = this.fc.getHeight();
+    const wrapper = (this.fc as any).wrapperEl as HTMLElement | undefined;
+    if (wrapper && this.wrapStyles) {
+      this.wrapStyles = {
+        w : wrapper.style.width,
+        h : wrapper.style.height,
+        mw: wrapper.style.maxWidth,
+        mh: wrapper.style.maxHeight,
+        transform: wrapper.style.transform,
+      };
+    }
+  }
+
   constructor (fc: fabric.Canvas, scale: number, selColour: string,
                onChange?: (state: boolean) => void) {
     this.fc      = fc

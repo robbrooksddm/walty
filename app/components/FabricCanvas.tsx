@@ -1625,7 +1625,10 @@ window.addEventListener('keydown', onKey)
     canvas.style.height = `${PREVIEW_H * zoom}px`
 
     fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
-    if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
+    if (cropToolRef.current) {
+      (cropToolRef.current as any).SCALE = SCALE * zoom
+      ;(cropToolRef.current as any).syncSize?.()
+    }
     fc.requestRenderAll()
   }, [zoom])
 
