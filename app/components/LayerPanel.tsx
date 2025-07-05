@@ -11,11 +11,13 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragOverEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
   useSortable,
+  arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -27,7 +29,15 @@ import {
 import { useEditor } from "./EditorStore";
 
 /*────────────────────────────    Sortable row    ──*/
-function Row({ id, idx }: { id: string; idx: number }) {
+function Row({
+  id,
+  idx,
+  dropIndex,
+}: {
+  id: string;
+  idx: number;
+  dropIndex: number | null;
+}) {
   const layer = useEditor((s) => s.pages[s.activePage]?.layers[idx]);
   const remove = useEditor((s) => s.deleteLayer);
 
@@ -37,6 +47,7 @@ function Row({ id, idx }: { id: string; idx: number }) {
     setNodeRef,
     transform,
     transition,
+    index,
   } = useSortable({ id });
 
   const style: React.CSSProperties = {
@@ -44,15 +55,26 @@ function Row({ id, idx }: { id: string; idx: number }) {
     transition,
   };
 
+  const total = useEditor((s) => s.pages[s.activePage]?.layers.length || 0);
+  const dropBefore =
+    dropIndex !== null && dropIndex === index && dropIndex > 0;
+  const dropAfter =
+    dropIndex !== null && dropIndex - 1 === index && dropIndex < total - 1;
+
   if (!layer) return null;
 
   return (
     <li
       ref={setNodeRef}
       style={style}
-      className="group flex h-14 items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 text-sm hover:bg-walty-orange/10"
-
+      className="relative group flex h-14 items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 text-sm hover:bg-walty-orange/10"
     >
+      {dropBefore && (
+        <div className="pointer-events-none absolute inset-x-0 -top-1/2 h-1 bg-walty-orange" />
+      )}
+      {dropAfter && (
+        <div className="pointer-events-none absolute inset-x-0 top-full translate-y-1/2 h-1 bg-walty-orange" />
+      )}
       {/* drag handle */}
       <button
         {...listeners}
@@ -64,7 +86,7 @@ function Row({ id, idx }: { id: string; idx: number }) {
 
       {/* name / preview */}
       <span
-        className="flex-1 truncate"
+        className="flex-1 truncate text-center"
         style={
           layer.type === 'text'
             ? {
@@ -89,7 +111,7 @@ function Row({ id, idx }: { id: string; idx: number }) {
             alt="layer"
             width={48}
             height={48}
-            className="inline-block h-12 w-12 rounded object-cover"
+            className="inline-block h-12 w-12 rounded object-cover mx-auto"
           />
         )}
       </span>
@@ -112,6 +134,7 @@ export default function LayerPanel() {
   const addImage = useEditor((s) => s.addImage);
   const addText = useEditor((s) => s.addText);
   const [open, setOpen] = useState(true);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
 
   if (!pages[activePage]) return null;
   const layerOrder = pages[activePage].layers.map((_, i) => pages[activePage].layers.length - 1 - i);
@@ -119,7 +142,16 @@ export default function LayerPanel() {
 
   /* drag‑and‑drop */
   const sensors = useSensors(useSensor(PointerSensor));
+  const onDragOver = (e: DragOverEvent) => {
+    if (!e.over) return setDropIndex(null);
+    const oldIndex = ids.indexOf(e.active.id.toString());
+    const overIndex = ids.indexOf(e.over.id.toString());
+    const newOrder = arrayMove(ids, oldIndex, overIndex);
+    const target = newOrder.indexOf(e.active.id.toString());
+    setDropIndex(target);
+  };
   const onDragEnd = (e: DragEndEvent) => {
+    setDropIndex(null);
     if (e.over && e.active.id !== e.over.id)
       reorder(+e.active.id, +e.over.id);
   };
@@ -163,11 +195,11 @@ export default function LayerPanel() {
       </div>
 
       {/* layer list */}
-      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+      <DndContext sensors={sensors} onDragOver={onDragOver} onDragEnd={onDragEnd}>
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           <ul className="scrollbar-hidden flex h-[calc(100%-330px)] flex-col gap-1 overflow-y-auto px-4 pb-6">
             {layerOrder.map((idx) => (
-              <Row key={idx} id={idx.toString()} idx={idx} />
+              <Row key={idx} id={idx.toString()} idx={idx} dropIndex={dropIndex} />
             ))}
           </ul>
         </SortableContext>
