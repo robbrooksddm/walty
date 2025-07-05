@@ -55,6 +55,26 @@ export class CropTool {
     }
   }
 
+  /**
+   * Refresh the stored canvas dimensions and wrapper styles. Call this
+   * whenever external layout changes (e.g. zoom) while cropping is active
+   * so `cancel()` restores the correct size.
+   */
+  public refreshBase () {
+    this.baseW = this.fc.getWidth()
+    this.baseH = this.fc.getHeight()
+    const wrap = (this.fc as any).wrapperEl as HTMLElement | undefined
+    if (wrap) {
+      this.wrapStyles = {
+        w : wrap.style.width,
+        h : wrap.style.height,
+        mw: wrap.style.maxWidth,
+        mh: wrap.style.maxHeight,
+        transform: wrap.style.transform,
+      }
+    }
+  }
+
   /* ─────────────── public API ──────────────────────────────────── */
   public begin (img: fabric.Image) {
     if (this.isActive) return
