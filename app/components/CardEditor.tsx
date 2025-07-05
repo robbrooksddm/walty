@@ -718,8 +718,6 @@ const handleProofAll = async () => {
   }, [])
 
   useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
     const wheel = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) {
         const fc = activeFc
@@ -744,10 +742,10 @@ const handleProofAll = async () => {
         }
       }
     }
-    el.addEventListener('wheel', wheel, { passive: false })
+    window.addEventListener('wheel', wheel, { passive: false })
     window.addEventListener('keydown', key)
     return () => {
-      el.removeEventListener('wheel', wheel)
+      window.removeEventListener('wheel', wheel)
       window.removeEventListener('keydown', key)
     }
   }, [activeFc, handleZoomIn, handleZoomOut, setZoomSmooth])
