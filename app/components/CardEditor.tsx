@@ -370,7 +370,7 @@ useEffect(() => {
     const fc = canvasMap[activeIdx]
     if (!fc) return
     const obj = fc.getActiveObject() as any
-    if (!obj || obj.type !== 'image') return
+    if (!obj || obj.type !== 'image' || obj.locked) return
     const tool = (fc as any)._cropTool as CropTool | undefined
     if (tool && !tool.isActive) {
       tool.begin(obj)

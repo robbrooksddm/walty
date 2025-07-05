@@ -272,6 +272,11 @@ export const useEditor = create<EditorState>((set, get) => ({
   /* drag-to-reorder in LayerPanel --------------------------------- */
   reorder: (from, to) => {
     const { activePage, pages, pushHistory } = get()
+    const currentLayers = pages[activePage]?.layers ?? []
+    const fromLayer = currentLayers[from]
+    const toLayer   = currentLayers[to]
+    if (fromLayer?.locked || toLayer?.locked) return
+
     const nextPages = clone(pages)
     const [moved]   = nextPages[activePage].layers.splice(from, 1)
     nextPages[activePage].layers.splice(to, 0, moved)
@@ -283,6 +288,8 @@ export const useEditor = create<EditorState>((set, get) => ({
   /* delete layer (sidebar OR ⌫ key) ------------------------------- */
   deleteLayer: idx => {
     const { activePage, pages, pushHistory } = get()
+    const layer = pages[activePage]?.layers[idx]
+    if (layer?.locked) return
     const nextPages = clone(pages)
     nextPages[activePage].layers.splice(idx, 1)
 

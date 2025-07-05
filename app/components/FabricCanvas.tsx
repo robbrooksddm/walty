@@ -336,6 +336,7 @@ const objToLayer = (o: fabric.Object): Layer => {
       scaleX    : t.scaleX,
       scaleY    : t.scaleY,
       lines     : t.textLines as string[],
+      locked    : (t as any).locked,
     }
   }
   const i = o as fabric.Image
@@ -363,6 +364,7 @@ const objToLayer = (o: fabric.Object): Layer => {
     scaleY : i.scaleY,
     flipX  : (i as any).flipX,
     flipY  : (i as any).flipY,
+    locked : (i as any).locked,
   }
 
   if (i.cropX != null) layer.cropX = i.cropX
@@ -513,13 +515,36 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const setPageLayers = useEditor(s => s.setPageLayers)
   const updateLayer   = useEditor(s => s.updateLayer)
 
+  const toggleActiveLock = () => {
+    const fc = fcRef.current
+    if (!fc) return
+    const active = fc.getActiveObject() as fabric.Object | undefined
+    if (!active) return
+    const locked = !!(active as any).locked
+    const next = !locked
+    ;(active as any).locked = next
+    active.set({
+      lockMovementX: next,
+      lockMovementY: next,
+      lockScalingX : next,
+      lockScalingY : next,
+      lockRotation : next,
+    })
+    fc.requestRenderAll()
+    if ((active as any).layerIdx !== undefined) {
+      updateLayer(pageIdx, (active as any).layerIdx, { locked: next })
+    }
+    setActionPos(pos => (pos ? { ...pos } : null))
+  }
+
   const handleMenuAction = (a: import('./ContextMenu').MenuAction) => {
     const fc = fcRef.current
     if (!fc) return
     const active = fc.getActiveObject() as fabric.Object | undefined
+    const locked = (active as any)?.locked
     switch (a) {
       case 'cut':
-        if (active) {
+        if (active && !locked) {
           clip.json = [active.toJSON(PROPS)]
           clip.nudge = 0
           allObjs(active).forEach(o => fc.remove(o))
@@ -556,7 +581,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
         }
         break
       case 'duplicate':
-        if (active) {
+        if (active && !locked) {
           clip.json = [active.toJSON(PROPS)]
           clip.nudge += 10
           fabric.util.enlivenObjects(clip.json, (objs: fabric.Object[]) => {
@@ -620,13 +645,15 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
         }
         break
       case 'delete':
-        if (active) {
+        if (active && !locked) {
           allObjs(active).forEach(o => fc.remove(o))
           syncLayersFromCanvas(fc, pageIdx)
         }
         break
       case 'crop':
-        document.dispatchEvent(new Event('start-crop'))
+        if (active && !locked) {
+          document.dispatchEvent(new Event('start-crop'))
+        }
         break
     }
     setMenuPos(null)
@@ -869,7 +896,7 @@ if (container) {
   // double‑click on an <image> starts cropping
   const dblHandler = (e: fabric.IEvent) => {
     const tgt = e.target as fabric.Object | undefined;
-    if (tgt && (tgt as any).type === 'image') {
+    if (tgt && (tgt as any).type === 'image' && !(tgt as any).locked) {
       cropToolRef.current?.begin(tgt as fabric.Image);
     }
   };
@@ -1244,7 +1271,27 @@ const hideRotBubble = () => {
   if (bubble) bubble.style.display = 'none'
 }
 
+const filterLockedSelection = () => {
+  const act = fc.getActiveObject() as fabric.Object | undefined
+  if (act && (act as any).type === 'activeSelection') {
+    const as = act as fabric.ActiveSelection
+    const objs = as.getObjects()
+    const unlocked = objs.filter(o => !(o as any).locked)
+    if (unlocked.length !== objs.length) {
+      fc.discardActiveObject()
+      if (unlocked.length === 1) {
+        fc.setActiveObject(unlocked[0])
+      } else if (unlocked.length > 1) {
+        const sel = new fabric.ActiveSelection(unlocked, { canvas: fc } as any)
+        fc.setActiveObject(sel)
+      }
+      fc.requestRenderAll()
+    }
+  }
+}
+
 fc.on('selection:created', () => {
+  filterLockedSelection()
   hoverHL.visible = false
   fc.requestRenderAll()
   selDomRef.current && (selDomRef.current.style.display = 'block')
@@ -1262,8 +1309,8 @@ fc.on('selection:created', () => {
   window.addEventListener('resize', scrollHandler)
   containerRef.current?.addEventListener('scroll', scrollHandler, { passive: true, capture: true })
 })
-  .on('selection:updated', syncSel)
-.on('selection:cleared', () => {
+  .on('selection:updated', () => { filterLockedSelection(); syncSel() })
+  .on('selection:cleared', () => {
   if (scrollHandler) {
     window.removeEventListener('scroll', scrollHandler);
     window.removeEventListener('resize', scrollHandler);
@@ -1466,6 +1513,7 @@ const onKey = (e: KeyboardEvent) => {
   if (useEditor.getState().activePage !== pageIdx) return
   const active = fc.getActiveObject() as fabric.Object | undefined
   const cmd    = e.metaKey || e.ctrlKey
+  const locked = (active as any)?.locked
 
   /* —— COPY ————————————————————————————————————— */
   if (cmd && e.code === 'KeyC' && active) {
@@ -1476,7 +1524,7 @@ const onKey = (e: KeyboardEvent) => {
   }
 
   /* —— CUT —————————————————————————————————————— */
-  if (cmd && e.code === 'KeyX' && active) {
+  if (cmd && e.code === 'KeyX' && active && !locked) {
     clip.json  = [(active).toJSON(PROPS)]
     clip.nudge = 0
 
@@ -1523,7 +1571,7 @@ const onKey = (e: KeyboardEvent) => {
   }
 
   /* —— DELETE ——————————————————————————————————— */
-  if (!cmd && (e.code === 'Delete' || e.code === 'Backspace') && active) {
+  if (!cmd && (e.code === 'Delete' || e.code === 'Backspace') && active && !locked) {
     allObjs(active).forEach(o => fc.remove(o))
     syncLayersFromCanvas(fc, pageIdx)
     e.preventDefault()
@@ -1642,7 +1690,7 @@ window.addEventListener('keydown', onKey)
 
     if (isCropping && !croppingRef.current) {
       const act = fc.getActiveObject() as fabric.Object | undefined
-      if (act && (act as any).type === 'image') {
+      if (act && (act as any).type === 'image' && !(act as any).locked) {
         document.dispatchEvent(new Event('start-crop'))
       }
     }
@@ -1716,6 +1764,17 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
             flipX     : ly.flipX ?? false,
             flipY     : ly.flipY ?? false,
           })
+
+          ;(img as any).locked = ly.locked
+          if (ly.locked) {
+            img.set({
+              lockMovementX: true,
+              lockMovementY: true,
+              lockScalingX : true,
+              lockScalingY : true,
+              lockRotation : true,
+            })
+          }
 
           /* ---------- AI placeholder extras -------------------------------- */
           let doSync: (() => void) | undefined
@@ -1823,12 +1882,22 @@ doSync = () =>
           fill: hex(ly.fill ?? '#000'),
           textAlign: ly.textAlign ?? 'left',
           lineHeight: ly.lineHeight ?? 1.16,
-          opacity: ly.opacity ?? 1,
-          selectable: ly.selectable ?? true,
-          editable: ly.editable ?? true,
-          scaleX: ly.scaleX ?? 1, scaleY: ly.scaleY ?? 1,
-          lockScalingFlip: true,
-        })
+      opacity: ly.opacity ?? 1,
+      selectable: ly.selectable ?? true,
+      editable: ly.editable ?? true,
+      scaleX: ly.scaleX ?? 1, scaleY: ly.scaleY ?? 1,
+      lockScalingFlip: true,
+    })
+        ;(tb as any).locked = ly.locked
+        if (ly.locked) {
+          tb.set({
+            lockMovementX: true,
+            lockMovementY: true,
+            lockScalingX : true,
+            lockScalingY : true,
+            lockRotation : true,
+          })
+        }
         ;(tb as any).layerIdx = idx
         ;(tb as any).uid = ly.uid
         fc.insertAt(tb, idx, false)
@@ -1860,6 +1929,8 @@ doSync = () =>
         pos={actionPos}
         onAction={handleMenuAction}
         onMenu={p => setMenuPos(p)}
+        locked={Boolean(fcRef.current?.getActiveObject() && (fcRef.current!.getActiveObject() as any).locked)}
+        onUnlock={toggleActiveLock}
       />
       {menuPos && (
         <ContextMenu
