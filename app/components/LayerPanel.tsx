@@ -11,11 +11,13 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragOverEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
   useSortable,
+  arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -27,7 +29,15 @@ import {
 import { useEditor } from "./EditorStore";
 
 /*────────────────────────────    Sortable row    ──*/
-function Row({ id, idx }: { id: string; idx: number }) {
+function Row({
+  id,
+  idx,
+  guideBefore,
+}: {
+  id: string;
+  idx: number;
+  guideBefore?: boolean;
+}) {
   const layer = useEditor((s) => s.pages[s.activePage]?.layers[idx]);
   const remove = useEditor((s) => s.deleteLayer);
 
@@ -44,15 +54,18 @@ function Row({ id, idx }: { id: string; idx: number }) {
     transition,
   };
 
+
   if (!layer) return null;
 
   return (
     <li
       ref={setNodeRef}
       style={style}
-      className="group flex h-14 items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 text-sm hover:bg-walty-orange/10"
-
+      className="relative group flex h-14 items-center gap-2 rounded-lg border-2 border-walty-teal/40 px-2 text-sm hover:bg-walty-orange/10"
     >
+      {guideBefore && (
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 h-1 bg-walty-orange" />
+      )}
       {/* drag handle */}
       <button
         {...listeners}
@@ -64,7 +77,7 @@ function Row({ id, idx }: { id: string; idx: number }) {
 
       {/* name / preview */}
       <span
-        className="flex-1 truncate"
+        className="flex-1 truncate text-center"
         style={
           layer.type === 'text'
             ? {
@@ -89,7 +102,7 @@ function Row({ id, idx }: { id: string; idx: number }) {
             alt="layer"
             width={48}
             height={48}
-            className="inline-block h-12 w-12 rounded object-cover"
+            className="inline-block h-12 w-12 rounded object-cover mx-auto"
           />
         )}
       </span>
@@ -119,7 +132,23 @@ export default function LayerPanel() {
 
   /* drag‑and‑drop */
   const sensors = useSensors(useSensor(PointerSensor));
+
+  const [guideIndex, setGuideIndex] = useState<number | null>(null);
+
+  const onDragOver = (e: DragOverEvent) => {
+    if (!e.over) {
+      setGuideIndex(null);
+      return;
+    }
+    const activeIndex = ids.indexOf(e.active.id.toString());
+    const overIndex = ids.indexOf(e.over.id.toString());
+    const newIdx = arrayMove(ids, activeIndex, overIndex).indexOf(e.active.id.toString());
+    if (newIdx <= 0 || newIdx >= ids.length - 1) setGuideIndex(null);
+    else setGuideIndex(newIdx);
+  };
+
   const onDragEnd = (e: DragEndEvent) => {
+    setGuideIndex(null);
     if (e.over && e.active.id !== e.over.id)
       reorder(+e.active.id, +e.over.id);
   };
@@ -163,11 +192,11 @@ export default function LayerPanel() {
       </div>
 
       {/* layer list */}
-      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+      <DndContext sensors={sensors} onDragOver={onDragOver} onDragEnd={onDragEnd}>
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           <ul className="scrollbar-hidden flex h-[calc(100%-330px)] flex-col gap-1 overflow-y-auto px-4 pb-6">
-            {layerOrder.map((idx) => (
-              <Row key={idx} id={idx.toString()} idx={idx} />
+            {layerOrder.map((idx, i) => (
+              <Row key={idx} id={idx.toString()} idx={idx} guideBefore={guideIndex === i} />
             ))}
           </ul>
         </SortableContext>
