@@ -758,6 +758,11 @@ const handleProofAll = async () => {
     const fc = activeFc
     const canvas = fc.upperCanvasEl
 
+    const box = document.createElement('div')
+    box.className = 'drag-select'
+    box.style.display = 'none'
+    el.appendChild(box)
+
     const forward = (ev: PointerEvent | MouseEvent) => ({
       clientX: ev.clientX,
       clientY: ev.clientY,
@@ -780,13 +785,30 @@ const handleProofAll = async () => {
       fc.discardActiveObject()
       fc.requestRenderAll()
 
+      const rect = el.getBoundingClientRect()
+      const startX = e.clientX - rect.left
+      const startY = e.clientY - rect.top
+      box.style.left = `${startX}px`
+      box.style.top = `${startY}px`
+      box.style.width = '0px'
+      box.style.height = '0px'
+      box.style.display = 'block'
+
       const down = new MouseEvent('mousedown', forward(e))
       canvas.dispatchEvent(down)
 
-      const move = (ev: PointerEvent) =>
+      const move = (ev: PointerEvent) => {
         canvas.dispatchEvent(new MouseEvent('mousemove', forward(ev)))
+        const x = ev.clientX - rect.left
+        const y = ev.clientY - rect.top
+        box.style.left = `${Math.min(startX, x)}px`
+        box.style.top = `${Math.min(startY, y)}px`
+        box.style.width = `${Math.abs(x - startX)}px`
+        box.style.height = `${Math.abs(y - startY)}px`
+      }
       const up = (ev: PointerEvent) => {
         canvas.dispatchEvent(new MouseEvent('mouseup', forward(ev)))
+        box.style.display = 'none'
         document.removeEventListener('pointermove', move)
         document.removeEventListener('pointerup', up)
       }
@@ -795,7 +817,10 @@ const handleProofAll = async () => {
     }
 
     el.addEventListener('pointerdown', handler)
-    return () => el.removeEventListener('pointerdown', handler)
+    return () => {
+      el.removeEventListener('pointerdown', handler)
+      box.remove()
+    }
   }, [activeFc])
 
   /* 8 ─ loader guard --------------------------------------------- */
