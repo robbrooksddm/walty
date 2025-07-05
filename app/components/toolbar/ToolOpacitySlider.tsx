@@ -10,9 +10,10 @@ import IconButton from "./IconButton";   // forward-ref version
 interface Props {
   img: fabric.Image;
   mutate: (p: Partial<fabric.Image>) => void;
+  disabled?: boolean;
 }
 
-export default function ToolOpacitySlider({ img, mutate }: Props) {
+export default function ToolOpacitySlider({ img, mutate, disabled }: Props) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);   // ⬅️ grab anchor via ref
 
@@ -26,10 +27,11 @@ export default function ToolOpacitySlider({ img, mutate }: Props) {
         Icon={Droplet}
         label="Opacity"
         active={open}
-        onClick={() => setOpen(o => !o)}
+        onClick={() => !disabled && setOpen(o => !o)}
+        disabled={disabled}
       />
 
-      <Popover anchor={btnRef.current} open={open} onClose={() => setOpen(false)}>
+      <Popover anchor={btnRef.current} open={open && !disabled} onClose={() => setOpen(false)}>
         <label htmlFor="opacity-slider" className="sr-only">
           Image opacity
         </label>

@@ -6,9 +6,10 @@ interface Props {
   pos: { x: number; y: number } | null
   onAction: (a: MenuAction) => void
   onMenu: (pos: { x: number; y: number }) => void
+  locked?: boolean
 }
 
-export default function QuickActionBar({ pos, onAction, onMenu }: Props) {
+export default function QuickActionBar({ pos, onAction, onMenu, locked }: Props) {
   if (!pos) return null
 
   const openMenu = (e: React.MouseEvent) => {
@@ -21,8 +22,9 @@ export default function QuickActionBar({ pos, onAction, onMenu }: Props) {
       type="button"
       aria-label={label}
       title={label}
+      disabled={locked && !!action && (action === 'cut' || action === 'duplicate' || action === 'delete')}
       onClick={action ? () => onAction(action) : openMenu}
-      className="h-8 w-8 flex items-center justify-center -ml-px first:ml-0 rounded-lg text-[--walty-teal] enabled:hover:bg-[--walty-orange]/10 enabled:hover:text-[--walty-orange] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50"
+      className="h-8 w-8 flex items-center justify-center -ml-px first:ml-0 rounded-lg text-[--walty-teal] enabled:hover:bg-[--walty-orange]/10 enabled:hover:text-[--walty-orange] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50 disabled:opacity-40"
     >
       <Icon className="w-5 h-5" />
     </button>

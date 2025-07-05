@@ -513,9 +513,10 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
     const fc = fcRef.current
     if (!fc) return
     const active = fc.getActiveObject() as fabric.Object | undefined
+    const locked = (active as any)?.locked
     switch (a) {
       case 'cut':
-        if (active) {
+        if (active && !locked) {
           clip.json = [active.toJSON(PROPS)]
           clip.nudge = 0
           allObjs(active).forEach(o => fc.remove(o))
@@ -552,7 +553,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
         }
         break
       case 'duplicate':
-        if (active) {
+        if (active && !locked) {
           clip.json = [active.toJSON(PROPS)]
           clip.nudge += 10
           fabric.util.enlivenObjects(clip.json, (objs: fabric.Object[]) => {
@@ -616,7 +617,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
         }
         break
       case 'delete':
-        if (active) {
+        if (active && !locked) {
           allObjs(active).forEach(o => fc.remove(o))
           syncLayersFromCanvas(fc, pageIdx)
         }
@@ -1462,6 +1463,7 @@ const onKey = (e: KeyboardEvent) => {
   if (useEditor.getState().activePage !== pageIdx) return
   const active = fc.getActiveObject() as fabric.Object | undefined
   const cmd    = e.metaKey || e.ctrlKey
+  const locked = (active as any)?.locked
 
   /* —— COPY ————————————————————————————————————— */
   if (cmd && e.code === 'KeyC' && active) {
@@ -1472,7 +1474,7 @@ const onKey = (e: KeyboardEvent) => {
   }
 
   /* —— CUT —————————————————————————————————————— */
-  if (cmd && e.code === 'KeyX' && active) {
+  if (cmd && e.code === 'KeyX' && active && !locked) {
     clip.json  = [(active).toJSON(PROPS)]
     clip.nudge = 0
 
@@ -1519,7 +1521,7 @@ const onKey = (e: KeyboardEvent) => {
   }
 
   /* —— DELETE ——————————————————————————————————— */
-  if (!cmd && (e.code === 'Delete' || e.code === 'Backspace') && active) {
+  if (!cmd && (e.code === 'Delete' || e.code === 'Backspace') && active && !locked) {
     allObjs(active).forEach(o => fc.remove(o))
     syncLayersFromCanvas(fc, pageIdx)
     e.preventDefault()
@@ -1875,6 +1877,7 @@ doSync = () =>
         pos={actionPos}
         onAction={handleMenuAction}
         onMenu={p => setMenuPos(p)}
+        locked={Boolean(fcRef.current?.getActiveObject() && (fcRef.current!.getActiveObject() as any).locked)}
       />
       {menuPos && (
         <ContextMenu

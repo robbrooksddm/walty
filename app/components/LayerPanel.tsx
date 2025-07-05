@@ -124,8 +124,9 @@ function Row({
 
       {/* delete */}
       <button
-        onClick={() => remove(idx)}
-        className="opacity-0 transition-opacity group-hover:opacity-100 text-walty-teal hover:text-walty-orange"
+        onClick={() => !layer.locked && remove(idx)}
+        disabled={layer.locked}
+        className="opacity-0 transition-opacity group-hover:opacity-100 text-walty-teal hover:text-walty-orange disabled:opacity-40"
       >
         <Trash2 className="h-4 w-4" />
       </button>
