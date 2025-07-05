@@ -31,6 +31,7 @@ export class CropTool {
   private wrapper: HTMLElement | null = null;
   private scrollLeft = 0;
   private scrollTop = 0;
+  private startZoom = 1;
   /** clean‑up callbacks to run on `teardown()` */
   private cleanup: Array<() => void> = [];
 
@@ -66,6 +67,7 @@ export class CropTool {
     this.isActive = true
     this.onChange?.(true)
     this.img      = img
+    this.startZoom = this.fc.getZoom?.() ?? 1
     // allow freeform scaling of the crop window
     const prevUniformScaling = this.fc.uniformScaling
     const prevUniScaleKey    = this.fc.uniScaleKey
@@ -741,19 +743,25 @@ export class CropTool {
     if (!keep) this.fc.discardActiveObject()
     this.fc.requestRenderAll()
     if (this.baseW && this.baseH) {
-      this.fc.setWidth(this.baseW)
-      this.fc.setHeight(this.baseH)
+      const currentZoom = this.fc.getZoom?.() ?? 1
       const wrap = (this.fc as any).wrapperEl as HTMLElement | undefined
+      if (this.startZoom === currentZoom) {
+        this.fc.setWidth(this.baseW)
+        this.fc.setHeight(this.baseH)
+        if (wrap && this.wrapStyles) {
+          wrap.style.width = this.wrapStyles.w
+          wrap.style.height = this.wrapStyles.h
+          wrap.style.maxWidth = this.wrapStyles.mw
+          wrap.style.maxHeight = this.wrapStyles.mh
+        }
+      }
       if (wrap && this.wrapStyles) {
-        wrap.style.width = this.wrapStyles.w
-        wrap.style.height = this.wrapStyles.h
-        wrap.style.maxWidth = this.wrapStyles.mw
-        wrap.style.maxHeight = this.wrapStyles.mh
         wrap.style.transform = this.wrapStyles.transform
       }
       this.baseW = 0
       this.baseH = 0
       this.wrapStyles = null
+      this.startZoom = 1
     }
     if (this.panX || this.panY) {
       this.fc.relativePan(new fabric.Point(-this.panX, -this.panY))
