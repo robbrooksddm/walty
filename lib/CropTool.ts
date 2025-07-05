@@ -166,10 +166,12 @@ export class CropTool {
         wrapper.style.maxHeight = `${needH}px`
       }
     }
+    const prevVisibility = { ...(img as any)._controlsVisibility }
     this.cleanup.push(() => {
       img.lockUniScaling  = prevLockUniScaling
       img.centeredScaling = prevCenteredScaling
       img.hasBorders      = prevHasBorders
+      img.setControlsVisibility(prevVisibility)
     })
     /* hide the rotate ("mtr") and side controls while cropping */
     img.setControlsVisibility({
