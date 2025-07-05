@@ -50,7 +50,7 @@ function Row({
     isDragging,
     index,
     newIndex,
-  } = useSortable({ id });
+  } = useSortable({ id, disabled: layer?.locked });
 
   const style: React.CSSProperties = {
     transform: CSS.Translate.toString(transform),
@@ -83,9 +83,10 @@ function Row({
       )}
       {/* drag handle */}
       <button
-        {...listeners}
+        {...(!layer.locked ? listeners : {})}
         {...attributes}
-        className="cursor-grab text-walty-teal hover:text-walty-orange"
+        disabled={layer.locked}
+        className="text-walty-teal hover:text-walty-orange disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <GripVertical className="h-4 w-4" />
       </button>
@@ -150,10 +151,17 @@ export default function LayerPanel() {
   /* drag‑and‑drop */
   const sensors = useSensors(useSensor(PointerSensor));
   const onDragEnd = (e: DragEndEvent) => {
-    if (e.over && e.active.id !== e.over.id)
-      reorder(+e.active.id, +e.over.id);
-    setDropIndex(null);
-  };
+    if (e.over && e.active.id !== e.over.id) {
+      const fromIdx = +e.active.id
+      const toIdx   = +e.over.id
+      const fromLayer = pages[activePage].layers[fromIdx]
+      const toLayer   = pages[activePage].layers[toIdx]
+      if (!fromLayer.locked && !toLayer.locked) {
+        reorder(fromIdx, toIdx)
+      }
+    }
+    setDropIndex(null)
+  }
 
   return (
         <aside
