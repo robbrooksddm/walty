@@ -145,16 +145,22 @@ export default function TextToolbar (props: Props) {
   const sendBackward = () => {
     if (locked || !fc || !tb) return
     fc.sendBackwards(tb)
+    fc.setActiveObject(tb)
     fc.requestRenderAll()
     const sync = (fc as any)._syncLayers as (() => void) | undefined
     sync && sync()
+    tb.fire('modified');
+    fc.fire('object:modified', { target: tb })
   }
   const bringForward = () => {
     if (locked || !fc || !tb) return
     fc.bringForward(tb)
+    fc.setActiveObject(tb)
     fc.requestRenderAll()
     const sync = (fc as any)._syncLayers as (() => void) | undefined
     sync && sync()
+    tb.fire('modified');
+    fc.fire('object:modified', { target: tb })
   }
 
   /* ------------------------------------------------------------------ */

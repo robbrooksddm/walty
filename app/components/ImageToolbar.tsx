@@ -132,16 +132,22 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
   const sendBackward = () => {
     if (locked || !fc) return;
     fc.sendBackwards(img);
+    fc.setActiveObject(img);
     fc.requestRenderAll();
     const sync = (fc as any)._syncLayers as (() => void) | undefined;
     sync && sync();
+    img.fire('modified');
+    fc.fire('object:modified', { target: img });
   };
   const bringForward = () => {
     if (locked || !fc) return;
     fc.bringForward(img);
+    fc.setActiveObject(img);
     fc.requestRenderAll();
     const sync = (fc as any)._syncLayers as (() => void) | undefined;
     sync && sync();
+    img.fire('modified');
+    fc.fire('object:modified', { target: img });
   };
 
   /* remove active image */
