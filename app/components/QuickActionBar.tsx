@@ -9,15 +9,18 @@ import {
 } from 'lucide-react'
 import type { MenuAction } from './ContextMenu'
 
+import type { Mode } from '@/lib/useSnapGuides'
+
 interface Props {
   pos: { x: number; y: number } | null
   onAction: (a: MenuAction) => void
   onMenu: (pos: { x: number; y: number }) => void
   locked?: boolean
   onUnlock?: () => void
+  mode?: Mode
 }
 
-export default function QuickActionBar({ pos, onAction, onMenu, locked, onUnlock }: Props) {
+export default function QuickActionBar({ pos, onAction, onMenu, locked, onUnlock, mode = 'customer' }: Props) {
   if (!pos) return null
 
   const openMenu = (e: React.MouseEvent) => {
@@ -39,6 +42,7 @@ export default function QuickActionBar({ pos, onAction, onMenu, locked, onUnlock
   )
 
   if (locked) {
+    if (mode !== 'staff') return null
     return (
       <div
         className="fixed z-50 pointer-events-auto flex items-center bg-white border border-[rgba(0,91,85,.2)] shadow-lg rounded-full p-0"

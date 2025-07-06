@@ -850,7 +850,7 @@ if (container) {
   addBackdrop(fc);
   // keep the preview scaled to the configured width
   fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0]);
-  enableSnapGuides(fc, PAGE_W, PAGE_H);
+  enableSnapGuides(fc, PAGE_W, PAGE_H, mode);
 
   /* keep event coordinates aligned with any scroll/resize */
   const updateOffset = () => fc.calcOffset();
@@ -1937,6 +1937,7 @@ doSync = () =>
         onMenu={p => setMenuPos(p)}
         locked={Boolean(fcRef.current?.getActiveObject() && (fcRef.current!.getActiveObject() as any).locked)}
         onUnlock={toggleActiveLock}
+        mode={mode}
       />
       {menuPos && (
         <ContextMenu

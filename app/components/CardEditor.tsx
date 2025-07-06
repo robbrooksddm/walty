@@ -928,6 +928,7 @@ const handleProofAll = async () => {
             <ImageToolbar
               canvas={activeFc}
               saving={saving}
+              mode={mode}
             />
           ) : (
             <div

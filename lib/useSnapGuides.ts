@@ -7,7 +7,14 @@ import { fabric } from 'fabric'
  * @param width  Full page width in canvas units
  * @param height Full page height in canvas units
  */
-export function enableSnapGuides(fc: fabric.Canvas, width: number, height: number) {
+export type Mode = 'staff' | 'customer'
+
+export function enableSnapGuides(
+  fc: fabric.Canvas,
+  width: number,
+  height: number,
+  mode: Mode = 'customer',
+) {
   const SNAP = 4
   // how strongly to pull the object toward a snapped position (0‑1)
   // use 1 for a hard snap with no drift
@@ -61,7 +68,8 @@ export function enableSnapGuides(fc: fabric.Canvas, width: number, height: numbe
       .filter(o =>
         o !== active &&
         (o as any).visible !== false &&
-        !(o as any)._guide
+        !(o as any)._guide &&
+        (mode === 'staff' || !(o as any).locked)
       )
       .map(o => metrics(o.getBoundingRect(true, true)))
   }
