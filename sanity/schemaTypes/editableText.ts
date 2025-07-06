@@ -21,5 +21,8 @@ export default defineType({
     defineField({name:'fill',       type:'string'}),
     defineField({name:'textAlign',  type:'string'}),
     defineField({name:'lineHeight', type:'number'}),
+
+    /* locked state controlled in the editor */
+    defineField({name:'locked', type:'boolean', hidden:true}),
   ],
 })

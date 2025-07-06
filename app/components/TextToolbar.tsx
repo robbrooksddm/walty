@@ -124,6 +124,10 @@ export default function TextToolbar (props: Props) {
       lockScalingX : next,
       lockScalingY : next,
       lockRotation : next,
+      selectable   : !next,
+      evented      : !next,
+      hasControls  : !next,
+      editable     : !next,
     })
     fc.requestRenderAll()
     updateLayer(activePage, (tb as any).layerIdx, { locked: next })

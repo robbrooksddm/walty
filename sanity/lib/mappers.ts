@@ -36,6 +36,7 @@ function toFabricLayer (raw: SanityLayer): Layer | null {
 
     /* — ② editable text — */
     case 'editableText':
+      const textLocked = !!raw.locked
       return {
         type : 'text',
         text : raw.text ?? 'New text',
@@ -43,13 +44,15 @@ function toFabricLayer (raw: SanityLayer): Layer | null {
         y    : raw.y    ?? 50,
         fontSize : raw.fontSize ?? 32,
         fill     : raw.fill     ?? '#000',
-        selectable: true,
-        editable  : true,
+        selectable: !textLocked,
+        editable  : !textLocked,
+        locked    : textLocked,
         width: raw.width ?? 300,
       }
 
     /* — ③ editable image — */
     case 'editableImage':
+      const imgLocked = !!raw.locked
       return {
         type  : 'image',
         src   : raw.src ? urlFor(raw.src).url() : '',
@@ -57,8 +60,9 @@ function toFabricLayer (raw: SanityLayer): Layer | null {
         y     : raw.y ?? 0,
         width : raw.w,
         height: raw.h,
-        selectable: true,
-        editable  : true,
+        selectable: !imgLocked,
+        editable  : !imgLocked,
+        locked    : imgLocked,
       }
 
     /* — ④ ⭐ NEW AI face-swap layer (or legacy aiPlaceholder) — */

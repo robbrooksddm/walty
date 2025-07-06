@@ -26,6 +26,9 @@ export default defineType({
 
     /* raw URL / blob while the upload is still in progress */
     defineField({name: 'srcUrl', type: 'url', hidden: true}),
+
+    /* locked state controlled in the editor */
+    defineField({ name: 'locked', type: 'boolean', hidden: true }),
   ],
 
   /* ── layer-list preview ── */
