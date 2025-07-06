@@ -1669,18 +1669,13 @@ window.addEventListener('keydown', onKey)
     const container = canvas.parentElement as HTMLElement | null
     if (container) {
       const pad = 4 * zoom
-      container.style.width = `${PREVIEW_W * zoom}px`
-      container.style.height = `${PREVIEW_H * zoom}px`
-      container.style.maxWidth = `${PREVIEW_W * zoom}px`
-      container.style.maxHeight = `${PREVIEW_H * zoom}px`
+      container.style.transform = `scale(${zoom})`
+      container.style.transformOrigin = 'top left'
       container.style.padding = `${pad}px`
       container.style.overflow = 'visible'
     }
 
-    fc.setWidth(PREVIEW_W * zoom)
-    fc.setHeight(PREVIEW_H * zoom)
-    canvas.style.width = `${PREVIEW_W * zoom}px`
-    canvas.style.height = `${PREVIEW_H * zoom}px`
+    // container scaling handles visible size; keep Fabric canvas fixed
 
     fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
     if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
