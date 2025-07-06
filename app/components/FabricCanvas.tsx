@@ -8,7 +8,7 @@
  *********************************************************************/
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { fabric }            from 'fabric'
 import { useEditor }         from './EditorStore'
 import { fromSanity }        from '@/app/library/layerAdapters'
@@ -1661,7 +1661,7 @@ window.addEventListener('keydown', onKey)
 /* ---------- END mount once ----------------------------------- */
 
   /* ---------- apply zoom -------------------------------------- */
-  useEffect(() => {
+  useLayoutEffect(() => {
     const fc = fcRef.current
     const canvas = canvasRef.current
     if (!fc || !canvas) return
@@ -1677,8 +1677,6 @@ window.addEventListener('keydown', onKey)
       container.style.overflow = 'visible'
     }
 
-    fc.setWidth(PREVIEW_W * zoom)
-    fc.setHeight(PREVIEW_H * zoom)
     canvas.style.width = `${PREVIEW_W * zoom}px`
     canvas.style.height = `${PREVIEW_H * zoom}px`
 
