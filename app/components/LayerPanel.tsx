@@ -23,6 +23,7 @@ import {
   Upload as UploadIcon,
   Trash2,
   GripVertical,
+  Lock,
 } from "lucide-react";
 import { useEditor } from "./EditorStore";
 
@@ -50,7 +51,7 @@ function Row({ id, idx }: { id: string; idx: number }) {
       className={`relative group flex h-14 items-center gap-2 rounded-lg
                   border-2 border-walty-teal/40 px-2 text-sm
                   hover:bg-walty-orange/10
-                  ${layer?.locked ? "cursor-default" : "cursor-grab"}`}
+                  ${layer?.locked ? 'cursor-default opacity-50' : 'cursor-grab'}`}
     >
       {/* drag handle */}
       <button
@@ -91,6 +92,10 @@ function Row({ id, idx }: { id: string; idx: number }) {
           />
         )}
       </span>
+
+      {layer.locked && (
+        <Lock className="h-4 w-4 text-walty-teal" />
+      )}
 
       {/* delete */}
       <button

@@ -40,9 +40,10 @@ import {
 interface Props {
   canvas: fabric.Canvas | null;
   saving: boolean;
+  mode?: 'staff' | 'customer';
 }
 
-export default function ImageToolbar({ canvas: fc, saving }: Props) {
+export default function ImageToolbar({ canvas: fc, saving, mode = 'customer' }: Props) {
   /* local state / editor wiring */
   const [, force]      = useState({});
   const reorder        = useEditor(s => s.reorder);
@@ -112,6 +113,9 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
       lockScalingX : next,
       lockScalingY : next,
       lockRotation : next,
+      selectable   : !next,
+      evented      : !next,
+      hasControls  : !next,
     });
     fc.requestRenderAll();
     updateLayer(activePage, (img as any).layerIdx, { locked: next });
@@ -158,7 +162,9 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
         <IconButton Icon={AlignToPageVertical}   label="Center vertical" caption="Center Y" onClick={cycleVertical} disabled={locked} />
         <IconButton Icon={AlignToPageHorizontal} label="Center horizontal" caption="Center X" onClick={cycleHorizontal} disabled={locked} />
         <IconButton Icon={Eraser} label="Remove background" caption="BG Erase" onClick={() => alert("TODO: remove background") } disabled={locked} />
-        <IconButton Icon={locked ? Lock : Unlock} label={locked ? "Unlock layer" : "Lock layer"} active={locked} onClick={toggleLock} />
+        {mode === 'staff' && (
+          <IconButton Icon={locked ? Lock : Unlock} label={locked ? 'Unlock layer' : 'Lock layer'} active={locked} onClick={toggleLock} />
+        )}
         <IconButton Icon={ArrowDownToLine} label="Send backward" caption="Send ↓" onClick={sendBackward} disabled={locked} />
         <IconButton Icon={ArrowUpToLine}   label="Bring forward" caption="Bring ↑" onClick={bringForward} disabled={locked} />
         <IconButton Icon={Trash2} label="Delete image" caption="Delete" onClick={deleteCurrent} disabled={locked} />
