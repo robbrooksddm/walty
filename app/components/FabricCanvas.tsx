@@ -1800,15 +1800,20 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
             const locked = !!ly.locked
             img.set({ selectable: !locked, evented: !locked, hasControls: !locked })
 
- 
+
             // ─── open the Selfie Drawer on click ─────────────────────────
-img.on('mouseup', () => {
-  // make sure it’s still an AI placeholder
-  if ((img as any)._isAI || ly._isAI) {
-    useEditor.getState().setDrawerState('idle');   // <- OPEN drawer
-  }
-  
-});
+            img.on('mouseup', () => {
+              // make sure it’s still an AI placeholder
+              if ((img as any)._isAI || ly._isAI) {
+                const placeholderId = spec?._ref || spec?._id || null
+                document.dispatchEvent(
+                  new CustomEvent('open-selfie-drawer', {
+                    detail: { placeholderId },
+                  })
+                )
+              }
+
+            });
 
             let ghost = (img as any)._ghost as HTMLDivElement | undefined
             if (!ghost) {
