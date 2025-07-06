@@ -225,6 +225,8 @@ export interface Layer {
   opacity?:   number
   scaleX?:    number
   scaleY?:    number
+  /** rotation in degrees */
+  angle?:     number
   selectable?:boolean
   editable?:  boolean
   locked?:    boolean
@@ -335,6 +337,7 @@ const objToLayer = (o: fabric.Object): Layer => {
       opacity   : t.opacity,
       scaleX    : t.scaleX,
       scaleY    : t.scaleY,
+      angle     : t.angle,
       lines     : t.textLines as string[],
       locked    : (t as any).locked,
     }
@@ -364,6 +367,7 @@ const objToLayer = (o: fabric.Object): Layer => {
     scaleY : i.scaleY,
     flipX  : (i as any).flipX,
     flipY  : (i as any).flipY,
+    angle  : i.angle,
     locked : (i as any).locked,
   }
 
@@ -1764,6 +1768,7 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
             flipX     : ly.flipX ?? false,
             flipY     : ly.flipY ?? false,
           })
+          img.angle = ly.angle ?? 0
 
           ;(img as any).locked = ly.locked
           if (ly.locked) {
@@ -1881,13 +1886,14 @@ doSync = () =>
           underline: !!ly.underline,
           fill: hex(ly.fill ?? '#000'),
           textAlign: ly.textAlign ?? 'left',
-          lineHeight: ly.lineHeight ?? 1.16,
+      lineHeight: ly.lineHeight ?? 1.16,
       opacity: ly.opacity ?? 1,
       selectable: ly.selectable ?? true,
       editable: ly.editable ?? true,
       scaleX: ly.scaleX ?? 1, scaleY: ly.scaleY ?? 1,
       lockScalingFlip: true,
     })
+        tb.angle = ly.angle ?? 0
         ;(tb as any).locked = ly.locked
         if (ly.locked) {
           tb.set({
