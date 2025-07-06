@@ -259,7 +259,7 @@ export interface TemplatePage {
 /* ----------another helper --------------------------------------------- */
 const discardSelection = (fc: fabric.Canvas) => {
   fc.discardActiveObject();   // removes the wrapper
-  fc.requestRenderAll();
+  fc.renderAll();
 };
 
 /* ---------- helpers --------------------------------------------- */
@@ -539,7 +539,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
       hasControls  : !next,
       editable     : !next,
     })
-    fc.requestRenderAll()
+    fc.renderAll()
     if ((active as any).layerIdx !== undefined) {
       updateLayer(pageIdx, (active as any).layerIdx, { locked: next })
     }
@@ -1693,7 +1693,7 @@ window.addEventListener('keydown', onKey)
 
     fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
     if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
-    fc.requestRenderAll()
+    fc.renderAll()
   }, [zoom])
 
   /* ---------- crop mode toggle ------------------------------ */
