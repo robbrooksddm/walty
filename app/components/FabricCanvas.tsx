@@ -643,9 +643,8 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
         break
       case 'align':
         if (active) {
-          const zoom = fc.viewportTransform?.[0] ?? 1
-          const fcH = (fc.getHeight() ?? 0) / zoom
-          const fcW = (fc.getWidth()  ?? 0) / zoom
+          const fcH = previewH()
+          const fcW = previewW()
           const { width, height } = active.getBoundingRect(true, true)
           active.set({ left: fcW / 2 - width / 2, top: fcH / 2 - height / 2 })
           active.setCoords()
@@ -835,24 +834,24 @@ useEffect(() => {
   cropEl.addEventListener('contextmenu', ctxMenu);
  
 /* --- keep Fabric’s wrapper the same size as the visible preview --- */
-const container = canvasRef.current!.parentElement as HTMLElement | null;
-if (container) {
-  const pad = 4 * zoom;
+  const container = canvasRef.current!.parentElement as HTMLElement | null;
+  if (container) {
+    const pad = 4 * zoom;
 
-  // zoom-aware dimensions
-  container.style.width     = `${PREVIEW_W * zoom}px`;
-  container.style.height    = `${PREVIEW_H * zoom}px`;
-  container.style.maxWidth  = `${PREVIEW_W * zoom}px`;
-  container.style.maxHeight = `${PREVIEW_H * zoom}px`;
-  container.style.padding   = `${pad}px`;
-  container.style.overflow  = 'visible';
+    // zoom-aware dimensions
+    container.style.width     = `${PREVIEW_W * zoom}px`;
+    container.style.height    = `${PREVIEW_H * zoom}px`;
+    container.style.maxWidth  = `${PREVIEW_W * zoom}px`;
+    container.style.maxHeight = `${PREVIEW_H * zoom}px`;
+    container.style.padding   = `${pad}px`;
+    container.style.overflow  = 'visible';
 
-  // keep the ref so scroll listeners work
-  containerRef.current = container;
-}
-  
-  fc.setWidth(PREVIEW_W * zoom)
-  fc.setHeight(PREVIEW_H * zoom)
+    // keep the ref so scroll listeners work
+    containerRef.current = container;
+  }
+
+  fc.setWidth(PREVIEW_W)
+  fc.setHeight(PREVIEW_H)
   addBackdrop(fc);
   // keep the preview scaled to the configured width
   fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0]);
@@ -1686,8 +1685,6 @@ window.addEventListener('keydown', onKey)
       container.style.overflow = 'visible'
     }
 
-    fc.setWidth(PREVIEW_W * zoom)
-    fc.setHeight(PREVIEW_H * zoom)
     canvas.style.width = `${PREVIEW_W * zoom}px`
     canvas.style.height = `${PREVIEW_H * zoom}px`
 
@@ -1942,8 +1939,8 @@ doSync = () =>
     <>
       <canvas
         ref={canvasRef}
-        width={PREVIEW_W * zoom}
-        height={PREVIEW_H * zoom}
+        width={PREVIEW_W}
+        height={PREVIEW_H}
         style={{ width: PREVIEW_W * zoom, height: PREVIEW_H * zoom }}
         className={`border shadow rounded ${className}`}
       />
