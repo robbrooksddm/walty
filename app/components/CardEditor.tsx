@@ -851,6 +851,7 @@ const handleProofAll = async () => {
   }
 
   const boxWidth = previewW() * zoom
+  const boxHeight = previewH() * zoom
   const box = `flex-shrink-0 relative`
 
   /* ---------------- UI ------------------------------------------ */
@@ -957,7 +958,7 @@ const handleProofAll = async () => {
             {/* front */}
             <div
               className={section === 'front' ? box : 'hidden'}
-              style={{ width: boxWidth }}
+              style={{ width: boxWidth, height: boxHeight }}
               onClick={() => activeIdx !== 0 && gotoPage(0)}
             >
               <FabricCanvas
@@ -977,7 +978,7 @@ const handleProofAll = async () => {
             <div className={section === 'inside' ? 'flex gap-0' : 'hidden'}>
               <div
                 className={`${box} mr-[-1px]`}
-                style={{ width: boxWidth }}
+                style={{ width: boxWidth, height: boxHeight }}
                 onClick={() => activeIdx !== 1 && gotoPage(1)}
               >
                 <FabricCanvas
@@ -996,7 +997,7 @@ const handleProofAll = async () => {
               </div>
               <div
                 className={box}
-                style={{ width: boxWidth }}
+                style={{ width: boxWidth, height: boxHeight }}
                 onClick={() => activeIdx !== 2 && gotoPage(2)}
               >
                 <FabricCanvas
@@ -1017,7 +1018,7 @@ const handleProofAll = async () => {
             {/* back */}
             <div
               className={section === 'back' ? box : 'hidden'}
-              style={{ width: boxWidth }}
+              style={{ width: boxWidth, height: boxHeight }}
               onClick={() => activeIdx !== 3 && gotoPage(3)}
             >
               <FabricCanvas
