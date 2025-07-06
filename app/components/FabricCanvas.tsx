@@ -225,6 +225,7 @@ export interface Layer {
   opacity?:   number
   scaleX?:    number
   scaleY?:    number
+  angle?:     number
   selectable?:boolean
   editable?:  boolean
   locked?:    boolean

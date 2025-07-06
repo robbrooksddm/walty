@@ -13,8 +13,12 @@ export default defineType({
 
   /* ── geometry + style (hidden) ── */
   fields: [
-    ...(['x','y','w','h','width','height','scaleX','scaleY','opacity'] as const)
-      .map((n) => defineField({name: n, type: 'number', hidden: true})),
+    ...([
+      'x','y','w','h','width','height','scaleX','scaleY','angle'
+    ] as const).map((n) => defineField({ name: n, type: 'number', hidden: true })),
+    defineField({ name: 'flipX', type: 'boolean', hidden: true }),
+    defineField({ name: 'flipY', type: 'boolean', hidden: true }),
+    defineField({ name: 'opacity', type: 'number', hidden: true }),
 
     /* uploaded Sanity asset */
     defineField({
