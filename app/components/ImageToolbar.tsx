@@ -125,14 +125,28 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
 
   /* layer order helpers */
   const sendBackward = () => {
-    if (locked) return
+    if (locked) return;
     const idx = (img as any).layerIdx ?? 0;
-    if (idx < layerCount - 1) reorder(idx, idx + 1);
+    if (idx > 0) {
+      fc.sendBackwards(img);
+      fc.setActiveObject(img);
+      fc.requestRenderAll();
+      fc.fire("object:modified", { target: img });
+      reorder(idx, idx - 1);
+      force({});
+    }
   };
   const bringForward = () => {
-    if (locked) return
+    if (locked) return;
     const idx = (img as any).layerIdx ?? 0;
-    if (idx > 0 && idx <= layerCount - 1) reorder(idx, idx - 1);
+    if (idx < layerCount - 1) {
+      fc.bringForward(img);
+      fc.setActiveObject(img);
+      fc.requestRenderAll();
+      fc.fire("object:modified", { target: img });
+      reorder(idx, idx + 1);
+      force({});
+    }
   };
 
   /* remove active image */

@@ -136,14 +136,28 @@ export default function TextToolbar (props: Props) {
   }
 
   const sendBackward = () => {
-    if (locked) return
+    if (locked || !tb) return
     const idx = (tb as any).layerIdx ?? 0
-    if (idx < layerCount - 1) reorder(idx, idx + 1)
+    if (idx > 0) {
+      fc.sendBackwards(tb)
+      fc.setActiveObject(tb)
+      fc.requestRenderAll()
+      fc.fire('object:modified', { target: tb })
+      reorder(idx, idx - 1)
+      force({})
+    }
   }
   const bringForward = () => {
-    if (locked) return
+    if (locked || !tb) return
     const idx = (tb as any).layerIdx ?? 0
-    if (idx > 0 && idx <= layerCount - 1) reorder(idx, idx - 1)
+    if (idx < layerCount - 1) {
+      fc.bringForward(tb)
+      fc.setActiveObject(tb)
+      fc.requestRenderAll()
+      fc.fire('object:modified', { target: tb })
+      reorder(idx, idx + 1)
+      force({})
+    }
   }
 
   /* ------------------------------------------------------------------ */
