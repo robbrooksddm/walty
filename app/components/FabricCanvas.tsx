@@ -661,6 +661,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
         break
     }
     setMenuPos(null)
+    requestAnimationFrame(() => requestAnimationFrame(syncSel))
   }
 
 /* ---------- mount once --------------------------------------- */
@@ -1518,6 +1519,9 @@ const onKey = (e: KeyboardEvent) => {
   const active = fc.getActiveObject() as fabric.Object | undefined
   const cmd    = e.metaKey || e.ctrlKey
   const locked = (active as any)?.locked
+
+  // When editing text, allow normal key behaviour
+  if ((active as any)?.isEditing) return
 
   /* —— COPY ————————————————————————————————————— */
   if (cmd && e.code === 'KeyC' && active) {

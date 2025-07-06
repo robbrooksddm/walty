@@ -45,9 +45,24 @@ export default function TextToolbar (props: Props) {
   const { canvas: fc, mode } = props
 
   /* ------------------------------------------------------------------ */
-  /* 1.  Re-render whenever Fabric selection changes                    */
+  /* 1.  Store access and local state                                   */
   /* ------------------------------------------------------------------ */
   const [_, force] = useState({})
+  const updateLayer = useEditor(s => s.updateLayer)
+  const activePage  = useEditor(s => s.activePage)
+  const layerCount  = useEditor(
+    s => s.pages[s.activePage]?.layers.length || 0,
+  )
+
+  const [caseState, setCaseState] =
+    useState<'upper' | 'title' | 'lower'>('upper')
+  const [vIdx, setVIdx] = useState(0)
+  const [hIdx, setHIdx] = useState(0)
+  const [lastAxis, setLastAxis] = useState<'v' | 'h' | null>(null)
+
+  /* ------------------------------------------------------------------ */
+  /* 2.  Re-render whenever Fabric selection changes                    */
+  /* ------------------------------------------------------------------ */
   useEffect(() => {
     if (!fc) return
     const tick = () => force({})
@@ -61,24 +76,19 @@ export default function TextToolbar (props: Props) {
     }
   }, [fc])
 
-  if (!fc) return null
-  const tb = getActiveTextbox(fc)
+  const zoom = fc?.viewportTransform?.[0] ?? 1
+  const fcH  = (fc?.getHeight() ?? 0) / zoom
+  const fcW  = (fc?.getWidth()  ?? 0) / zoom
 
-  /* ------------------------------------------------------------------ */
-  /* 2.  Store access for layer order & locking                         */
-  /* ------------------------------------------------------------------ */
-  const reorder     = useEditor(s => s.reorder)
-  const updateLayer = useEditor(s => s.updateLayer)
-  const activePage  = useEditor(s => s.activePage)
-  const layerCount  = useEditor(
-    s => s.pages[s.activePage]?.layers.length || 0,
-  )
+  const tb = fc ? getActiveTextbox(fc) : null
+
+  useEffect(() => { setVIdx(0); setHIdx(0); setLastAxis(null) }, [tb])
+
+  if (!fc || !tb) return null
 
   /* ------------------------------------------------------------------ */
   /* 3.  Case-cycle & align-cycle helpers                               */
   /* ------------------------------------------------------------------ */
-  const [caseState, setCaseState] =
-    useState<'upper' | 'title' | 'lower'>('upper')
 
   const alignOrder = ['left', 'center', 'right', 'justify'] as const
   const cycleAlign = () => {
@@ -92,22 +102,25 @@ export default function TextToolbar (props: Props) {
   /* ------------------------------------------------------------------ */
   /* 4.  Centre-on-page maths (copied from Image toolbar)               */
   /* ------------------------------------------------------------------ */
-  const zoom = fc.viewportTransform?.[0] ?? 1
-  const fcH  = (fc.getHeight() ?? 0) / zoom
-  const fcW  = (fc.getWidth()  ?? 0) / zoom
 
   const cycleVertical = () => {
     if (!tb) return
-    const { top, height } = tb.getBoundingRect(true, true)
-    const pos = [0, fcH / 2 - height / 2, fcH - height]
-    mutate({ top: pos[(pos.findIndex(p => Math.abs(top - p) < 1) + 1) % 3] })
+    const { height } = tb.getBoundingRect(true, true)
+    const pos = [fcH / 2 - height / 2, fcH - height, 0]
+    const idx = lastAxis === 'v' ? vIdx : 0
+    mutate({ top: pos[idx] })
+    setVIdx((idx + 1) % 3)
+    setLastAxis('v')
   }
 
   const cycleHorizontal = () => {
     if (!tb) return
-    const { left, width } = tb.getBoundingRect(true, true)
-    const pos = [0, fcW / 2 - width / 2, fcW - width]
-    mutate({ left: pos[(pos.findIndex(p => Math.abs(left - p) < 1) + 1) % 3] })
+    const { width } = tb.getBoundingRect(true, true)
+    const pos = [fcW / 2 - width / 2, fcW - width, 0]
+    const idx = lastAxis === 'h' ? hIdx : 0
+    mutate({ left: pos[idx] })
+    setHIdx((idx + 1) % 3)
+    setLastAxis('h')
   }
 
   /* ------------------------------------------------------------------ */
@@ -130,14 +143,20 @@ export default function TextToolbar (props: Props) {
   }
 
   const sendBackward = () => {
-    if (locked) return
-    const idx = (tb as any).layerIdx ?? 0
-    if (idx < layerCount - 1) reorder(idx, idx + 1)
+    if (locked || !fc || !tb) return
+    fc.sendBackwards(tb)
+    fc.setActiveObject(tb)
+    fc.requestRenderAll()
+    const sync = (fc as any)._syncLayers as (() => void) | undefined
+    sync && sync()
   }
   const bringForward = () => {
-    if (locked) return
-    const idx = (tb as any).layerIdx ?? 0
-    if (idx > 0 && idx <= layerCount - 1) reorder(idx, idx - 1)
+    if (locked || !fc || !tb) return
+    fc.bringForward(tb)
+    fc.setActiveObject(tb)
+    fc.requestRenderAll()
+    const sync = (fc as any)._syncLayers as (() => void) | undefined
+    sync && sync()
   }
 
   /* ------------------------------------------------------------------ */
