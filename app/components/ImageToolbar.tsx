@@ -37,12 +37,15 @@ import {
 
 
 /* ───────────────────────── main toolbar component ─── */
+type Mode = 'staff' | 'customer'
+
 interface Props {
-  canvas: fabric.Canvas | null;
-  saving: boolean;
+  canvas: fabric.Canvas | null
+  saving: boolean
+  mode?: Mode
 }
 
-export default function ImageToolbar({ canvas: fc, saving }: Props) {
+export default function ImageToolbar({ canvas: fc, saving, mode = 'customer' }: Props) {
   /* local state / editor wiring */
   const [, force]      = useState({});
   const reorder        = useEditor(s => s.reorder);
@@ -158,7 +161,10 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
         <IconButton Icon={AlignToPageVertical}   label="Center vertical" caption="Center Y" onClick={cycleVertical} disabled={locked} />
         <IconButton Icon={AlignToPageHorizontal} label="Center horizontal" caption="Center X" onClick={cycleHorizontal} disabled={locked} />
         <IconButton Icon={Eraser} label="Remove background" caption="BG Erase" onClick={() => alert("TODO: remove background") } disabled={locked} />
-        <IconButton Icon={locked ? Lock : Unlock} label={locked ? "Unlock layer" : "Lock layer"} active={locked} onClick={toggleLock} />
+        {mode === "staff" && (
+          <IconButton Icon={locked ? Lock : Unlock} label={locked ? "Unlock layer" : "Lock layer"} active={locked} onClick={toggleLock} />
+        )}
+
         <IconButton Icon={ArrowDownToLine} label="Send backward" caption="Send ↓" onClick={sendBackward} disabled={locked} />
         <IconButton Icon={ArrowUpToLine}   label="Bring forward" caption="Bring ↑" onClick={bringForward} disabled={locked} />
         <IconButton Icon={Trash2} label="Delete image" caption="Delete" onClick={deleteCurrent} disabled={locked} />

@@ -23,6 +23,7 @@ import {
   Upload as UploadIcon,
   Trash2,
   GripVertical,
+  Lock,
 } from "lucide-react";
 import { useEditor } from "./EditorStore";
 
@@ -91,6 +92,10 @@ function Row({ id, idx }: { id: string; idx: number }) {
           />
         )}
       </span>
+
+      {layer.locked && (
+        <Lock className="absolute right-2 text-walty-teal" />
+      )}
 
       {/* delete */}
       <button
