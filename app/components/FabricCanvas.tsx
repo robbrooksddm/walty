@@ -1693,7 +1693,7 @@ window.addEventListener('keydown', onKey)
 
     fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
     if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
-    fc.requestRenderAll()
+    fc.renderAll()
   }, [zoom])
 
   /* ---------- crop mode toggle ------------------------------ */
