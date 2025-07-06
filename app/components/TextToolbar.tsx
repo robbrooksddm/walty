@@ -96,18 +96,24 @@ export default function TextToolbar (props: Props) {
   const fcH  = (fc.getHeight() ?? 0) / zoom
   const fcW  = (fc.getWidth()  ?? 0) / zoom
 
+  const [vIdx, setVIdx] = useState(0)
+  const [hIdx, setHIdx] = useState(0)
+  useEffect(() => { setVIdx(0); setHIdx(0) }, [tb])
+
   const cycleVertical = () => {
     if (!tb) return
-    const { top, height } = tb.getBoundingRect(true, true)
-    const pos = [0, fcH / 2 - height / 2, fcH - height]
-    mutate({ top: pos[(pos.findIndex(p => Math.abs(top - p) < 1) + 1) % 3] })
+    const { height } = tb.getBoundingRect(true, true)
+    const pos = [fcH / 2 - height / 2, fcH - height, 0]
+    mutate({ top: pos[vIdx] })
+    setVIdx((vIdx + 1) % 3)
   }
 
   const cycleHorizontal = () => {
     if (!tb) return
-    const { left, width } = tb.getBoundingRect(true, true)
-    const pos = [0, fcW / 2 - width / 2, fcW - width]
-    mutate({ left: pos[(pos.findIndex(p => Math.abs(left - p) < 1) + 1) % 3] })
+    const { width } = tb.getBoundingRect(true, true)
+    const pos = [fcW / 2 - width / 2, fcW - width, 0]
+    mutate({ left: pos[hIdx] })
+    setHIdx((hIdx + 1) % 3)
   }
 
   /* ------------------------------------------------------------------ */

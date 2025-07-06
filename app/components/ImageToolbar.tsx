@@ -89,16 +89,22 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
   };
 
   /* page-alignment cycles */
+  const [vIdx, setVIdx] = useState(0);
+  const [hIdx, setHIdx] = useState(0);
+  useEffect(() => { setVIdx(0); setHIdx(0); }, [img]);
+
   const cycleVertical = () => {
-    const { top, height } = img.getBoundingRect(true, true);
-    const pos = [0, fcH / 2 - height / 2, fcH - height];
-    mutate({ top: pos[(pos.findIndex(p => Math.abs(top - p) < 1) + 1) % 3] });
+    const { height } = img.getBoundingRect(true, true);
+    const pos = [fcH / 2 - height / 2, fcH - height, 0];
+    mutate({ top: pos[vIdx] });
+    setVIdx((vIdx + 1) % 3);
   };
 
   const cycleHorizontal = () => {
-    const { left, width } = img.getBoundingRect(true, true);
-    const pos = [0, fcW / 2 - width / 2, fcW - width];
-    mutate({ left: pos[(pos.findIndex(p => Math.abs(left - p) < 1) + 1) % 3] });
+    const { width } = img.getBoundingRect(true, true);
+    const pos = [fcW / 2 - width / 2, fcW - width, 0];
+    mutate({ left: pos[hIdx] });
+    setHIdx((hIdx + 1) % 3);
   };
 
   /* layer lock */
