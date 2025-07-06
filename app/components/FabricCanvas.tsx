@@ -644,8 +644,8 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
       case 'align':
         if (active) {
           const zoom = fc.viewportTransform?.[0] ?? 1
-          const fcH = (fc.getHeight() ?? 0) / zoom
-          const fcW = (fc.getWidth()  ?? 0) / zoom
+          const fcH = fc.getHeight() ?? 0
+          const fcW = fc.getWidth() ?? 0
           const { width, height } = active.getBoundingRect(true, true)
           active.set({ left: fcW / 2 - width / 2, top: fcH / 2 - height / 2 })
           active.setCoords()
@@ -850,12 +850,17 @@ if (container) {
   // keep the ref so scroll listeners work
   containerRef.current = container;
 }
-  
-  fc.setWidth(PREVIEW_W * zoom)
-  fc.setHeight(PREVIEW_H * zoom)
+
+  fc.setWidth(PREVIEW_W)
+  fc.setHeight(PREVIEW_H)
   addBackdrop(fc);
   // keep the preview scaled to the configured width
   fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0]);
+  const canvas = canvasRef.current!
+  canvas.style.width = `${PREVIEW_W}px`
+  canvas.style.height = `${PREVIEW_H}px`
+  canvas.style.transformOrigin = 'top left'
+  canvas.style.transform = `scale(${zoom})`
   enableSnapGuides(fc, PAGE_W, PAGE_H);
 
   /* keep event coordinates aligned with any scroll/resize */
@@ -1686,13 +1691,16 @@ window.addEventListener('keydown', onKey)
       container.style.overflow = 'visible'
     }
 
-    fc.setWidth(PREVIEW_W * zoom)
-    fc.setHeight(PREVIEW_H * zoom)
-    canvas.style.width = `${PREVIEW_W * zoom}px`
-    canvas.style.height = `${PREVIEW_H * zoom}px`
+    fc.setWidth(PREVIEW_W)
+    fc.setHeight(PREVIEW_H)
+    canvas.style.width = `${PREVIEW_W}px`
+    canvas.style.height = `${PREVIEW_H}px`
+    canvas.style.transformOrigin = 'top left'
+    canvas.style.transform = `scale(${zoom})`
 
     fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
     if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
+    fc.calcOffset()
     fc.requestRenderAll()
   }, [zoom])
 

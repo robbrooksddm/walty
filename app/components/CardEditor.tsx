@@ -670,7 +670,10 @@ const handleProofAll = async () => {
       const base = fc.getZoom() / current
       const point = origin
         ? new fabric.Point(origin.x, origin.y)
-        : new fabric.Point(fc.getWidth() / 2, fc.getHeight() / 2)
+        : (() => {
+            const rect = fc.upperCanvasEl.getBoundingClientRect()
+            return new fabric.Point(rect.width / 2, rect.height / 2)
+          })()
       fc.zoomToPoint(point, base * next)
       fc.requestRenderAll()
     })
@@ -687,13 +690,23 @@ const handleProofAll = async () => {
 
   const handleZoomIn = useCallback(() => {
     const fc = activeFc
-    const origin = fc ? { x: fc.getWidth() / 2, y: fc.getHeight() / 2 } : null
+    const origin = fc
+      ? (() => {
+          const rect = fc.upperCanvasEl.getBoundingClientRect()
+          return { x: rect.width / 2, y: rect.height / 2 }
+        })()
+      : null
     setZoomSmooth(targetZoom.current + 0.25, origin)
   }, [activeFc, setZoomSmooth])
 
   const handleZoomOut = useCallback(() => {
     const fc = activeFc
-    const origin = fc ? { x: fc.getWidth() / 2, y: fc.getHeight() / 2 } : null
+    const origin = fc
+      ? (() => {
+          const rect = fc.upperCanvasEl.getBoundingClientRect()
+          return { x: rect.width / 2, y: rect.height / 2 }
+        })()
+      : null
     setZoomSmooth(targetZoom.current - 0.25, origin)
   }, [activeFc, setZoomSmooth])
   const ran = useRef(false)
@@ -1082,7 +1095,12 @@ const handleProofAll = async () => {
           onChange={e => {
             const val = parseFloat(e.currentTarget.value)
             setSliderPos(val)
-            const origin = activeFc ? { x: activeFc.getWidth() / 2, y: activeFc.getHeight() / 2 } : null
+            const origin = activeFc
+              ? (() => {
+                  const rect = activeFc.upperCanvasEl.getBoundingClientRect()
+                  return { x: rect.width / 2, y: rect.height / 2 }
+                })()
+              : null
             setZoomSmooth(sliderToZoom(val), origin)
           }}
           className="h-2 w-32"
