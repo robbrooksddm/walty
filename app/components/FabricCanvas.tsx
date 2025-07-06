@@ -832,12 +832,14 @@ useEffect(() => {
 const container = canvasRef.current!.parentElement as HTMLElement | null;
 if (container) {
   const pad = 4 * zoom;
+  const w = Math.round(PREVIEW_W * zoom);
+  const h = Math.round(PREVIEW_H * zoom);
 
-  // zoom-aware dimensions
-  container.style.width     = `${PREVIEW_W * zoom}px`;
-  container.style.height    = `${PREVIEW_H * zoom}px`;
-  container.style.maxWidth  = `${PREVIEW_W * zoom}px`;
-  container.style.maxHeight = `${PREVIEW_H * zoom}px`;
+  // zoom-aware dimensions (rounded to avoid flicker)
+  container.style.width     = `${w}px`;
+  container.style.height    = `${h}px`;
+  container.style.maxWidth  = `${w}px`;
+  container.style.maxHeight = `${h}px`;
   container.style.padding   = `${pad}px`;
   container.style.overflow  = 'visible';
 
@@ -845,8 +847,8 @@ if (container) {
   containerRef.current = container;
 }
   
-  fc.setWidth(PREVIEW_W * zoom)
-  fc.setHeight(PREVIEW_H * zoom)
+  fc.setWidth(w)
+  fc.setHeight(h)
   addBackdrop(fc);
   // keep the preview scaled to the configured width
   fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0]);
@@ -1666,21 +1668,23 @@ window.addEventListener('keydown', onKey)
     const canvas = canvasRef.current
     if (!fc || !canvas) return
 
+    const w = Math.round(PREVIEW_W * zoom)
+    const h = Math.round(PREVIEW_H * zoom)
     const container = canvas.parentElement as HTMLElement | null
     if (container) {
       const pad = 4 * zoom
-      container.style.width = `${PREVIEW_W * zoom}px`
-      container.style.height = `${PREVIEW_H * zoom}px`
-      container.style.maxWidth = `${PREVIEW_W * zoom}px`
-      container.style.maxHeight = `${PREVIEW_H * zoom}px`
+      container.style.width = `${w}px`
+      container.style.height = `${h}px`
+      container.style.maxWidth = `${w}px`
+      container.style.maxHeight = `${h}px`
       container.style.padding = `${pad}px`
       container.style.overflow = 'visible'
     }
 
-    fc.setWidth(PREVIEW_W * zoom)
-    fc.setHeight(PREVIEW_H * zoom)
-    canvas.style.width = `${PREVIEW_W * zoom}px`
-    canvas.style.height = `${PREVIEW_H * zoom}px`
+    fc.setWidth(w)
+    fc.setHeight(h)
+    canvas.style.width = `${w}px`
+    canvas.style.height = `${h}px`
 
     fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
     if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
@@ -1926,9 +1930,9 @@ doSync = () =>
     <>
       <canvas
         ref={canvasRef}
-        width={PREVIEW_W * zoom}
-        height={PREVIEW_H * zoom}
-        style={{ width: PREVIEW_W * zoom, height: PREVIEW_H * zoom }}
+        width={Math.round(PREVIEW_W * zoom)}
+        height={Math.round(PREVIEW_H * zoom)}
+        style={{ width: Math.round(PREVIEW_W * zoom), height: Math.round(PREVIEW_H * zoom) }}
         className={`border shadow rounded ${className}`}
       />
       <QuickActionBar
