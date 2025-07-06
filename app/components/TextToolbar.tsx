@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { fabric }              from 'fabric'
-import { getActiveTextbox }    from './FabricCanvas'
+import { getActiveTextbox, previewW, previewH }    from './FabricCanvas'
 import { useEditor }           from './EditorStore'
 
 /* UI building blocks */
@@ -92,9 +92,8 @@ export default function TextToolbar (props: Props) {
   /* ------------------------------------------------------------------ */
   /* 4.  Centre-on-page maths (copied from Image toolbar)               */
   /* ------------------------------------------------------------------ */
-  const zoom = fc.viewportTransform?.[0] ?? 1
-  const fcH  = (fc.getHeight() ?? 0) / zoom
-  const fcW  = (fc.getWidth()  ?? 0) / zoom
+  const fcH  = previewH()
+  const fcW  = previewW()
 
   const cycleVertical = () => {
     if (!tb) return

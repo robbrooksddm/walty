@@ -670,7 +670,7 @@ const handleProofAll = async () => {
       const base = fc.getZoom() / current
       const point = origin
         ? new fabric.Point(origin.x, origin.y)
-        : new fabric.Point(fc.getWidth() / 2, fc.getHeight() / 2)
+        : new fabric.Point(previewW() / 2, previewH() / 2)
       fc.zoomToPoint(point, base * next)
       fc.requestRenderAll()
     })
@@ -686,16 +686,14 @@ const handleProofAll = async () => {
   }, [])
 
   const handleZoomIn = useCallback(() => {
-    const fc = activeFc
-    const origin = fc ? { x: fc.getWidth() / 2, y: fc.getHeight() / 2 } : null
+    const origin = { x: previewW() / 2, y: previewH() / 2 }
     setZoomSmooth(targetZoom.current + 0.25, origin)
-  }, [activeFc, setZoomSmooth])
+  }, [zoom, setZoomSmooth])
 
   const handleZoomOut = useCallback(() => {
-    const fc = activeFc
-    const origin = fc ? { x: fc.getWidth() / 2, y: fc.getHeight() / 2 } : null
+    const origin = { x: previewW() / 2, y: previewH() / 2 }
     setZoomSmooth(targetZoom.current - 0.25, origin)
-  }, [activeFc, setZoomSmooth])
+  }, [zoom, setZoomSmooth])
   const ran = useRef(false)
   useEffect(() => {
     if (ran.current || typeof window === 'undefined') return
@@ -1081,7 +1079,7 @@ const handleProofAll = async () => {
           onChange={e => {
             const val = parseFloat(e.currentTarget.value)
             setSliderPos(val)
-            const origin = activeFc ? { x: activeFc.getWidth() / 2, y: activeFc.getHeight() / 2 } : null
+            const origin = { x: previewW() / 2, y: previewH() / 2 }
             setZoomSmooth(sliderToZoom(val), origin)
           }}
           className="h-2 w-32"
