@@ -639,8 +639,8 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
       case 'align':
         if (active) {
           const zoom = fc.viewportTransform?.[0] ?? 1
-          const fcH = (fc.getHeight() ?? 0) / zoom
-          const fcW = (fc.getWidth()  ?? 0) / zoom
+          const fcH = previewH()
+          const fcW = previewW()
           const { width, height } = active.getBoundingRect(true, true)
           active.set({ left: fcW / 2 - width / 2, top: fcH / 2 - height / 2 })
           active.setCoords()
@@ -845,8 +845,11 @@ if (container) {
   containerRef.current = container;
 }
   
-  fc.setWidth(PREVIEW_W * zoom)
-  fc.setHeight(PREVIEW_H * zoom)
+  fc.setWidth(PREVIEW_W)
+  fc.setHeight(PREVIEW_H)
+  const canvas = canvasRef.current!
+  canvas.style.width  = `${PREVIEW_W * zoom}px`
+  canvas.style.height = `${PREVIEW_H * zoom}px`
   addBackdrop(fc);
   // keep the preview scaled to the configured width
   fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0]);
@@ -1677,8 +1680,6 @@ window.addEventListener('keydown', onKey)
       container.style.overflow = 'visible'
     }
 
-    fc.setWidth(PREVIEW_W * zoom)
-    fc.setHeight(PREVIEW_H * zoom)
     canvas.style.width = `${PREVIEW_W * zoom}px`
     canvas.style.height = `${PREVIEW_H * zoom}px`
 

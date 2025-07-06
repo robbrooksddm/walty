@@ -11,6 +11,7 @@
 import { useEffect, useState } from "react";
 import { fabric } from "fabric";
 import { useEditor } from "./EditorStore";
+import { previewW, previewH } from "./FabricCanvas";
 import ToolFlipImage     from "./toolbar/ToolFlipImage";
 import ToolOpacitySlider from "./toolbar/ToolOpacitySlider";
 import IconButton        from "./toolbar/IconButton";
@@ -71,8 +72,8 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
 
   /* canvas metrics */
   const zoom = fc.viewportTransform?.[0] ?? 1;
-  const fcH  = (fc.getHeight() ?? 0) / zoom;
-  const fcW  = (fc.getWidth()  ?? 0) / zoom;
+  const fcH  = previewH();
+  const fcW  = previewW();
 
   const img = fc.getActiveObject() as fabric.Image | null;
   if (!img || (img as any).type !== "image") return null;
