@@ -1686,12 +1686,11 @@ window.addEventListener('keydown', onKey)
       container.style.overflow = 'visible'
     }
 
-    fc.setWidth(PREVIEW_W * zoom)
-    fc.setHeight(PREVIEW_H * zoom)
-    canvas.style.width = `${PREVIEW_W * zoom}px`
-    canvas.style.height = `${PREVIEW_H * zoom}px`
-
-    fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
+    fc.setDimensions(
+      { width: PREVIEW_W * zoom, height: PREVIEW_H * zoom },
+      { cssOnly: true },
+    )
+    fc.calcOffset()
     if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
     fc.requestRenderAll()
   }, [zoom])
