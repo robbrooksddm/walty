@@ -527,12 +527,17 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
     const locked = !!(active as any).locked
     const next = !locked
     ;(active as any).locked = next
+    const isStaff = mode === 'staff'
     active.set({
       lockMovementX: next,
       lockMovementY: next,
       lockScalingX : next,
       lockScalingY : next,
       lockRotation : next,
+      selectable   : isStaff || !next,
+      evented      : isStaff || !next,
+      hasControls  : !next,
+      editable     : !next,
     })
     fc.requestRenderAll()
     if ((active as any).layerIdx !== undefined) {
@@ -1771,15 +1776,18 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
           img.angle = ly.angle ?? 0
 
           ;(img as any).locked = ly.locked
-          if (ly.locked) {
-            img.set({
-              lockMovementX: true,
-              lockMovementY: true,
-              lockScalingX : true,
-              lockScalingY : true,
-              lockRotation : true,
-            })
-          }
+          const locked = !!ly.locked
+          const isStaff = mode === 'staff'
+          img.set({
+            lockMovementX: locked,
+            lockMovementY: locked,
+            lockScalingX : locked,
+            lockScalingY : locked,
+            lockRotation : locked,
+            selectable   : isStaff || !locked,
+            evented      : isStaff || !locked,
+            hasControls  : !locked,
+          })
 
           /* ---------- AI placeholder extras -------------------------------- */
           let doSync: (() => void) | undefined
@@ -1895,15 +1903,19 @@ doSync = () =>
     })
         tb.angle = ly.angle ?? 0
         ;(tb as any).locked = ly.locked
-        if (ly.locked) {
-          tb.set({
-            lockMovementX: true,
-            lockMovementY: true,
-            lockScalingX : true,
-            lockScalingY : true,
-            lockRotation : true,
-          })
-        }
+        const locked = !!ly.locked
+        const isStaff = mode === 'staff'
+        tb.set({
+          lockMovementX: locked,
+          lockMovementY: locked,
+          lockScalingX : locked,
+          lockScalingY : locked,
+          lockRotation : locked,
+          selectable   : isStaff || !locked,
+          evented      : isStaff || !locked,
+          hasControls  : !locked,
+          editable     : !locked,
+        })
         ;(tb as any).layerIdx = idx
         ;(tb as any).uid = ly.uid
         fc.insertAt(tb, idx, false)
@@ -1937,6 +1949,7 @@ doSync = () =>
         onMenu={p => setMenuPos(p)}
         locked={Boolean(fcRef.current?.getActiveObject() && (fcRef.current!.getActiveObject() as any).locked)}
         onUnlock={toggleActiveLock}
+        mode={mode}
       />
       {menuPos && (
         <ContextMenu

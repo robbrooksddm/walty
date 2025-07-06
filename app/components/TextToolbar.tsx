@@ -118,12 +118,17 @@ export default function TextToolbar (props: Props) {
     if (!tb) return
     const next = !locked
     ;(tb as any).locked = next
+    const isStaff = mode === 'staff'
     tb.set({
       lockMovementX: next,
       lockMovementY: next,
       lockScalingX : next,
       lockScalingY : next,
       lockRotation : next,
+      selectable   : isStaff || !next,
+      evented      : isStaff || !next,
+      hasControls  : !next,
+      editable     : !next,
     })
     fc.requestRenderAll()
     updateLayer(activePage, (tb as any).layerIdx, { locked: next })
