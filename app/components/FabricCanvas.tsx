@@ -845,8 +845,9 @@ if (container) {
   containerRef.current = container;
 }
   
-  fc.setWidth(PREVIEW_W * zoom)
-  fc.setHeight(PREVIEW_H * zoom)
+  // render at base resolution – avoid resizing to prevent flicker
+  fc.setWidth(PREVIEW_W)
+  fc.setHeight(PREVIEW_H)
   addBackdrop(fc);
   // keep the preview scaled to the configured width
   fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0]);
@@ -1677,8 +1678,7 @@ window.addEventListener('keydown', onKey)
       container.style.overflow = 'visible'
     }
 
-    fc.setWidth(PREVIEW_W * zoom)
-    fc.setHeight(PREVIEW_H * zoom)
+    // keep visual size in sync without resizing the drawing buffer
     canvas.style.width = `${PREVIEW_W * zoom}px`
     canvas.style.height = `${PREVIEW_H * zoom}px`
 
@@ -1926,8 +1926,8 @@ doSync = () =>
     <>
       <canvas
         ref={canvasRef}
-        width={PREVIEW_W * zoom}
-        height={PREVIEW_H * zoom}
+        width={PREVIEW_W}
+        height={PREVIEW_H}
         style={{ width: PREVIEW_W * zoom, height: PREVIEW_H * zoom }}
         className={`border shadow rounded ${className}`}
       />
