@@ -658,7 +658,7 @@ const handleProofAll = async () => {
     if (Math.abs(current - target) < 0.001) {
       zoomRef.current = target
       setZoom(target)
-      canvasMap.forEach(fc => fc?.requestRenderAll())
+      canvasMap.forEach(fc => fc?.renderAll())
       animRef.current = undefined
       return
     }
@@ -672,7 +672,7 @@ const handleProofAll = async () => {
         ? new fabric.Point(origin.x, origin.y)
         : new fabric.Point(fc.getWidth() / 2, fc.getHeight() / 2)
       fc.zoomToPoint(point, base * next)
-      fc.requestRenderAll()
+      fc.renderAll()
     })
     setZoom(next)
     animRef.current = requestAnimationFrame(animateZoom)
