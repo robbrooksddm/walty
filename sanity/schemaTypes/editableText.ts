@@ -10,6 +10,7 @@ export default defineType({
     defineField({name:'x', type:'number', hidden:true}),
     defineField({name:'y', type:'number', hidden:true}),
     defineField({name:'width', type:'number', hidden:true}),
+    defineField({name:'angle', type:'number', hidden:true}),
     /* content + style */
     defineField({name:'text',       type:'string', title:'Default text'}),
     defineField({name:'fontSize',   type:'number'}),

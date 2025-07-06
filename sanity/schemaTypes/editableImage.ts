@@ -13,7 +13,7 @@ export default defineType({
 
   /* ── geometry + style (hidden) ── */
   fields: [
-    ...(['x','y','w','h','width','height','scaleX','scaleY','opacity'] as const)
+    ...(['x','y','w','h','width','height','scaleX','scaleY','opacity','angle'] as const)
       .map((n) => defineField({name: n, type: 'number', hidden: true})),
 
     /* uploaded Sanity asset */
