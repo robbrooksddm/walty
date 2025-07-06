@@ -1686,8 +1686,10 @@ window.addEventListener('keydown', onKey)
       container.style.overflow = 'visible'
     }
 
-    fc.setWidth(PREVIEW_W * zoom)
-    fc.setHeight(PREVIEW_H * zoom)
+    fc.setDimensions(
+      { width: PREVIEW_W * zoom, height: PREVIEW_H * zoom },
+      { cssOnly: true },
+    )
     canvas.style.width = `${PREVIEW_W * zoom}px`
     canvas.style.height = `${PREVIEW_H * zoom}px`
 
