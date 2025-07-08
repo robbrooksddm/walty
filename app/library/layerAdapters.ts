@@ -62,6 +62,7 @@ if (raw._type === 'aiLayer') {
     heightPct: typeof raw.heightPct === 'number' ? raw.heightPct : (raw.h != null ? (raw.h / PAGE_H) * 100 : undefined),
     scaleX: raw.scaleX,
     scaleY: raw.scaleY,
+    ...(raw.angle != null && { angle: raw.angle }),
     ...(raw.flipX != null && { flipX: raw.flipX }),
     ...(raw.flipY != null && { flipY: raw.flipY }),
     selectable: !locked,
@@ -78,6 +79,7 @@ if (raw._type === 'aiLayer') {
 
   /* ② editable / bg image -------------------------------------- */
   if (raw._type === 'editableImage' || raw._type === 'bgImage') {
+    const locked = !!raw.locked
     return {
       type :'image',
       src  : imgUrl(raw.src) ?? imgUrl(raw) ?? raw.srcUrl,
@@ -91,6 +93,7 @@ if (raw._type === 'aiLayer') {
       heightPct: typeof raw.heightPct === 'number' ? raw.heightPct : (raw.h != null ? (raw.h / PAGE_H) * 100 : undefined),
       scaleX: raw.scaleX,
       scaleY: raw.scaleY,
+      ...(raw.angle  != null && { angle: raw.angle }),
       ...(raw.flipX != null && { flipX: raw.flipX }),
       ...(raw.flipY != null && { flipY: raw.flipY }),
       ...(raw.cropX != null && { cropX: raw.cropX }),
@@ -98,13 +101,15 @@ if (raw._type === 'aiLayer') {
       ...(raw.cropW != null && { cropW: raw.cropW }),
       ...(raw.cropH != null && { cropH: raw.cropH }),
       opacity: raw.opacity,
-      selectable: raw._type !== 'bgImage',
-      editable  : raw._type !== 'bgImage',
+      selectable: raw._type !== 'bgImage' && !locked,
+      editable  : raw._type !== 'bgImage' && !locked,
+      locked,
     }
   }
 
   /* ③ editable text -------------------------------------------- */
   if (raw._type === 'editableText') {
+    const locked = !!raw.locked
     return {
       type :'text',
       text : raw.text ?? '',
@@ -137,6 +142,10 @@ if (raw._type === 'aiLayer') {
       opacity   : raw.opacity,
       scaleX    : raw.scaleX,
       scaleY    : raw.scaleY,
+      ...(raw.angle != null && { angle: raw.angle }),
+      selectable: !locked,
+      editable  : !locked,
+      locked,
     }
   }
 
@@ -183,6 +192,7 @@ if (layer?._type === 'aiLayer') {
     // ── persist explicit scale adjustments, if any ─────────────────
     ...(scaleX != null && { scaleX }),
     ...(scaleY != null && { scaleY }),
+    ...(layer.angle != null && { angle: layer.angle }),
     ...(layer.flipX != null && { flipX: layer.flipX }),
     ...(layer.flipY != null && { flipY: layer.flipY }),
   };
@@ -221,8 +231,10 @@ if (layer.type === 'image') {
     ...(layer.opacity != null && { opacity: layer.opacity }),
     ...(layer.scaleX  != null && { scaleX: layer.scaleX }),
     ...(layer.scaleY  != null && { scaleY: layer.scaleY }),
+    ...(layer.angle   != null && { angle: layer.angle }),
     ...(layer.flipX   != null && { flipX: layer.flipX }),
     ...(layer.flipY   != null && { flipY: layer.flipY }),
+    ...(layer.locked != null && { locked: layer.locked }),
   };
 
 /* 1️⃣ Already have assetId → easiest */
@@ -272,6 +284,8 @@ else if (typeof layer.src === 'string') {
       ...(layer.opacity != null && { opacity: layer.opacity }),
       ...(layer.scaleX  != null && { scaleX : layer.scaleX }),
       ...(layer.scaleY  != null && { scaleY : layer.scaleY }),
+      ...(layer.angle   != null && { angle : layer.angle }),
+      ...(layer.locked != null && { locked: layer.locked }),
     }
   }
 

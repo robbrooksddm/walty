@@ -225,6 +225,8 @@ export interface Layer {
   opacity?:   number
   scaleX?:    number
   scaleY?:    number
+  /** rotation in degrees */
+  angle?:     number
   selectable?:boolean
   editable?:  boolean
   locked?:    boolean
@@ -335,6 +337,7 @@ const objToLayer = (o: fabric.Object): Layer => {
       opacity   : t.opacity,
       scaleX    : t.scaleX,
       scaleY    : t.scaleY,
+      angle     : t.angle,
       lines     : t.textLines as string[],
       locked    : (t as any).locked,
     }
@@ -364,6 +367,7 @@ const objToLayer = (o: fabric.Object): Layer => {
     scaleY : i.scaleY,
     flipX  : (i as any).flipX,
     flipY  : (i as any).flipY,
+    angle  : i.angle,
     locked : (i as any).locked,
   }
 
@@ -523,12 +527,17 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
     const locked = !!(active as any).locked
     const next = !locked
     ;(active as any).locked = next
+    const isStaff = mode === 'staff'
     active.set({
       lockMovementX: next,
       lockMovementY: next,
       lockScalingX : next,
       lockScalingY : next,
       lockRotation : next,
+      selectable   : isStaff || !next,
+      evented      : isStaff || !next,
+      hasControls  : !next,
+      editable     : !next,
     })
     fc.requestRenderAll()
     if ((active as any).layerIdx !== undefined) {
@@ -657,6 +666,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
         break
     }
     setMenuPos(null)
+    requestAnimationFrame(() => requestAnimationFrame(syncSel))
   }
 
 /* ---------- mount once --------------------------------------- */
@@ -1515,6 +1525,9 @@ const onKey = (e: KeyboardEvent) => {
   const cmd    = e.metaKey || e.ctrlKey
   const locked = (active as any)?.locked
 
+  // When editing text, allow normal key behaviour
+  if ((active as any)?.isEditing) return
+
   /* —— COPY ————————————————————————————————————— */
   if (cmd && e.code === 'KeyC' && active) {
     clip.json  = [(active).toJSON(PROPS)]            // keep the wrapper!
@@ -1764,17 +1777,21 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
             flipX     : ly.flipX ?? false,
             flipY     : ly.flipY ?? false,
           })
+          img.angle = ly.angle ?? 0
 
           ;(img as any).locked = ly.locked
-          if (ly.locked) {
-            img.set({
-              lockMovementX: true,
-              lockMovementY: true,
-              lockScalingX : true,
-              lockScalingY : true,
-              lockRotation : true,
-            })
-          }
+          const locked = !!ly.locked
+          const isStaff = mode === 'staff'
+          img.set({
+            lockMovementX: locked,
+            lockMovementY: locked,
+            lockScalingX : locked,
+            lockScalingY : locked,
+            lockRotation : locked,
+            selectable   : isStaff || !locked,
+            evented      : isStaff || !locked,
+            hasControls  : !locked,
+          })
 
           /* ---------- AI placeholder extras -------------------------------- */
           let doSync: (() => void) | undefined
@@ -1783,15 +1800,20 @@ if (ly.type === 'image' && (ly.src || ly.srcUrl)) {
             const locked = !!ly.locked
             img.set({ selectable: !locked, evented: !locked, hasControls: !locked })
 
- 
+
             // ─── open the Selfie Drawer on click ─────────────────────────
-img.on('mouseup', () => {
-  // make sure it’s still an AI placeholder
-  if ((img as any)._isAI || ly._isAI) {
-    useEditor.getState().setDrawerState('idle');   // <- OPEN drawer
-  }
-  
-});
+            img.on('mouseup', () => {
+              // make sure it’s still an AI placeholder
+              if ((img as any)._isAI || ly._isAI) {
+                const placeholderId = spec?._ref || spec?._id || null
+                document.dispatchEvent(
+                  new CustomEvent('open-selfie-drawer', {
+                    detail: { placeholderId },
+                  })
+                )
+              }
+
+            });
 
             let ghost = (img as any)._ghost as HTMLDivElement | undefined
             if (!ghost) {
@@ -1881,23 +1903,28 @@ doSync = () =>
           underline: !!ly.underline,
           fill: hex(ly.fill ?? '#000'),
           textAlign: ly.textAlign ?? 'left',
-          lineHeight: ly.lineHeight ?? 1.16,
+      lineHeight: ly.lineHeight ?? 1.16,
       opacity: ly.opacity ?? 1,
       selectable: ly.selectable ?? true,
       editable: ly.editable ?? true,
       scaleX: ly.scaleX ?? 1, scaleY: ly.scaleY ?? 1,
       lockScalingFlip: true,
     })
+        tb.angle = ly.angle ?? 0
         ;(tb as any).locked = ly.locked
-        if (ly.locked) {
-          tb.set({
-            lockMovementX: true,
-            lockMovementY: true,
-            lockScalingX : true,
-            lockScalingY : true,
-            lockRotation : true,
-          })
-        }
+        const locked = !!ly.locked
+        const isStaff = mode === 'staff'
+        tb.set({
+          lockMovementX: locked,
+          lockMovementY: locked,
+          lockScalingX : locked,
+          lockScalingY : locked,
+          lockRotation : locked,
+          selectable   : isStaff || !locked,
+          evented      : isStaff || !locked,
+          hasControls  : !locked,
+          editable     : !locked,
+        })
         ;(tb as any).layerIdx = idx
         ;(tb as any).uid = ly.uid
         fc.insertAt(tb, idx, false)
@@ -1931,6 +1958,7 @@ doSync = () =>
         onMenu={p => setMenuPos(p)}
         locked={Boolean(fcRef.current?.getActiveObject() && (fcRef.current!.getActiveObject() as any).locked)}
         onUnlock={toggleActiveLock}
+        mode={mode}
       />
       {menuPos && (
         <ContextMenu

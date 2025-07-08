@@ -40,15 +40,20 @@ import {
 interface Props {
   canvas: fabric.Canvas | null;
   saving: boolean;
+  mode?: 'staff' | 'customer';
 }
 
-export default function ImageToolbar({ canvas: fc, saving }: Props) {
+export default function ImageToolbar({ canvas: fc, saving, mode = 'customer' }: Props) {
   /* local state / editor wiring */
   const [, force]      = useState({});
-  const reorder        = useEditor(s => s.reorder);
   const updateLayer    = useEditor(s => s.updateLayer);
   const activePage     = useEditor(s => s.activePage);
   const layerCount     = useEditor(s => s.pages[s.activePage]?.layers.length || 0);
+
+  /* alignment state */
+  const [vIdx, setVIdx] = useState(0);
+  const [hIdx, setHIdx] = useState(0);
+  const [lastAxis, setLastAxis] = useState<'v' | 'h' | null>(null);
 
   /* re-render on selection changes */
   useEffect(() => {
@@ -67,15 +72,15 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
     };
   }, [fc]);
 
-  if (!fc) return null;
+  const zoom = fc?.viewportTransform?.[0] ?? 1;
+  const fcH  = (fc?.getHeight() ?? 0) / zoom;
+  const fcW  = (fc?.getWidth()  ?? 0) / zoom;
 
-  /* canvas metrics */
-  const zoom = fc.viewportTransform?.[0] ?? 1;
-  const fcH  = (fc.getHeight() ?? 0) / zoom;
-  const fcW  = (fc.getWidth()  ?? 0) / zoom;
+  const img = fc?.getActiveObject() as fabric.Image | null | undefined;
 
-  const img = fc.getActiveObject() as fabric.Image | null;
-  if (!img || (img as any).type !== "image") return null;
+  useEffect(() => { setVIdx(0); setHIdx(0); setLastAxis(null); }, [img]);
+
+  if (!fc || !img || (img as any).type !== "image") return null;
 
   /* helper: mutate + refresh */
   const mutate = (p: Partial<fabric.Image>) => {
@@ -89,16 +94,23 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
   };
 
   /* page-alignment cycles */
+
   const cycleVertical = () => {
-    const { top, height } = img.getBoundingRect(true, true);
-    const pos = [0, fcH / 2 - height / 2, fcH - height];
-    mutate({ top: pos[(pos.findIndex(p => Math.abs(top - p) < 1) + 1) % 3] });
+    const { height } = img.getBoundingRect(true, true);
+    const pos = [fcH / 2 - height / 2, fcH - height, 0];
+    const idx = lastAxis === 'v' ? vIdx : 0;
+    mutate({ top: pos[idx] });
+    setVIdx((idx + 1) % 3);
+    setLastAxis('v');
   };
 
   const cycleHorizontal = () => {
-    const { left, width } = img.getBoundingRect(true, true);
-    const pos = [0, fcW / 2 - width / 2, fcW - width];
-    mutate({ left: pos[(pos.findIndex(p => Math.abs(left - p) < 1) + 1) % 3] });
+    const { width } = img.getBoundingRect(true, true);
+    const pos = [fcW / 2 - width / 2, fcW - width, 0];
+    const idx = lastAxis === 'h' ? hIdx : 0;
+    mutate({ left: pos[idx] });
+    setHIdx((idx + 1) % 3);
+    setLastAxis('h');
   };
 
   /* layer lock */
@@ -106,12 +118,16 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
   const toggleLock = () => {
     const next = !locked;
     (img as any).locked = next;
+    const isStaff = mode === 'staff';
     img.set({
       lockMovementX: next,
       lockMovementY: next,
       lockScalingX : next,
       lockScalingY : next,
       lockRotation : next,
+      selectable   : isStaff || !next,
+      evented      : isStaff || !next,
+      hasControls  : !next,
     });
     fc.requestRenderAll();
     updateLayer(activePage, (img as any).layerIdx, { locked: next });
@@ -119,14 +135,26 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
 
   /* layer order helpers */
   const sendBackward = () => {
-    if (locked) return
-    const idx = (img as any).layerIdx ?? 0;
-    if (idx < layerCount - 1) reorder(idx, idx + 1);
+    if (locked || !fc) return;
+    fc.sendBackwards(img);
+    fc.setActiveObject(img);
+    fc.requestRenderAll();
+    img.fire('modified');
+    fc.fire('object:modified', { target: img });
+    const sync = (fc as any)._syncLayers as (() => void) | undefined;
+    sync && sync();
+    force({});
   };
   const bringForward = () => {
-    if (locked) return
-    const idx = (img as any).layerIdx ?? 0;
-    if (idx > 0 && idx <= layerCount - 1) reorder(idx, idx - 1);
+    if (locked || !fc) return;
+    fc.bringForward(img);
+    fc.setActiveObject(img);
+    fc.requestRenderAll();
+    img.fire('modified');
+    fc.fire('object:modified', { target: img });
+    const sync = (fc as any)._syncLayers as (() => void) | undefined;
+    sync && sync();
+    force({});
   };
 
   /* remove active image */
@@ -158,7 +186,9 @@ export default function ImageToolbar({ canvas: fc, saving }: Props) {
         <IconButton Icon={AlignToPageVertical}   label="Center vertical" caption="Center Y" onClick={cycleVertical} disabled={locked} />
         <IconButton Icon={AlignToPageHorizontal} label="Center horizontal" caption="Center X" onClick={cycleHorizontal} disabled={locked} />
         <IconButton Icon={Eraser} label="Remove background" caption="BG Erase" onClick={() => alert("TODO: remove background") } disabled={locked} />
-        <IconButton Icon={locked ? Lock : Unlock} label={locked ? "Unlock layer" : "Lock layer"} active={locked} onClick={toggleLock} />
+        {mode === 'staff' && (
+          <IconButton Icon={locked ? Lock : Unlock} label={locked ? 'Unlock layer' : 'Lock layer'} active={locked} onClick={toggleLock} />
+        )}
         <IconButton Icon={ArrowDownToLine} label="Send backward" caption="Send ↓" onClick={sendBackward} disabled={locked} />
         <IconButton Icon={ArrowUpToLine}   label="Bring forward" caption="Bring ↑" onClick={bringForward} disabled={locked} />
         <IconButton Icon={Trash2} label="Delete image" caption="Delete" onClick={deleteCurrent} disabled={locked} />

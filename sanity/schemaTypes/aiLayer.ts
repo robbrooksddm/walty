@@ -29,6 +29,7 @@ export default defineType({
     defineField({ name: 'scaleX',  type: 'number', hidden: true }),
     defineField({ name: 'scaleY',  type: 'number', hidden: true }),
     defineField({ name: 'opacity', type: 'number', hidden: true }),
+    defineField({ name: 'angle',   type: 'number', hidden: true }),
     defineField({ name: 'src',     type: 'url',    hidden: true }),  // PNG URL after swap
 
     defineField({
