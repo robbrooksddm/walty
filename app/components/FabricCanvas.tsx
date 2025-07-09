@@ -1118,8 +1118,8 @@ const drawOverlay = (
   const vt   = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
   const scale = vt[0] * zoom
   const c = containerRef.current
-  const scrollX = c?.scrollLeft ?? 0
-  const scrollY = c?.scrollTop ?? 0
+  const scrollX = (c?.scrollLeft ?? 0) * zoom
+  const scrollY = (c?.scrollTop ?? 0) * zoom
 
   const cx = box.left + box.width / 2
   const cy = box.top + box.height / 2
