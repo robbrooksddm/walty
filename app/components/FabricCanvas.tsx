@@ -839,11 +839,11 @@ const container = canvasRef.current!.parentElement as HTMLElement | null;
 if (container) {
   const pad = 4 * zoom;
 
-  // zoom-aware dimensions
-  container.style.width     = `${PREVIEW_W * zoom}px`;
-  container.style.height    = `${PREVIEW_H * zoom}px`;
-  container.style.maxWidth  = `${PREVIEW_W * zoom}px`;
-  container.style.maxHeight = `${PREVIEW_H * zoom}px`;
+  // fixed DOM dimensions – scale using internal canvas size
+  container.style.width     = `${PREVIEW_W}px`;
+  container.style.height    = `${PREVIEW_H}px`;
+  container.style.maxWidth  = `${PREVIEW_W}px`;
+  container.style.maxHeight = `${PREVIEW_H}px`;
   container.style.padding   = `${pad}px`;
   container.style.overflow  = 'visible';
 
@@ -851,6 +851,7 @@ if (container) {
   containerRef.current = container;
 }
   
+  // scale drawing buffer with zoom
   fc.setWidth(PREVIEW_W * zoom)
   fc.setHeight(PREVIEW_H * zoom)
   addBackdrop(fc);
@@ -1678,20 +1679,17 @@ window.addEventListener('keydown', onKey)
     const container = canvas.parentElement as HTMLElement | null
     if (container) {
       const pad = 4 * zoom
-      container.style.width = `${PREVIEW_W * zoom}px`
-      container.style.height = `${PREVIEW_H * zoom}px`
-      container.style.maxWidth = `${PREVIEW_W * zoom}px`
-      container.style.maxHeight = `${PREVIEW_H * zoom}px`
+      // only adjust padding; keep DOM dimensions intact
       container.style.padding = `${pad}px`
       container.style.overflow = 'visible'
     }
 
+    // Zoom purely through Fabric's viewport transform
     fc.setWidth(PREVIEW_W * zoom)
     fc.setHeight(PREVIEW_H * zoom)
-    canvas.style.width = `${PREVIEW_W * zoom}px`
-    canvas.style.height = `${PREVIEW_H * zoom}px`
 
     fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
+    fc.calcOffset()
     if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
     fc.requestRenderAll()
   }, [zoom])
@@ -1947,9 +1945,9 @@ doSync = () =>
     <>
       <canvas
         ref={canvasRef}
-        width={PREVIEW_W * zoom}
-        height={PREVIEW_H * zoom}
-        style={{ width: PREVIEW_W * zoom, height: PREVIEW_H * zoom }}
+        width={PREVIEW_W}
+        height={PREVIEW_H}
+        style={{ width: PREVIEW_W, height: PREVIEW_H }}
         className={`border shadow rounded ${className}`}
       />
       <QuickActionBar
@@ -1968,5 +1966,4 @@ doSync = () =>
         />
       )}
     </>
-  )
-}
+  )}
