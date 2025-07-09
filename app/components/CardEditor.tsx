@@ -188,50 +188,31 @@ export default function CardEditor({
   const [thumbs, setThumbs] = useState<string[]>(['', '', '', ''])
 
   const THUMB_MULT = 0.25
-  const THUMB_DELAY = 300
-  const thumbTimer = useRef<NodeJS.Timeout | null>(null)
-  const lastThumb = useRef(0)
+  // Delay thumbnail generation until the user has been idle
+  const THUMB_DELAY = 1000
+  const thumbTimers = useRef<(NodeJS.Timeout | null)[]>([null, null, null, null])
 
   const updateThumbFromCanvas = (idx: number, fc: fabric.Canvas) => {
-    const run = () => {
+    if (thumbTimers.current[idx]) clearTimeout(thumbTimers.current[idx] as NodeJS.Timeout)
+    thumbTimers.current[idx] = setTimeout(async () => {
       try {
-        if (!(fc as any).lowerCanvasEl) return
-        fc.renderAll()
-        requestAnimationFrame(() => {
-          try {
-            const canvasEl = fc.toCanvasElement(THUMB_MULT)
-            canvasEl.toBlob(
-              blob => {
-                if (!blob) return
-                const url = URL.createObjectURL(blob)
-                setThumbs(prev => {
-                  const next = [...prev]
-                  next[idx] = url
-                  return next
-                })
-              },
-              'image/jpeg',
-              0.8,
-            )
-          } catch (err) {
-            console.error('thumb blob failed', err)
-          }
+        const dataUrl = fc.toDataURL({
+          format: 'jpeg',
+          quality: 0.8,
+          multiplier: THUMB_MULT,
+        })
+        const res = await fetch(dataUrl)
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        setThumbs(prev => {
+          const next = [...prev]
+          next[idx] = url
+          return next
         })
       } catch (err) {
         console.error('thumb failed', err)
       }
-    }
-    const now = Date.now()
-    if (now - lastThumb.current > THUMB_DELAY) {
-      lastThumb.current = now
-      run()
-    } else {
-      if (thumbTimer.current) clearTimeout(thumbTimer.current)
-      thumbTimer.current = setTimeout(() => {
-        lastThumb.current = Date.now()
-        run()
-      }, THUMB_DELAY)
-    }
+    }, THUMB_DELAY)
   }
 
   const updateThumb = (idx: number) => {
