@@ -189,11 +189,12 @@ export default function CardEditor({
 
   const THUMB_MULT = 0.25
   const THUMB_DELAY = 500
-  const thumbTimer = useRef<NodeJS.Timeout | null>(null)
+  const thumbTimers = useRef<(NodeJS.Timeout | null)[]>([null, null, null, null])
 
   const updateThumbFromCanvas = (idx: number, fc: fabric.Canvas) => {
-    if (thumbTimer.current) clearTimeout(thumbTimer.current)
-    thumbTimer.current = setTimeout(() => {
+    const timers = thumbTimers.current
+    if (timers[idx]) clearTimeout(timers[idx] as NodeJS.Timeout)
+    timers[idx] = setTimeout(() => {
       try {
         const url = fc.toDataURL({
           format: 'jpeg',
