@@ -839,13 +839,15 @@ const container = canvasRef.current!.parentElement as HTMLElement | null;
 if (container) {
   const pad = 4 * zoom;
 
-  // fixed dimensions – zoom handled via viewportTransform
+  // fixed dimensions – zoom handled via CSS transform
   container.style.width     = `${PREVIEW_W}px`;
   container.style.height    = `${PREVIEW_H}px`;
   container.style.maxWidth  = `${PREVIEW_W}px`;
   container.style.maxHeight = `${PREVIEW_H}px`;
   container.style.padding   = `${pad}px`;
   container.style.overflow  = 'visible';
+  container.style.transformOrigin = '0 0';
+  container.style.transform = `scale(${zoom})`;
 
   // keep the ref so scroll listeners work
   containerRef.current = container;
@@ -1678,18 +1680,19 @@ window.addEventListener('keydown', onKey)
     const container = canvas.parentElement as HTMLElement | null
     if (container) {
       const pad = 4 * zoom
-      // only adjust padding; keep DOM dimensions intact
       container.style.padding = `${pad}px`
       container.style.overflow = 'visible'
+      container.style.transformOrigin = '0 0'
+      container.style.transform = `scale(${zoom})`
     }
 
-    // Zoom purely through Fabric's viewport transform
+    // viewport remains at base preview scale
     fc.setWidth(PREVIEW_W)
     fc.setHeight(PREVIEW_H)
 
-    fc.setViewportTransform([SCALE * zoom, 0, 0, SCALE * zoom, 0, 0])
+    fc.setViewportTransform([SCALE, 0, 0, SCALE, 0, 0])
     fc.calcOffset()
-    if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE * zoom
+    if (cropToolRef.current) (cropToolRef.current as any).SCALE = SCALE
     fc.requestRenderAll()
   }, [zoom])
 

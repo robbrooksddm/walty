@@ -640,7 +640,6 @@ const handleProofAll = async () => {
   const zoomRef = useRef(1)
   const targetZoom = useRef(1)
   const animRef = useRef<number>()
-  const zoomPointRef = useRef<{ x: number; y: number } | null>(null)
 
   const sliderToZoom = (pos: number) => {
     const pct = pos < 0 ? 10 + (pos + 1) * 90 : 100 + pos * 400
@@ -664,38 +663,24 @@ const handleProofAll = async () => {
     }
     const next = current + (target - current) * 0.15
     zoomRef.current = next
-    const origin = zoomPointRef.current
-    canvasMap.forEach(fc => {
-      if (!fc) return
-      const base = fc.getZoom() / current
-      const point = origin
-        ? new fabric.Point(origin.x, origin.y)
-        : new fabric.Point(fc.getWidth() / 2, fc.getHeight() / 2)
-      fc.zoomToPoint(point, base * next)
-      fc.requestRenderAll()
-    })
     setZoom(next)
+    canvasMap.forEach(fc => fc?.requestRenderAll())
     animRef.current = requestAnimationFrame(animateZoom)
   }
 
-  const setZoomSmooth = useCallback((val: number, origin: { x: number; y: number } | null) => {
-    zoomPointRef.current = origin
+  const setZoomSmooth = useCallback((val: number) => {
     targetZoom.current = Math.min(Math.max(val, 0.1), 5)
     setSliderPos(zoomToSlider(targetZoom.current))
     if (!animRef.current) animRef.current = requestAnimationFrame(animateZoom)
   }, [])
 
   const handleZoomIn = useCallback(() => {
-    const fc = activeFc
-    const origin = fc ? { x: fc.getWidth() / 2, y: fc.getHeight() / 2 } : null
-    setZoomSmooth(targetZoom.current + 0.25, origin)
-  }, [activeFc, setZoomSmooth])
+    setZoomSmooth(targetZoom.current + 0.25)
+  }, [setZoomSmooth])
 
   const handleZoomOut = useCallback(() => {
-    const fc = activeFc
-    const origin = fc ? { x: fc.getWidth() / 2, y: fc.getHeight() / 2 } : null
-    setZoomSmooth(targetZoom.current - 0.25, origin)
-  }, [activeFc, setZoomSmooth])
+    setZoomSmooth(targetZoom.current - 0.25)
+  }, [setZoomSmooth])
   const ran = useRef(false)
   useEffect(() => {
     if (ran.current || typeof window === 'undefined') return
@@ -720,13 +705,8 @@ const handleProofAll = async () => {
   useEffect(() => {
     const wheel = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) {
-        const fc = activeFc
-        if (fc) {
-          const rect = fc.upperCanvasEl.getBoundingClientRect()
-          zoomPointRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
-        }
         const delta = e.deltaMode === 1 ? e.deltaY * 20 : e.deltaY
-        setZoomSmooth(targetZoom.current * Math.pow(0.999, delta), zoomPointRef.current)
+        setZoomSmooth(targetZoom.current * Math.pow(0.999, delta))
         e.preventDefault()
       }
     }
@@ -850,7 +830,7 @@ const handleProofAll = async () => {
     )
   }
 
-  const boxWidth = previewW() * zoom
+  const boxWidth = previewW()
   const box = `flex-shrink-0 relative`
 
   /* ---------------- UI ------------------------------------------ */
@@ -1082,8 +1062,7 @@ const handleProofAll = async () => {
           onChange={e => {
             const val = parseFloat(e.currentTarget.value)
             setSliderPos(val)
-            const origin = activeFc ? { x: activeFc.getWidth() / 2, y: activeFc.getHeight() / 2 } : null
-            setZoomSmooth(sliderToZoom(val), origin)
+            setZoomSmooth(sliderToZoom(val))
           }}
           className="h-2 w-32"
         />
