@@ -283,6 +283,14 @@ export const useEditor = create<EditorState>((set, get) => ({
 
     set({ pages: nextPages })
     pushHistory()
+
+    if (typeof document !== 'undefined') {
+      document.dispatchEvent(
+        new CustomEvent('layer-reorder', {
+          detail: { pageIdx: activePage, from, to },
+        })
+      )
+    }
   },
 
   /* delete layer (sidebar OR ⌫ key) ------------------------------- */

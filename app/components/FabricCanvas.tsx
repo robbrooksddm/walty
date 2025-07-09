@@ -1709,6 +1709,44 @@ window.addEventListener('keydown', onKey)
     }
   }, [isCropping])
 
+  /* ---------- respond to reorder events ----------------------- */
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ pageIdx: number; from: number; to: number }>).detail
+      if (!detail || detail.pageIdx !== pageIdx) return
+      const fc = fcRef.current
+      if (!fc) return
+
+      const objs = fc
+        .getObjects()
+        .filter(o =>
+          !(o as any)._guide &&
+          !(o as any)._backdrop &&
+          !(o as any).excludeFromExport &&
+          (o as any).type !== 'activeSelection'
+        )
+
+      const obj = objs[detail.from]
+      if (!obj) return
+
+      fc.moveTo(obj, detail.to)
+
+      const ordered = fc
+        .getObjects()
+        .filter(o =>
+          !(o as any)._guide &&
+          !(o as any)._backdrop &&
+          !(o as any).excludeFromExport &&
+          (o as any).type !== 'activeSelection'
+        )
+      ordered.forEach((o, i) => ((o as any).layerIdx = i))
+      fc.requestRenderAll()
+    }
+
+    document.addEventListener('layer-reorder', handler)
+    return () => document.removeEventListener('layer-reorder', handler)
+  }, [pageIdx])
+
 
 
   /* ---------- redraw on page change ----------------------------- */
@@ -1719,15 +1757,32 @@ window.addEventListener('keydown', onKey)
 
     cropToolRef.current?.abort()
     hydrating.current = true
-    fc.clear();
-    fc.setBackgroundColor('#fff', fc.renderAll.bind(fc));
-    hoverRef.current && fc.add(hoverRef.current)
+
+    const current = fc
+      .getObjects()
+      .filter(o =>
+        !(o as any)._guide &&
+        !(o as any)._backdrop &&
+        !(o as any).excludeFromExport &&
+        (o as any).type !== 'activeSelection'
+      )
+    const map = new Map<string, fabric.Object>()
+    current.forEach(o => map.set((o as any).uid, o))
+    const seen = new Set<string>()
 
     /* bottom ➜ top keeps original z-order */
     for (let idx = 0; idx < page.layers.length; idx++) {
       const raw = page.layers[idx]
-      const ly: Layer | null = (raw as any).type ? raw as Layer : fromSanity(raw, currentSpec)
+      const ly: Layer | null = (raw as any).type ? (raw as Layer) : fromSanity(raw, currentSpec)
       if (!ly) continue
+
+      const existing = ly.uid ? map.get(ly.uid) : undefined
+      if (existing) {
+        fc.moveTo(existing, idx)
+        ;(existing as any).layerIdx = idx
+        seen.add(ly.uid!)
+        continue
+      }
 
       if (ly.leftPct != null) ly.x = (ly.leftPct / 100) * PAGE_W
       if (ly.topPct  != null) ly.y = (ly.topPct  / 100) * PAGE_H
@@ -1879,6 +1934,7 @@ doSync = () =>
           ;(img as any).layerIdx = idx
           ;(img as any).uid = ly.uid
           fc.insertAt(img, idx, false)
+          seen.add(ly.uid!)
           img.setCoords()
           fc.requestRenderAll()
           doSync?.()
@@ -1928,8 +1984,13 @@ doSync = () =>
         ;(tb as any).layerIdx = idx
         ;(tb as any).uid = ly.uid
         fc.insertAt(tb, idx, false)
+        seen.add(ly.uid!)
       }
     }
+
+    current.forEach(o => {
+      if (!seen.has((o as any).uid)) fc.remove(o)
+    })
 
     addGuides(fc, mode)
     hoverRef.current?.bringToFront()
