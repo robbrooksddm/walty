@@ -34,6 +34,17 @@ const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v))
 
 const makeId = () => Math.random().toString(36).slice(2, 9)
 
+/* ---------- image helpers ----------------------------------------- */
+const MAX_IMAGE_DIM = 2000
+
+const loadImage = (src: string) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = reject
+    img.src = src
+  })
+
 /* ---------- extra editor-only fields ------------------------------- */
 export type EditorLayer = Layer & {
   uid: string
@@ -202,8 +213,34 @@ export const useEditor = create<EditorState>((set, get) => ({
   addImage: async (file) => {
     const { activePage, pages, pushHistory } = get()
 
+    /* 0 ▸ inspect + downscale if needed ---------------------------- */
+    let processed: Blob = file
+    try {
+      const testUrl = URL.createObjectURL(file)
+      const img     = await loadImage(testUrl)
+      URL.revokeObjectURL(testUrl)
+
+      if (img.width > MAX_IMAGE_DIM || img.height > MAX_IMAGE_DIM) {
+        const scale = Math.min(
+          MAX_IMAGE_DIM / img.width,
+          MAX_IMAGE_DIM / img.height
+        )
+        const canvas = document.createElement('canvas')
+        canvas.width  = Math.round(img.width * scale)
+        canvas.height = Math.round(img.height * scale)
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        const blob = await new Promise<Blob>((res) =>
+          canvas.toBlob(b => res(b!), file.type)
+        )
+        processed = new File([blob], file.name, { type: file.type })
+      }
+    } catch (err) {
+      console.error('Image resize failed:', err)
+    }
+
     /* 1 ▸ optimistic blob: layer ---------------------------------- */
-    const blobUrl  = URL.createObjectURL(file)
+    const blobUrl  = URL.createObjectURL(processed)
     const nextPages= clone(pages)
     nextPages[activePage].layers.push({
       uid     : makeId(),
@@ -225,7 +262,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     /* 2 ▸ upload --------------------------------------------------- */
     try {
       const fd = new FormData()
-      fd.append('file', file)
+      fd.append('file', processed)
       const res = await fetch('/api/upload', { method: 'POST', body: fd })
       if (!res.ok) throw new Error(await res.text())
 
