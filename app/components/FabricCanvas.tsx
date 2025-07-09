@@ -281,7 +281,7 @@ const syncGhost = (
   const { left, top, width, height } = img.getBoundingRect()
   const fc   = img.canvas as fabric.Canvas | null
   const vt   = fc?.viewportTransform || [SCALE, 0, 0, SCALE, 0, 0]
-  const scale = vt[0] * zoom
+  const scale = vt[0] * zoomRef.current
   const posX  = window.scrollX + canvasRect.left + vt[4] + left * scale
   const posY  = window.scrollY + canvasRect.top  + vt[5] + top  * scale
   ghost.style.left   = `${posX}px`
@@ -513,6 +513,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const [actionPos, setActionPos] = useState<{ x: number; y: number } | null>(null)
   const actionTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const zoomRef = useRef(zoom)
 
 
 
@@ -671,6 +672,7 @@ export default function FabricCanvas ({ pageIdx, page, onReady, isCropping = fal
 
 /* ---------- mount once --------------------------------------- */
 useEffect(() => {
+  zoomRef.current = zoom
   if (!canvasRef.current) return
 
   // Create Fabric using the <canvas> element’s own dimensions
@@ -767,7 +769,7 @@ useEffect(() => {
   const bridge = (e: PointerEvent) => {
     const corner = (e.target as HTMLElement | null)?.dataset.corner
     const vt = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
-    const scale = vt[0] * zoom
+    const scale = vt[0] * zoomRef.current
     const offset = PAD * scale
     const dx = corner?.includes('l') ? offset : corner?.includes('r') ? -offset : 0
     const dy = corner?.includes('t') ? offset : corner?.includes('b') ? -offset : 0
@@ -1116,7 +1118,7 @@ const drawOverlay = (
   const box  = obj.getBoundingRect(true, true)
   const rect = canvasRef.current!.getBoundingClientRect()
   const vt   = fc.viewportTransform || [1, 0, 0, 1, 0, 0]
-  const scale = vt[0] * zoom
+  const scale = vt[0] * zoomRef.current
   const c = containerRef.current
   const scrollX = c?.scrollLeft ?? 0
   const scrollY = c?.scrollTop ?? 0
@@ -1673,6 +1675,7 @@ window.addEventListener('keydown', onKey)
 
   /* ---------- apply zoom -------------------------------------- */
   useEffect(() => {
+    zoomRef.current = zoom
     const fc = fcRef.current
     const canvas = canvasRef.current
     if (!fc || !canvas) return
