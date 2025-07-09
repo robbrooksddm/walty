@@ -643,13 +643,13 @@ const handleProofAll = async () => {
   const zoomPointRef = useRef<{ x: number; y: number } | null>(null)
 
   const sliderToZoom = (pos: number) => {
-    const pct = pos < 0 ? 10 + (pos + 1) * 90 : 100 + pos * 400
+    const pct = pos < 0 ? 10 + (pos + 1) * 90 : 100 + pos * 100
     return pct / 100
   }
 
   const zoomToSlider = (z: number) => {
     const pct = z * 100
-    return pct < 100 ? (pct - 10) / 90 - 1 : (pct - 100) / 400
+    return pct < 100 ? (pct - 10) / 90 - 1 : (pct - 100) / 100
   }
 
   const animateZoom = () => {
@@ -680,7 +680,7 @@ const handleProofAll = async () => {
 
   const setZoomSmooth = useCallback((val: number, origin: { x: number; y: number } | null) => {
     zoomPointRef.current = origin
-    targetZoom.current = Math.min(Math.max(val, 0.1), 5)
+    targetZoom.current = Math.min(Math.max(val, 0.1), 2)
     setSliderPos(zoomToSlider(targetZoom.current))
     if (!animRef.current) animRef.current = requestAnimationFrame(animateZoom)
   }, [])
