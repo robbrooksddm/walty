@@ -31,6 +31,7 @@ import { CropTool }                     from '@/lib/CropTool'
 import WaltyEditorHeader                from './WaltyEditorHeader'
 import type { TemplatePage }            from './FabricCanvas'
 import type { TemplateProduct }         from '@/app/library/getTemplatePages'
+import { generateCardMockups }          from '@/lib/generateMockups'
 import { SEL_COLOR }                    from '@/lib/fabricDefaults'
 
 
@@ -500,6 +501,20 @@ const handlePreview = () => {
   })
   setPreviewImgs(imgs)
   setPreviewOpen(true)
+}
+
+const generateMockupImages = async () => {
+  const fc = canvasMap[0]
+  if (!fc) return {}
+  const tool = (fc as any)._cropTool as CropTool | undefined
+  if (tool?.isActive) tool.commit()
+  fc.renderAll()
+  const front = fc.toDataURL({
+    format: 'png',
+    quality: 1,
+    multiplier: EXPORT_MULT(),
+  })
+  return await generateCardMockups(front)
 }
 
 /* helper – gather pages and rendered images once */
@@ -1070,6 +1085,7 @@ const handleProofAll = async () => {
         coverUrl={coverImage || ''}
         products={products}
         generateProofUrls={generateProofURLs}
+        generateMockups={generateMockupImages}
       />
       <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 bg-white shadow px-3 py-2 rounded">
         <span className="text-xs">{Math.round(zoom * 100)}%</span>

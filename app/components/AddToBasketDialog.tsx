@@ -1,7 +1,8 @@
 'use client'
 
 import { Dialog, Transition } from '@headlessui/react'
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import { Check } from 'lucide-react'
 import { useBasket } from '@/lib/useBasket'
 
@@ -14,6 +15,7 @@ interface Props {
   products?: { title: string; variantHandle: string }[]
   onAdd?: (variant: string) => void
   generateProofUrls?: (variants: string[]) => Promise<Record<string, string>>
+  generateMockups?: () => Promise<Record<string, string>>
 }
 
 const DEFAULT_OPTIONS = [
@@ -23,15 +25,42 @@ const DEFAULT_OPTIONS = [
   { label: 'Giant Card', handle: 'gc-large' },
 ]
 
-export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd, generateProofUrls }: Props) {
+const SIZE_DIMENSIONS: Record<string, { w: number; h: number }> = {
+  'gc-mini': { w: 130, h: 190 },
+  'gc-classic': { w: 160, h: 225 },
+  'gc-large': { w: 270, h: 380 },
+}
+
+export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd, generateProofUrls, generateMockups }: Props) {
   const [choice, setChoice] = useState<string | null>(null)
+  const [mockups, setMockups] = useState<Record<string,string>|null>(null)
+  const [mockupLoading, setMockupLoading] = useState(false)
   const { addItem } = useBasket()
+
+  useEffect(() => {
+    if (open && generateMockups) {
+      setMockupLoading(true)
+      generateMockups()
+        .then((m) => setMockups(m))
+        .catch(() => setMockups(null))
+        .finally(() => setMockupLoading(false))
+    } else if (!open) {
+      setMockups(null)
+    }
+  }, [open, generateMockups])
 
   const options =
     products?.filter((p): p is { title: string; variantHandle: string } =>
       Boolean(p && p.title && p.variantHandle),
     ).map(p => ({ label: p.title, handle: p.variantHandle })) ??
     DEFAULT_OPTIONS
+
+  useEffect(() => {
+    if (open) {
+      const initial = options.find(o => o.handle !== 'digital')?.handle || options[0]?.handle || null
+      setChoice(initial)
+    }
+  }, [open, options])
 
   const handleAdd = async () => {
     if (!choice) return
@@ -81,6 +110,24 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
         >
           <Dialog.Panel className="relative z-10 bg-white rounded shadow-lg w-[min(90vw,420px)] p-6 space-y-6">
             <h2 className="font-recoleta text-xl text-[--walty-teal]">Choose an option</h2>
+            <div className="w-full flex justify-center relative">
+              {mockupLoading && <div className="py-12">Generating preview…</div>}
+              {!mockupLoading && mockups && (
+                <div className="relative">
+                  <img src="/mockups/cards/Card_mockups_room_background.jpg" alt="room" className="w-full h-auto" />
+                  {choice && mockups[choice] && (
+                    <motion.img
+                      key={choice}
+                      src={mockups[choice]}
+                      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+                      initial={false}
+                      animate={{ width: SIZE_DIMENSIONS[choice].w, height: SIZE_DIMENSIONS[choice].h }}
+                      transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
             <ul className="space-y-2">
               {options.map((opt) => (
                 <li key={opt.handle}>
