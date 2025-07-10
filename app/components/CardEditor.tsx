@@ -32,6 +32,7 @@ import WaltyEditorHeader                from './WaltyEditorHeader'
 import type { TemplatePage }            from './FabricCanvas'
 import type { TemplateProduct }         from '@/app/library/getTemplatePages'
 import { SEL_COLOR }                    from '@/lib/fabricDefaults'
+import { createCardMockups }            from '@/lib/createMockups'
 
 
 /* ---------- helpers ------------------------------------------------ */
@@ -350,6 +351,21 @@ const [previewImgs, setPreviewImgs] = useState<string[]>([])
 
 /* add-to-basket modal state */
 const [basketOpen, setBasketOpen] = useState(false)
+const [mockups, setMockups] = useState<Record<string,string>|null>(null)
+
+const openBasket = async () => {
+  const fc = canvasMap[0]
+  if (!fc) { setBasketOpen(true); return }
+  const dataUrl = fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT() })
+  try {
+    const m = await createCardMockups(dataUrl)
+    setMockups(m)
+  } catch (err) {
+    console.error('mockup generation', err)
+    setMockups(null)
+  }
+  setBasketOpen(true)
+}
 
 /* listen for the event FabricCanvas now emits */
 useEffect(() => {
@@ -862,7 +878,7 @@ const handleProofAll = async () => {
     >
       <WaltyEditorHeader                     /* ② mount new component */
         onPreview={handlePreview}
-        onAddToBasket={() => setBasketOpen(true)}
+        onAddToBasket={openBasket}
         height={72}                          /* match the design */
       />
 
@@ -1064,12 +1080,13 @@ const handleProofAll = async () => {
       />
       <AddToBasketDialog
         open={basketOpen}
-        onClose={() => setBasketOpen(false)}
+        onClose={() => { setBasketOpen(false); setMockups(null) }}
         slug={slug}
         title={title}
         coverUrl={coverImage || ''}
         products={products}
         generateProofUrls={generateProofURLs}
+        mockups={mockups || undefined}
       />
       <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 bg-white shadow px-3 py-2 rounded">
         <span className="text-xs">{Math.round(zoom * 100)}%</span>
