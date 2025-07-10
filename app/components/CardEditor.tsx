@@ -350,6 +350,7 @@ const [previewImgs, setPreviewImgs] = useState<string[]>([])
 
 /* add-to-basket modal state */
 const [basketOpen, setBasketOpen] = useState(false)
+const [frontImage, setFrontImage] = useState<string | null>(null)
 
 /* listen for the event FabricCanvas now emits */
 useEffect(() => {
@@ -500,6 +501,19 @@ const handlePreview = () => {
   })
   setPreviewImgs(imgs)
   setPreviewOpen(true)
+}
+
+const getFrontImage = () => {
+  const fc = canvasMap[0]
+  if (!fc) return ''
+  const tool = (fc as any)._cropTool as CropTool | undefined
+  if (tool?.isActive) tool.commit()
+  fc.renderAll()
+  return fc.toDataURL({
+    format: 'png',
+    quality: 1,
+    multiplier: EXPORT_MULT(),
+  })
 }
 
 /* helper – gather pages and rendered images once */
@@ -862,7 +876,10 @@ const handleProofAll = async () => {
     >
       <WaltyEditorHeader                     /* ② mount new component */
         onPreview={handlePreview}
-        onAddToBasket={() => setBasketOpen(true)}
+        onAddToBasket={() => {
+          setFrontImage(getFrontImage())
+          setBasketOpen(true)
+        }}
         height={72}                          /* match the design */
       />
 
@@ -1064,10 +1081,11 @@ const handleProofAll = async () => {
       />
       <AddToBasketDialog
         open={basketOpen}
-        onClose={() => setBasketOpen(false)}
+        onClose={() => { setBasketOpen(false); setFrontImage(null) }}
         slug={slug}
         title={title}
         coverUrl={coverImage || ''}
+        frontImage={frontImage}
         products={products}
         generateProofUrls={generateProofURLs}
       />
