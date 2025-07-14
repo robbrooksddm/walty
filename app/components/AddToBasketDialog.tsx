@@ -2,6 +2,7 @@
 
 import { Dialog, Transition } from '@headlessui/react'
 import { Fragment, useState } from 'react'
+import Image from 'next/image'
 import { Check } from 'lucide-react'
 import { useBasket } from '@/lib/useBasket'
 import type { Mockup } from '@/lib/generateCardMockups'
@@ -12,7 +13,12 @@ interface Props {
   slug: string
   title: string
   coverUrl: string
-  products?: { title: string; variantHandle: string }[]
+  products?: {
+    title: string
+    variantHandle: string
+    price?: number
+    blurb?: string
+  }[]
   onAdd?: (variant: string) => void
   generateProofUrls?: (variants: string[]) => Promise<Record<string, string>>
   mockups?: Record<'mini' | 'classic' | 'giant', Mockup>
@@ -34,6 +40,12 @@ const SIZE_MAP: Record<string, 'mini' | 'classic' | 'giant'> = {
   'gc-large': 'giant',
 }
 
+const ICONS: Record<string, string> = {
+  'gc-mini': '/icons/mini_card_icon.svg',
+  'gc-classic': '/icons/classic_card_icon.svg',
+  'gc-large': '/icons/giant_card_icon.svg',
+}
+
 const BG_W = 2000
 const BG_H = 1333
 const ROOM_BG = '/mockups/cards/Card_mockups_room_background.jpg'
@@ -43,9 +55,19 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
   const { addItem } = useBasket()
 
   const options =
-    products?.filter((p): p is { title: string; variantHandle: string } =>
-      Boolean(p && p.title && p.variantHandle),
-    ).map(p => ({ label: p.title, handle: p.variantHandle })) ??
+    products?.filter(
+      (p): p is {
+        title: string
+        variantHandle: string
+        price?: number
+        blurb?: string
+      } => Boolean(p && p.title && p.variantHandle),
+    ).map(p => ({
+      label: p.title,
+      handle: p.variantHandle,
+      price: p.price,
+      blurb: p.blurb,
+    })) ??
     DEFAULT_OPTIONS
 
   const size = SIZE_MAP[choice ?? 'gc-classic']
@@ -119,15 +141,35 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
             <div className="p-6 space-y-4">
               <h2 className="font-recoleta text-xl text-[--walty-teal]">Choose an option</h2>
               <ul className="space-y-2">
-                {options.map((opt) => (
+                {options.map(opt => (
                   <li key={opt.handle}>
-                    <button
-                      onClick={() => setChoice(opt.handle)}
-                      className={`w-full flex items-center justify-between border rounded-md p-3 ${choice === opt.handle ? 'border-[--walty-orange] bg-[--walty-cream]' : 'border-gray-300'}`}
+                    <label
+                      className={`flex items-center gap-4 p-3 border-2 rounded-md cursor-pointer w-full ${choice === opt.handle ? 'border-[--walty-orange] bg-[#f3dea8]' : 'border-gray-300 bg-[#F7F3EC]'}`}
                     >
-                      <span>{opt.label}</span>
-                      {choice === opt.handle && <Check className="text-[--walty-orange]" size={20} />}
-                    </button>
+                      <Image
+                        src={ICONS[opt.handle] ?? '/icons/classic_card_icon.svg'}
+                        alt=""
+                        width={52}
+                        height={52}
+                      />
+                      <div className="flex-1 flex flex-col space-y-1">
+                        <div className="font-bold">{opt.label}</div>
+                        {opt.blurb && (
+                          <p className="text-sm text-gray-600">{opt.blurb}</p>
+                        )}
+                        {typeof opt.price === 'number' && (
+                          <div className="font-normal">£{opt.price.toFixed(2)}</div>
+                        )}
+                      </div>
+                      <input
+                        type="radio"
+                        name="variant"
+                        value={opt.handle}
+                        checked={choice === opt.handle}
+                        onChange={() => setChoice(opt.handle)}
+                        className="accent-[--walty-orange]"
+                      />
+                    </label>
                   </li>
                 ))}
               </ul>
