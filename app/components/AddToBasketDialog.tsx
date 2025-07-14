@@ -144,33 +144,33 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
                   const price  = (opt as any).price
                   const blurb  = (opt as any).blurb
                   return (
-                    <li key={handle}>
-                      <label
-                        className={`flex items-center gap-4 p-3 border-2 rounded-md cursor-pointer ${choice === handle ? 'border-[--walty-orange] bg-[#f3dea8]' : 'border-gray-300 bg-[#F7F3EC]'}`}
-                      >
-                        <Image
-                          src={ICONS[handle] ?? '/icons/classic_card_icon.svg'}
-                          alt=""
-                          width={52}
-                          height={52}
-                        />
-                        <div className="flex-1 flex flex-col space-y-1">
-                          <div className="font-bold">{label}</div>
-                          {blurb && <p className="text-sm text-gray-600">{blurb}</p>}
-                          {typeof price === 'number' && <div className="font-normal">£{price.toFixed(2)}</div>}
-                        </div>
-                        <input
-                          type="radio"
-                          name="size"
-                          value={handle}
-                          checked={choice === handle}
-                          onChange={() => setChoice(handle)}
-                          className="accent-[--walty-orange]"
-                        />
-                      </label>
-                    </li>
-                  )
-                })}
+                  <li key={handle}>
+                    <label
+                      className={`flex items-center gap-3 p-2 border-2 rounded-md cursor-pointer ${choice === handle ? 'border-[--walty-orange] bg-[#f3dea8]' : 'border-gray-300 bg-[#F7F3EC]'}`}
+                    >
+                      <Image
+                        src={ICONS[handle] ?? '/icons/classic_card_icon.svg'}
+                        alt=""
+                        width={40}
+                        height={40}
+                      />
+                      <div className="flex-1 flex flex-col space-y-0.5">
+                        <div className="font-bold">{label}</div>
+                        {blurb && <p className="text-sm text-gray-600 leading-tight">{blurb}</p>}
+                        {typeof price === 'number' && <div className="font-normal">£{price.toFixed(2)}</div>}
+                      </div>
+                      <input
+                        type="radio"
+                        name="size"
+                        value={handle}
+                        checked={choice === handle}
+                        onChange={() => setChoice(handle)}
+                        className="accent-[--walty-orange]"
+                      />
+                    </label>
+                  </li>
+                )
+              })}
               </ul>
               <div className="flex justify-end gap-4 pt-2">
                 <button onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2">Back to editor</button>
