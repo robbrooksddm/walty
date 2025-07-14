@@ -27,6 +27,7 @@ import SelfieDrawer                     from './SelfieDrawer'
 import CropDrawer                      from './CropDrawer'
 import PreviewModal                    from './PreviewModal'
 import AddToBasketDialog               from './AddToBasketDialog'
+import { generateCardMockups, Mockup } from '@/lib/generateCardMockups'
 import { CropTool }                     from '@/lib/CropTool'
 import WaltyEditorHeader                from './WaltyEditorHeader'
 import type { TemplatePage }            from './FabricCanvas'
@@ -350,6 +351,7 @@ const [previewImgs, setPreviewImgs] = useState<string[]>([])
 
 /* add-to-basket modal state */
 const [basketOpen, setBasketOpen] = useState(false)
+const [basketMockups, setBasketMockups] = useState<Record<'mini'|'classic'|'giant', Mockup> | null>(null)
 
 /* listen for the event FabricCanvas now emits */
 useEffect(() => {
@@ -500,6 +502,19 @@ const handlePreview = () => {
   })
   setPreviewImgs(imgs)
   setPreviewOpen(true)
+}
+
+const generateBasketMockups = async () => {
+  const fc = canvasMap[0]
+  if (!fc) return null
+  fc.renderAll()
+  const url = fc.toDataURL({ format: 'png', quality: 1, multiplier: EXPORT_MULT() })
+  try {
+    return await generateCardMockups(url)
+  } catch (err) {
+    console.error('mockup generation', err)
+    return null
+  }
 }
 
 /* helper – gather pages and rendered images once */
@@ -862,7 +877,11 @@ const handleProofAll = async () => {
     >
       <WaltyEditorHeader                     /* ② mount new component */
         onPreview={handlePreview}
-        onAddToBasket={() => setBasketOpen(true)}
+        onAddToBasket={async () => {
+          const m = await generateBasketMockups()
+          if (m) setBasketMockups(m)
+          setBasketOpen(true)
+        }}
         height={72}                          /* match the design */
       />
 
@@ -1064,12 +1083,16 @@ const handleProofAll = async () => {
       />
       <AddToBasketDialog
         open={basketOpen}
-        onClose={() => setBasketOpen(false)}
+        onClose={() => {
+          setBasketOpen(false)
+          setBasketMockups(null)
+        }}
         slug={slug}
         title={title}
         coverUrl={coverImage || ''}
         products={products}
         generateProofUrls={generateProofURLs}
+        mockups={basketMockups || undefined}
       />
       <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 bg-white shadow px-3 py-2 rounded">
         <span className="text-xs">{Math.round(zoom * 100)}%</span>
