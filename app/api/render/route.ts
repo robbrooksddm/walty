@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createCanvas } from 'canvas'
-import gl from 'gl'
-import * as THREE from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+// gl can't be statically resolved during the build when optional native
+// bindings are missing, so load it dynamically at runtime instead
+import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import type * as ThreeTypes from 'three'
 import { sanity, sanityPreview } from '@/sanity/lib/client'
 
 export const dynamic = 'force-dynamic'
@@ -21,6 +21,10 @@ export async function POST(req: NextRequest) {
 
     const width = 1024
     const height = 1024
+    const { createCanvas } = await import('canvas')
+    const { default: gl } = await import('gl')
+    const THREE: typeof ThreeTypes = await import('three')
+    const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
     const canvas = createCanvas(width, height)
     const glContext = gl(width, height)
     const renderer = new THREE.WebGLRenderer({ context: glContext as unknown as WebGLRenderingContext, canvas })
@@ -61,7 +65,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'model-download' }, { status: 500 })
     }
     const modelBuffer = await modelResp.arrayBuffer()
-    const gltf = await new Promise<THREE.GLTF>((resolve, reject) => {
+    const gltf = await new Promise<GLTF>((resolve, reject) => {
       loader.parse(modelBuffer as ArrayBuffer, '', resolve, reject)
     })
     scene.add(gltf.scene)
