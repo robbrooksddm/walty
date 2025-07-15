@@ -11,10 +11,10 @@ export default defineType({
       validation: r => r.required(),
     }),
     defineField({
-      name: 'skuMap',
+      name: 'variant',
       type: 'reference',
-      title: 'SKU map',
-      to: [{ type: 'skuMap' }],
+      title: 'Variant',
+      to: [{ type: 'cardProduct' }],
       validation: r => r.required(),
     }),
     defineField({
