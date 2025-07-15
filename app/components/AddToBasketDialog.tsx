@@ -2,8 +2,16 @@
 
 import { Dialog, Transition } from '@headlessui/react'
 import { Fragment, useState } from 'react'
+import Image from 'next/image'
 import { Check } from 'lucide-react'
 import { useBasket } from '@/lib/useBasket'
+import type { Mockup } from '@/lib/generateCardMockups'
+
+const ICONS: Record<string, string> = {
+  'gc-mini': '/icons/mini_card_icon.svg',
+  'gc-classic': '/icons/classic_card_icon.svg',
+  'gc-large': '/icons/giant_card_icon.svg',
+}
 
 interface Props {
   open: boolean
@@ -11,9 +19,15 @@ interface Props {
   slug: string
   title: string
   coverUrl: string
-  products?: { title: string; variantHandle: string }[]
+  products?: {
+    title: string
+    variantHandle: string
+    blurb?: string
+    price?: number
+  }[]
   onAdd?: (variant: string) => void
   generateProofUrls?: (variants: string[]) => Promise<Record<string, string>>
+  mockups?: Record<'mini' | 'classic' | 'giant', Mockup>
 }
 
 const DEFAULT_OPTIONS = [
@@ -23,15 +37,38 @@ const DEFAULT_OPTIONS = [
   { label: 'Giant Card', handle: 'gc-large' },
 ]
 
-export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd, generateProofUrls }: Props) {
+const SIZE_MAP: Record<string, 'mini' | 'classic' | 'giant'> = {
+  mini: 'mini',
+  classic: 'classic',
+  giant: 'giant',
+  'gc-mini': 'mini',
+  'gc-classic': 'classic',
+  'gc-large': 'giant',
+}
+
+const BG_W = 2000
+const BG_H = 1333
+const ROOM_BG = '/mockups/cards/Card_mockups_room_background.jpg'
+
+export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl, products, onAdd, generateProofUrls, mockups }: Props) {
   const [choice, setChoice] = useState<string | null>(null)
   const { addItem } = useBasket()
 
   const options =
-    products?.filter((p): p is { title: string; variantHandle: string } =>
-      Boolean(p && p.title && p.variantHandle),
-    ).map(p => ({ label: p.title, handle: p.variantHandle })) ??
-    DEFAULT_OPTIONS
+    products?.filter((p): p is {
+      title: string
+      variantHandle: string
+      blurb?: string
+      price?: number
+    } => Boolean(p && p.title && p.variantHandle)) ??
+    []
+
+  const opts = options.length
+    ? options
+    : DEFAULT_OPTIONS.map(o => ({ label: o.label, handle: o.handle }))
+
+  const size = SIZE_MAP[choice ?? 'gc-classic']
+  const preview = mockups ? mockups[size] : undefined
 
   const handleAdd = async () => {
     if (!choice) return
@@ -40,7 +77,7 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
     let proofs: Record<string, string> = {}
     if (generateProofUrls) {
       try {
-        const urls = await generateProofUrls(options.map(o => o.handle))
+        const urls = await generateProofUrls(opts.map(o => o.variantHandle ?? o.handle))
         proofs = urls
         const url = urls[choice]
         if (typeof url === 'string' && url) {
@@ -79,30 +116,74 @@ export default function AddToBasketDialog({ open, onClose, slug, title, coverUrl
           leaveFrom="opacity-100 scale-100"
           leaveTo="opacity-0 scale-95"
         >
-          <Dialog.Panel className="relative z-10 bg-white rounded shadow-lg w-[min(90vw,420px)] p-6 space-y-6">
-            <h2 className="font-recoleta text-xl text-[--walty-teal]">Choose an option</h2>
-            <ul className="space-y-2">
-              {options.map((opt) => (
-                <li key={opt.handle}>
-                  <button
-                    onClick={() => setChoice(opt.handle)}
-                    className={`w-full flex items-center justify-between border rounded-md p-3 ${choice === opt.handle ? 'border-[--walty-orange] bg-[--walty-cream]' : 'border-gray-300'}`}
-                  >
-                    <span>{opt.label}</span>
-                    {choice === opt.handle && <Check className="text-[--walty-orange]" size={20} />}
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <div className="flex justify-end gap-4 pt-2">
-              <button onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2">Back to editor</button>
-              <button
-                onClick={handleAdd}
-                disabled={!choice}
-                className={`rounded-md px-4 py-2 font-semibold text-white ${choice ? 'bg-[--walty-orange] hover:bg-orange-600' : 'bg-gray-300 cursor-not-allowed'}`}
-              >
-                Add to basket
-              </button>
+          <Dialog.Panel className="relative z-10 bg-white rounded shadow-lg w-[min(90vw,480px)] overflow-hidden">
+            <div className="relative w-full">
+              <img src={ROOM_BG} alt="room" className="w-full h-auto" />
+              {preview && (
+                <img
+                  src={preview.image}
+                  alt="preview"
+                  className="absolute"
+                  style={{
+                    top: `${(preview.box.y / BG_H) * 100}%`,
+                    left: `${(preview.box.x / BG_W) * 100}%`,
+                    width: `${(preview.box.width / BG_W) * 100}%`,
+                    height: `${(preview.box.height / BG_H) * 100}%`,
+                    transition:
+                      'all 0.4s cubic-bezier(0.175,0.885,0.32,1.275)',
+                  }}
+                />
+              )}
+            </div>
+            <div className="p-6 space-y-4">
+              <h2 className="font-recoleta text-xl text-[--walty-teal]">Choose an option</h2>
+              <ul className="space-y-2">
+                {opts.map((opt) => {
+                  const handle = (opt as any).variantHandle ?? (opt as any).handle
+                  const label = opt.title ?? (opt as any).label
+                  const price = (opt as any).price
+                  const blurb = (opt as any).blurb
+                  return (
+                    <li key={handle}>
+                      <label
+                        className={`flex items-center gap-2 px-2 py-1 border-2 rounded-md cursor-pointer ${choice === handle ? 'border-[--walty-orange] bg-[#f3dea8]' : 'border-gray-300 bg-[#F7F3EC]'}`}
+                      >
+                        <Image
+                          src={ICONS[handle] ?? '/icons/classic_card_icon.svg'}
+                          alt=""
+                          width={32}
+                          height={32}
+                        />
+                        <div className="flex-1 flex flex-col space-y-px leading-tight text-sm">
+                          <div className="font-bold leading-tight">{label}</div>
+                          {blurb && <p className="text-gray-600 leading-tight">{blurb}</p>}
+                          {typeof price === 'number' && (
+                            <div className="font-normal leading-tight">£{price.toFixed(2)}</div>
+                          )}
+                        </div>
+                        <input
+                          type="radio"
+                          name="size"
+                          value={handle}
+                          checked={choice === handle}
+                          onChange={() => setChoice(handle)}
+                          className="accent-[--walty-orange]"
+                        />
+                      </label>
+                    </li>
+                  )
+                })}
+              </ul>
+              <div className="flex justify-end gap-4 pt-2">
+                <button onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2">Back to editor</button>
+                <button
+                  onClick={handleAdd}
+                  disabled={!choice}
+                  className={`rounded-md px-4 py-2 font-semibold text-white ${choice ? 'bg-[--walty-orange] hover:bg-orange-600' : 'bg-gray-300 cursor-not-allowed'}`}
+                >
+                  Add to basket
+                </button>
+              </div>
             </div>
           </Dialog.Panel>
         </Transition.Child>
