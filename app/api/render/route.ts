@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import gl from 'gl'
+// gl can't be statically resolved during the build when optional native
+// bindings are missing, so load it dynamically at runtime instead
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { sanity, sanityPreview } from '@/sanity/lib/client'
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest) {
     const width = 1024
     const height = 1024
     const { createCanvas } = await import('canvas')
+    const { default: gl } = await import('gl')
     const canvas = createCanvas(width, height)
     const glContext = gl(width, height)
     const renderer = new THREE.WebGLRenderer({ context: glContext as unknown as WebGLRenderingContext, canvas })
