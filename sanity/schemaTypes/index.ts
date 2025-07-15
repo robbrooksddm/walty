@@ -7,6 +7,7 @@ import cardProduct   from './cardProduct'
 import product       from './product'
 import productMockup from './productMockup'
 import sitePage      from './sitePage'
+import visualVariant from './visualVariant'
 
 /* commerce ---------------------------------------------- */
 import fulfilOption from './commerce/fulfilOption'
@@ -21,6 +22,10 @@ import editableImage from './editableImage'
 import editableText  from './editableText'
 import heroSection   from './heroSection'
 import printSpec     from './printSpec'
+import mockupSettings from './objects/mockupSettings'
+import printArea      from './objects/printArea'
+import cameraPose     from './objects/cameraPose'
+import colourVariant  from './objects/colourVariant'
 
 /* facet look-ups ----------------------------------------------- */
 import occasion from './occasion'   // ← RE-ADDED ✔
@@ -38,6 +43,7 @@ export const schemaTypes = [
   sitePage,
   fulfilOption,
   skuMap,
+  visualVariant,
   aiPlaceholder,
   printSpec,
 
@@ -46,6 +52,10 @@ export const schemaTypes = [
   editableImage,
   editableText,
   heroSection,
+  mockupSettings,
+  printArea,
+  cameraPose,
+  colourVariant,
 
   /* facets */
   occasion,

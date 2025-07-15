@@ -95,5 +95,11 @@ export default defineType({
     of: [{ type: 'reference', to: [{ type: 'cardProduct' }] }],
     validation: r => r.min(1),
   }),
+  defineField({
+    name: 'visualVariants',
+    type: 'array',
+    title: 'Visual variants',
+    of: [{ type: 'reference', to: [{ type: 'visualVariant' }] }],
+  }),
   ],
 })

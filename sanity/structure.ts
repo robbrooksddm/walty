@@ -178,6 +178,7 @@ export const structure: StructureResolver = (S: StructureBuilder) =>
               S.documentTypeListItem('printSpec').title('Print specs'),
               S.documentTypeListItem('fulfilOption').title('Fulfil options'),
               S.documentTypeListItem('skuMap').title('SKU maps'),
+              S.documentTypeListItem('visualVariant').title('Visual variants'),
             ]),
         ),
 
