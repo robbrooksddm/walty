@@ -21,6 +21,7 @@ export interface TemplateProduct {
   _id: string
   slug: string
   title: string
+  blurb?: string
   variantHandle: string
   price?: number
   printSpec?: PrintSpec
@@ -59,6 +60,7 @@ export async function getTemplatePages(
     "products": products[]->variants[]->{
       _id,
       title,
+      blurb,
       "slug": slug.current,
       variantHandle,
       price,
