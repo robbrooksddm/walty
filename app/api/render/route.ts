@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createCanvas } from 'canvas'
 import gl from 'gl'
+import sharp from 'sharp'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { sanity, sanityPreview } from '@/sanity/lib/client'
@@ -21,10 +21,11 @@ export async function POST(req: NextRequest) {
 
     const width = 1024
     const height = 1024
-    const canvas = createCanvas(width, height)
-    const glContext = gl(width, height)
-    const renderer = new THREE.WebGLRenderer({ context: glContext as unknown as WebGLRenderingContext, canvas })
-    renderer.setSize(width, height)
+    const glContext = gl(width, height, { preserveDrawingBuffer: true })
+    const renderer = new THREE.WebGLRenderer({
+      context: glContext as unknown as WebGLRenderingContext
+    })
+    renderer.setSize(width, height, false)
 
     const scene = new THREE.Scene()
     scene.add(new THREE.AmbientLight(0xffffff))
@@ -99,7 +100,29 @@ export async function POST(req: NextRequest) {
 
     renderer.render(scene, camera)
 
-    const buffer = canvas.toBuffer('image/png')
+    const pixels = new Uint8Array(width * height * 4)
+    glContext.readPixels(
+      0,
+      0,
+      width,
+      height,
+      glContext.RGBA,
+      glContext.UNSIGNED_BYTE,
+      pixels
+    )
+
+    const flipped = Buffer.alloc(pixels.length)
+    for (let y = 0; y < height; y++) {
+      const srcStart = y * width * 4
+      const destStart = (height - y - 1) * width * 4
+      pixels.copy(flipped, destStart, srcStart, srcStart + width * 4)
+    }
+
+    const buffer = await sharp(flipped, {
+      raw: { width, height, channels: 4 }
+    })
+      .png()
+      .toBuffer()
     const out = `data:image/png;base64,${buffer.toString('base64')}`
     urls[cameraName] = out
     return NextResponse.json({ urls })
