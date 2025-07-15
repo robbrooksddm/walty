@@ -351,7 +351,7 @@ function DropZone({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/png, image/jpeg"
         onChange={e => handleFiles(e.target.files)}
         className="sr-only"
       />

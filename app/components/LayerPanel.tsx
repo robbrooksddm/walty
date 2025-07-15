@@ -165,7 +165,7 @@ export default function LayerPanel() {
         <span className="font-medium">Upload</span>
         <input
           type="file"
-          accept="image/*"
+          accept="image/png, image/jpeg"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];

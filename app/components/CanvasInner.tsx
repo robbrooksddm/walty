@@ -64,7 +64,7 @@ export default function CanvasInner() {
         {/* plain file input for now */}
         <input
           type="file"
-          accept="image/*"
+          accept="image/png, image/jpeg"
           onChange={(e) => {
             const file = e.currentTarget.files?.[0];
             if (file) addImage(file);
