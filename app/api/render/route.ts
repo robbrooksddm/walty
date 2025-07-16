@@ -59,7 +59,7 @@ export async function POST (req: NextRequest) {
           name === 'OES_standard_derivatives' ? {} : origGetExtension(name)
 
     /* 3-B · Browser-DOM poly-fill so ImageLoader works in Node */
-    const { Image } = await import('canvas')
+    const { Image } = await import('@/lib/canvas')
     ;(globalThis as any).Image = Image
 
         // -- add event-listener stubs (cast to any to silence TS)
