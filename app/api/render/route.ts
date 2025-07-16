@@ -1,14 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createCanvas } from 'canvas'
-import gl from 'gl'
-import * as THREE from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { sanity, sanityPreview } from '@/sanity/lib/client'
+
+export const runtime = 'nodejs'
 
 export const dynamic = 'force-dynamic'
 
+async function loadCanvas() {
+  try {
+    return await import(/* webpackIgnore: true */ 'canvas')
+  } catch (err) {
+    try {
+      return await import(/* webpackIgnore: true */ '@napi-rs/canvas')
+    } catch (err2) {
+      console.error('[render] no canvas module', err, err2)
+      throw new Error('canvas-not-installed')
+    }
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
+    let createCanvas: any
+    try {
+      ;({ createCanvas } = await loadCanvas())
+    } catch {
+      return NextResponse.json({ error: 'canvas-not-installed' }, { status: 500 })
+    }
+    const { default: gl } = await import(/* webpackIgnore: true */ 'gl')
+    const THREE = await import(/* webpackIgnore: true */ 'three')
+    const { GLTFLoader } = await import(
+      /* webpackIgnore: true */ 'three/examples/jsm/loaders/GLTFLoader.js'
+    )
     const { variantId, designPNGs } = await req.json()
     if (!variantId || typeof variantId !== 'string' || !designPNGs || typeof designPNGs !== 'object') {
       return NextResponse.json({ error: 'bad input' }, { status: 400 })
@@ -61,7 +83,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'model-download' }, { status: 500 })
     }
     const modelBuffer = await modelResp.arrayBuffer()
-    const gltf = await new Promise<THREE.GLTF>((resolve, reject) => {
+    const gltf = await new Promise<any>((resolve, reject) => {
       loader.parse(modelBuffer as ArrayBuffer, '', resolve, reject)
     })
     scene.add(gltf.scene)
