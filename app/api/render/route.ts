@@ -7,9 +7,20 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
-    const { createCanvas } = await import(/* webpackIgnore: true */ 'canvas')
-    const { default: gl } = await import(/* webpackIgnore: true */ 'gl')
-    const THREE = await import(/* webpackIgnore: true */ 'three')
+    const { createCanvas } = await import(/* webpackIgnore: true */ 'canvas').catch(
+      err => {
+        console.error('[render] missing canvas module', err)
+        throw new Error('missing-canvas')
+      }
+    )
+    const { default: gl } = await import(/* webpackIgnore: true */ 'gl').catch(err => {
+      console.error('[render] missing gl module', err)
+      throw new Error('missing-gl')
+    })
+    const THREE = await import(/* webpackIgnore: true */ 'three').catch(err => {
+      console.error('[render] missing three module', err)
+      throw new Error('missing-three')
+    })
     const { GLTFLoader } = await import(
       /* webpackIgnore: true */ 'three/examples/jsm/loaders/GLTFLoader.js'
     )
@@ -109,6 +120,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ urls })
   } catch (err) {
     console.error('[render]', err)
+    const msg =
+      err instanceof Error ? err.message : typeof err === 'string' ? err : ''
+    if (msg === 'missing-canvas' || msg === 'missing-gl' || msg === 'missing-three') {
+      return NextResponse.json({ error: msg }, { status: 500 })
+    }
     return NextResponse.json({ error: 'server-error' }, { status: 500 })
   }
 }
