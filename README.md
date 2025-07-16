@@ -49,3 +49,12 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## CMS-driven preview
 Products now store a `previewSpec` and page settings. Templates link to these products so the editor opens with the correct canvas size and safe‑area guides.
+
+## Rendering requirements
+
+Server-side mockup rendering depends on a Node canvas implementation. The API
+tries to load the native `canvas` module first and falls back to
+`@napi-rs/canvas`. If neither module is available, `/api/render` will return a
+`canvas-not-installed` error. Install either package in your environment with
+`npm install canvas` or `npm install @napi-rs/canvas` so that one can be
+resolved at runtime.
