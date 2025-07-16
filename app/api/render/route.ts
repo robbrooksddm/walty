@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createCanvas } from 'canvas'
-import gl from 'gl'
-import * as THREE from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { sanity, sanityPreview } from '@/sanity/lib/client'
+
+export const runtime = 'nodejs'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
+    const { createCanvas } = await import('canvas')
+    const { default: gl } = await import('gl')
+    const THREE = await import('three')
+    const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
     const { variantId, designPNGs } = await req.json()
     if (!variantId || typeof variantId !== 'string' || !designPNGs || typeof designPNGs !== 'object') {
       return NextResponse.json({ error: 'bad input' }, { status: 400 })
@@ -61,7 +63,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'model-download' }, { status: 500 })
     }
     const modelBuffer = await modelResp.arrayBuffer()
-    const gltf = await new Promise<THREE.GLTF>((resolve, reject) => {
+    const gltf = await new Promise<any>((resolve, reject) => {
       loader.parse(modelBuffer as ArrayBuffer, '', resolve, reject)
     })
     scene.add(gltf.scene)
