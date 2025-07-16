@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createCanvas } from 'canvas'
-import gl from 'gl'
-import * as THREE from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+// These modules rely on native bindings that may not be present during the
+// build, so load them at runtime instead of statically importing them.
+import type * as THREEType from 'three'
 import { sanity, sanityPreview } from '@/sanity/lib/client'
 
 export const runtime = 'nodejs'
@@ -21,11 +20,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'no design data' }, { status: 400 })
     }
 
+    // Dynamically import heavy modules only when we need them so Next.js
+    // doesn't attempt to bundle them during the build.
+    const { createCanvas } = await import('canvas')
+    const { default: gl } = await import('gl')
+    const THREE: typeof THREEType = await import('three')
+    const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
+
     const width = 1024
     const height = 1024
     const canvas = createCanvas(width, height)
     const glContext = gl(width, height)
-    const renderer = new THREE.WebGLRenderer({ context: glContext as unknown as WebGLRenderingContext, canvas })
+    const renderer = new THREE.WebGLRenderer({
+      context: glContext as unknown as WebGLRenderingContext,
+      canvas,
+    })
     renderer.setSize(width, height)
 
     const scene = new THREE.Scene()
