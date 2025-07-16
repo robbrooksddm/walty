@@ -1,14 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createCanvas } from 'canvas'
-import gl from 'gl'
-import * as THREE from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { sanity, sanityPreview } from '@/sanity/lib/client'
+
+export const runtime = 'nodejs'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
+    const { createCanvas } = await import(/* webpackIgnore: true */ 'canvas').catch(
+      err => {
+        console.error('[render] missing canvas module', err)
+        throw new Error('missing-canvas')
+      }
+    )
+    const { default: gl } = await import(/* webpackIgnore: true */ 'gl').catch(err => {
+      console.error('[render] missing gl module', err)
+      throw new Error('missing-gl')
+    })
+    const THREE = await import(/* webpackIgnore: true */ 'three').catch(err => {
+      console.error('[render] missing three module', err)
+      throw new Error('missing-three')
+    })
+    const { GLTFLoader } = await import(
+      /* webpackIgnore: true */ 'three/examples/jsm/loaders/GLTFLoader.js'
+    )
     const { variantId, designPNGs } = await req.json()
     if (!variantId || typeof variantId !== 'string' || !designPNGs || typeof designPNGs !== 'object') {
       return NextResponse.json({ error: 'bad input' }, { status: 400 })
@@ -61,7 +76,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'model-download' }, { status: 500 })
     }
     const modelBuffer = await modelResp.arrayBuffer()
-    const gltf = await new Promise<THREE.GLTF>((resolve, reject) => {
+    const gltf = await new Promise<any>((resolve, reject) => {
       loader.parse(modelBuffer as ArrayBuffer, '', resolve, reject)
     })
     scene.add(gltf.scene)
@@ -105,6 +120,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ urls })
   } catch (err) {
     console.error('[render]', err)
+    const msg =
+      err instanceof Error ? err.message : typeof err === 'string' ? err : ''
+    if (msg === 'missing-canvas' || msg === 'missing-gl' || msg === 'missing-three') {
+      return NextResponse.json({ error: msg }, { status: 500 })
+    }
     return NextResponse.json({ error: 'server-error' }, { status: 500 })
   }
 }
