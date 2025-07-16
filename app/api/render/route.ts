@@ -152,6 +152,9 @@ export async function POST (req: NextRequest) {
     }
     return NextResponse.json({ urls })
   } catch (err) {
+    if ((err as any)?.message === 'canvas-not-installed') {
+      return NextResponse.json({ error: 'canvas-not-installed' }, { status: 500 })
+    }
     console.error('[render]', err)
     return NextResponse.json({ error: 'server-error' }, { status: 500 })
   }
