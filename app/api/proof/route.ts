@@ -3,6 +3,8 @@ import sharp from 'sharp'
 import { sanityPreview } from '@/sanity/lib/client'
 import { buildSpread } from './buildSpread'
 
+export const runtime = 'nodejs'
+
 interface Overlay extends sharp.OverlayOptions {
   /** Global opacity for the overlay; sharp's types omit this */
   opacity?: number
