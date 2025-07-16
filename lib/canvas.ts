@@ -6,7 +6,7 @@ try {
   canvasMod = require('canvas') as typeof NodeCanvas
 } catch {
   try {
-    canvasMod = require('@napi-rs/canvas') as typeof NodeCanvas
+    canvasMod = eval('require')('@napi-rs/canvas') as typeof NodeCanvas
   } catch {
     canvasMod = null
   }

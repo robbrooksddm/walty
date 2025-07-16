@@ -58,6 +58,11 @@ export async function POST (req: NextRequest) {
         glContext.getExtension = (name: string) =>
           name === 'OES_standard_derivatives' ? {} : origGetExtension(name)
 
+        /* 3-A.4 · Provide empty texImage3D for WebGL1 contexts */
+        if (typeof glContext.texImage3D !== 'function') {
+          glContext.texImage3D = () => {}
+        }
+
     /* 3-B · Browser-DOM poly-fill so ImageLoader works in Node */
     const { Image } = await import('@/lib/canvas')
     ;(globalThis as any).Image = Image
