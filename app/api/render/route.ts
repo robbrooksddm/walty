@@ -35,7 +35,15 @@ export async function POST (req: NextRequest) {
 
     /* ───── 3 · Canvas + GL context ───── */
     const width = 1024, height = 1024
-    const canvas    = createCanvas(width, height) as any
+    let canvas: any
+    try {
+      canvas = createCanvas(width, height) as any
+    } catch (err) {
+      if ((err as Error).message === 'canvas-not-installed') {
+        return NextResponse.json({ error: 'canvas-not-installed' }, { status: 500 })
+      }
+      throw err
+    }
     const glContext = gl(width, height, { preserveDrawingBuffer: true }) as any
 
         /* 3-A.1 · Pretend we’re WebGL 1 so Three compiles #version 100 shaders */
