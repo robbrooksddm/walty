@@ -7,10 +7,12 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
-    const { createCanvas } = await import('canvas')
-    const { default: gl } = await import('gl')
-    const THREE = await import('three')
-    const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
+    const { createCanvas } = await import(/* webpackIgnore: true */ 'canvas')
+    const { default: gl } = await import(/* webpackIgnore: true */ 'gl')
+    const THREE = await import(/* webpackIgnore: true */ 'three')
+    const { GLTFLoader } = await import(
+      /* webpackIgnore: true */ 'three/examples/jsm/loaders/GLTFLoader.js'
+    )
     const { variantId, designPNGs } = await req.json()
     if (!variantId || typeof variantId !== 'string' || !designPNGs || typeof designPNGs !== 'object') {
       return NextResponse.json({ error: 'bad input' }, { status: 400 })
