@@ -158,15 +158,16 @@ export default function LayerPanel() {
       }}
     >
       {/* upload */}
-      <label className="m-4 flex flex-col items-center justify-center gap-2
+      <label htmlFor="image-upload" className="m-4 flex flex-col items-center justify-center gap-2
                          rounded-xl border-2 border-dashed border-walty-teal/50
                          p-4 text-walty-teal hover:bg-walty-orange/5">
         <UploadIcon className="h-8 w-8" />
         <span className="font-medium">Upload</span>
         <input
+          id="image-upload"
           type="file"
           accept="image/*"
-          className="hidden"
+          className="sr-only"
           onChange={(e) => {
             const f = e.target.files?.[0];
             if (f) addImage(f);
