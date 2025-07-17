@@ -87,6 +87,11 @@ export async function POST (req: NextRequest) {
       canvas,
       context: glContext as unknown as WebGLRenderingContext,
     })
+    // WebGLCapabilities in three 0.178 always marks the context as WebGL2.
+    // This breaks headless-gl which only implements WebGL1. Force the
+    // renderer to treat the context as WebGL1 so shaders are generated with
+    // `#version 100` and avoid unsupported features like `sampler3D`.
+    ;(renderer as any).capabilities.isWebGL2 = false
     renderer.setSize(width, height)
 
     /* ───── 4 · Scene & model ───── */
