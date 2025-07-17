@@ -37,8 +37,10 @@ export async function POST (req: NextRequest) {
       headless: 'new',
       args: ['--no-sandbox'],               // <-- works on Lambda / Vercel
     })
-    const page = await browser.newPage()
-    await page.setViewport({ width: 1024, height: 1024 })
+  const page = await browser.newPage()
+  page.on('console', msg => console.log('[page]', msg.text()))
+  page.on('pageerror', err => console.error('[page-error]', err))
+  await page.setViewport({ width: 1024, height: 1024 })
 
     /* ─── 4 · inline HTML with Three.js + render script ─── */
     const html = /* html */ `
@@ -69,11 +71,15 @@ export async function POST (req: NextRequest) {
           document.body.appendChild(renderer.domElement)
 
           /* load GLB */
-          const gltf = await new THREE.GLTFLoader().loadAsync('${variant.model}')
+          const gltfLoader = new THREE.GLTFLoader()
+          gltfLoader.crossOrigin = 'anonymous'
+          const gltf = await gltfLoader.loadAsync('${variant.model}')
           scene.add(gltf.scene)
 
           /* swap customer texture */
-          const tex = new THREE.TextureLoader().load('${pngData}')
+          const texLoader = new THREE.TextureLoader()
+          texLoader.crossOrigin = 'anonymous'
+          const tex = await texLoader.loadAsync('${pngData}')
           const mesh = gltf.scene.getObjectByName('${meshName}')
           if (mesh && mesh.material) {
             mesh.material.map = tex
@@ -81,11 +87,13 @@ export async function POST (req: NextRequest) {
           }
 
           renderer.render(scene, cam)
-          window.__png = renderer.domElement.toDataURL('image/png')
+          window.__ready = true
         })()
       </script>`
-    await page.setContent(html, { waitUntil: 'networkidle0' })
-    const dataUrl = await page.evaluate('window.__png')
+  await page.setContent(html, { waitUntil: 'networkidle0' })
+  await page.waitForFunction('window.__ready', { timeout: 60000 })
+  const buffer = await page.screenshot({ type: 'png' })
+  const dataUrl = 'data:image/png;base64,' + buffer.toString('base64')
     await browser.close()
 
     /* ─── 5 · respond ─── */
