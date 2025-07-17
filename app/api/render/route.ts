@@ -58,6 +58,7 @@ export async function POST (req: NextRequest) {
         const origGetExtension = glContext.getExtension.bind(glContext)
         glContext.getExtension = (name: string) =>
           name === 'OES_standard_derivatives' ? {} : origGetExtension(name)
+        glContext.getExtension('OES_standard_derivatives')
 
         /* 3-A.4 · Provide empty texImage3D for WebGL1 contexts */
         if (typeof glContext.texImage3D !== 'function') {
@@ -67,10 +68,11 @@ export async function POST (req: NextRequest) {
         /* 3-A.5 · Downgrade GLSL3 shaders to GLSL1 so headless-gl can compile */
         const origShaderSource = glContext.shaderSource.bind(glContext)
         const downgrade = (src: string) => {
-          const trimmed = src.trimStart()
+          const trimmed = src.replace(/^\uFEFF/, '').trimStart()
           if (!trimmed.startsWith('#version 300 es')) return src
-          return trimmed
-            .replace(/#version 300 es/g, '#version 100')
+          const withVersion = trimmed.replace(/#version 300 es/g, '#version 100')
+            .replace('#version 100', '#version 100\n#extension GL_OES_standard_derivatives : enable')
+          return withVersion
             .replace(/^#define attribute in\n/m, '')
             .replace(/^#define varying out\n/m, '')
             .replace(/#define gl_FragColor pc_fragColor\n/, '')
@@ -101,8 +103,10 @@ export async function POST (req: NextRequest) {
             .replace(/isamplerCube/g, 'samplerCube')
             .replace(/usamplerCube/g, 'samplerCube')
         }
-        glContext.shaderSource = (shader: any, src: string) =>
-          origShaderSource(shader, downgrade(src))
+        glContext.shaderSource = (shader: any, src: string) => {
+          const patched = downgrade(src)
+          origShaderSource(shader, patched)
+        }
 
     /* 3-B · Browser-DOM poly-fill so ImageLoader works in Node */
     const { Image } = await import('@/lib/canvas')
