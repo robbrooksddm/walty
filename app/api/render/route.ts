@@ -83,6 +83,8 @@ export async function POST (req: NextRequest) {
             .replace(/#define texture2DGradEXT textureGrad\n/, '')
             .replace(/#define texture2DProjGradEXT textureProjGrad\n/, '')
             .replace(/#define textureCubeGradEXT textureGrad\n/, '')
+            .replace(/#define attribute in\n/, '')
+            .replace(/#define varying (?:in|out)\n/, '')
             .replace(/^in /gm, 'attribute ')
             .replace(/^out /gm, 'varying ')
             .replace(/sampler3D/g, 'sampler2D')
