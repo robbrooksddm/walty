@@ -84,8 +84,9 @@ export async function POST (req: NextRequest) {
           window.__png = renderer.domElement.toDataURL('image/png')
         })()
       </script>`
-    await page.setContent(html, { waitUntil: 'networkidle0' })
-    const dataUrl = await page.evaluate('window.__png')
+  await page.setContent(html, { waitUntil: 'networkidle0' })
+  await page.waitForFunction('window.__png')
+  const dataUrl = await page.evaluate('window.__png')
     await browser.close()
 
     /* ─── 5 · respond ─── */
