@@ -58,8 +58,13 @@ export async function POST (req: NextRequest) {
         glContext.getExtension = (name: string) =>
           name === 'OES_standard_derivatives' ? {} : origGetExtension(name)
 
+        /* 3-A.4 · Provide empty texImage3D for WebGL1 contexts */
+        if (typeof glContext.texImage3D !== 'function') {
+          glContext.texImage3D = () => {}
+        }
+
     /* 3-B · Browser-DOM poly-fill so ImageLoader works in Node */
-    const { Image } = await import('canvas')
+    const { Image } = await import('@/lib/canvas')
     ;(globalThis as any).Image = Image
 
         // -- add event-listener stubs (cast to any to silence TS)
@@ -118,6 +123,38 @@ export async function POST (req: NextRequest) {
       loader.parse(modelBuffer as ArrayBuffer, '', res, rej)
     )
     scene.add(gltf.scene)
+
+    /* downgrade shaders to GLSL1 so headless-gl can compile */
+    const downgrade = (mat: any) => {
+      mat.glslVersion = THREE.GLSL1
+      mat.onBeforeCompile = (shader: any) => {
+        shader.vertexShader = shader.vertexShader
+          .replace(/^#version 300 es\n/, '')
+          .replace(/#define attribute in\n/, '')
+          .replace(/#define varying out\n/, '')
+          .replace(/#define texture2D texture\n/, '')
+        shader.fragmentShader = shader.fragmentShader
+          .replace(/^#version 300 es\n/, '')
+          .replace(/#define varying in\n/, '')
+          .replace(/layout\(location = 0\) out highp vec4 pc_fragColor;\n/, '')
+          .replace(/#define gl_FragColor pc_fragColor\n/, '')
+          .replace(/#define gl_FragDepthEXT gl_FragDepth\n/, '')
+          .replace(/#define texture2D texture\n/, '')
+          .replace(/#define textureCube texture\n/, '')
+          .replace(/#define texture2DProj textureProj\n/, '')
+          .replace(/#define texture2DLodEXT textureLod\n/, '')
+          .replace(/#define texture2DProjLodEXT textureProjLod\n/, '')
+          .replace(/#define textureCubeLodEXT textureLod\n/, '')
+          .replace(/#define texture2DGradEXT textureGrad\n/, '')
+          .replace(/#define texture2DProjGradEXT textureProjGrad\n/, '')
+          .replace(/#define textureCubeGradEXT textureGrad\n/, '')
+      }
+    }
+    gltf.scene.traverse(obj => {
+      const m = (obj as any).material
+      if (Array.isArray(m)) m.forEach(downgrade)
+      else if (m) downgrade(m)
+    })
 
     /* apply PNG textures */
     const texLoader = new TextureLoader()
