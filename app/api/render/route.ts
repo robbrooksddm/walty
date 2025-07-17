@@ -14,7 +14,7 @@ export async function POST (req: NextRequest) {
     /* ───── 1 · Runtime-load libs ───── */
     const THREE          = await import('three')
     const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader')
-    let WebGL1Renderer: any; try { ({ WebGL1Renderer } = eval('require')('three/examples/jsm/renderers/WebGL1Renderer.js')); } catch { ({ WebGLRenderer: WebGL1Renderer } = await import('three')); }
+    const { WebGL1Renderer } = await import('three/examples/jsm/renderers/WebGL1Renderer.js')
     const { default: gl } = await import(/* webpackIgnore: true */ 'gl')
 
     const {
