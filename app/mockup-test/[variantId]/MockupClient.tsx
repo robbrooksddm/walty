@@ -21,8 +21,12 @@ export default function MockupClient({ variantId, areaId }: Props) {
         body: JSON.stringify({ variantId, designPNGs: { [areaId]: base64 } })
       })
       const data = await res.json()
-      if (data?.urls && data.urls[areaId]) {
-        setPreview(data.urls[areaId])
+      // The render API returns an object keyed by camera name
+      // (e.g. { hero: 'data:image/png;base64,...' }). Grab the first
+      // available URL rather than expecting a specific key.
+      const url = data?.urls && Object.values<string>(data.urls)[0]
+      if (url) {
+        setPreview(url)
       }
     }
     reader.readAsDataURL(file)
