@@ -68,7 +68,7 @@ export async function POST (req: NextRequest) {
         const origShaderSource = glContext.shaderSource.bind(glContext)
         const downgrade = (src: string) => {
           const trimmed = src.trimStart()
-          if (!trimmed.startsWith('#version 300 es')) return src
+          if (!trimmed.startsWith('#version 300 es')) return trimmed
           return trimmed
             .replace(/#version 300 es/g, '#version 100')
             .replace(/^#define attribute in\n/m, '')
@@ -101,8 +101,12 @@ export async function POST (req: NextRequest) {
             .replace(/isamplerCube/g, 'samplerCube')
             .replace(/usamplerCube/g, 'samplerCube')
         }
+        const ensureVersion = (src: string) => {
+          const trimmed = src.trimStart()
+          return trimmed.startsWith('#version') ? trimmed : `#version 100\n${trimmed}`
+        }
         glContext.shaderSource = (shader: any, src: string) =>
-          origShaderSource(shader, downgrade(src))
+          origShaderSource(shader, ensureVersion(downgrade(src)))
 
     /* 3-B · Browser-DOM poly-fill so ImageLoader works in Node */
     const { Image } = await import('@/lib/canvas')
