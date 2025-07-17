@@ -14,7 +14,7 @@ export async function POST (req: NextRequest) {
     /* ───── 1 · Runtime-load libs ───── */
     const THREE          = await import('three')
     const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader')
-    let WebGL1Renderer: any; try { ({ WebGL1Renderer } = eval('require')('three/examples/jsm/renderers/WebGL1Renderer.js')); } catch { ({ WebGLRenderer: WebGL1Renderer } = await import('three')); }
+    const { default: WebGL1Renderer } = await import('@/lib/WebGL1Renderer')
     const { default: gl } = await import(/* webpackIgnore: true */ 'gl')
 
     const {
@@ -64,6 +64,21 @@ export async function POST (req: NextRequest) {
           glContext.texImage3D = () => {}
         }
 
+        /* 3-A.5 · Strip WebGL2-only directives from shaders */
+        const origShaderSource = glContext.shaderSource.bind(glContext)
+        glContext.shaderSource = (shader: any, src: string) => {
+          src = src
+            .replace(/^#version 300 es\n/, '')
+            .replace(/^precision highp .*sampler.*\n/gm, '')
+            .replace(/^#define attribute in\n/gm, '')
+            .replace(/^#define varying (?:in|out)\n/gm, '')
+            .replace(/^layout\(location = 0\) out highp vec4 pc_fragColor;\n/gm, '')
+            .replace(/^#define gl_FragColor pc_fragColor\n/gm, '')
+            .replace(/^#define gl_FragDepthEXT gl_FragDepth\n/gm, '')
+            .replace(/^#define texture\w+ .*\n/gm, '')
+          origShaderSource(shader, src)
+        }
+
     /* 3-B · Browser-DOM poly-fill so ImageLoader works in Node */
     const { Image } = await import('@/lib/canvas')
     ;(globalThis as any).Image = Image
@@ -87,6 +102,11 @@ export async function POST (req: NextRequest) {
       canvas,
       context: glContext as unknown as WebGLRenderingContext,
     })
+    // WebGLCapabilities in three 0.178 always marks the context as WebGL2.
+    // This breaks headless-gl which only implements WebGL1. Force the
+    // renderer to treat the context as WebGL1 so shaders are generated with
+    // `#version 100` and avoid unsupported features like `sampler3D`.
+    ;(renderer as any).capabilities.isWebGL2 = false
     renderer.setSize(width, height)
 
     /* ───── 4 · Scene & model ───── */
