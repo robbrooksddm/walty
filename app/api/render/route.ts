@@ -98,6 +98,15 @@ export async function POST (req: NextRequest) {
       params.glslVersion = THREE.GLSL1
       return params
     }
+    const origShader = (THREE as any).WebGLShader
+    ;(THREE as any).WebGLShader = (gl: any, type: any, src: string) =>
+      origShader(gl, type,
+        src
+          .replace(/^#version 300 es\n/, '#version 100\n')
+          .replace(/^precision highp sampler3D;\n?/gm, '')
+          .replace(/^precision highp isampler3D;\n?/gm, '')
+          .replace(/^precision highp usampler3D;\n?/gm, '')
+      )
     renderer.setSize(width, height)
 
     /* ───── 4 · Scene & model ───── */
