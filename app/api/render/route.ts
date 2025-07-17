@@ -14,7 +14,7 @@ export async function POST (req: NextRequest) {
     /* ───── 1 · Runtime-load libs ───── */
     const THREE          = await import('three')
     const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader')
-    let WebGL1Renderer: any; try { ({ WebGL1Renderer } = eval('require')('three/examples/jsm/renderers/WebGL1Renderer.js')); } catch { ({ WebGLRenderer: WebGL1Renderer } = await import('three')); }
+    const { WebGLRenderer } = await import('three')
     const { default: gl } = await import(/* webpackIgnore: true */ 'gl')
 
     const {
@@ -39,15 +39,7 @@ export async function POST (req: NextRequest) {
     const canvas    = createCanvas(width, height) as any
     const glContext = gl(width, height, { preserveDrawingBuffer: true }) as any
 
-        /* 3-A.1 · Pretend we’re WebGL 1 so Three compiles #version 100 shaders */
-        const origGetParameter = glContext.getParameter.bind(glContext)
-        glContext.getParameter = (p: number) => {
-          if (p === glContext.VERSION)                  return 'WebGL 1.0'
-          if (p === glContext.SHADING_LANGUAGE_VERSION) return 'WebGL GLSL ES 1.0'
-          return origGetParameter(p)
-        }
-    
-        /* 3-A.2 · Stub VAO calls that headless-gl 8 doesn’t expose */
+        /* 3-A.1 · Stub VAO calls that headless-gl 8 doesn’t expose */
         if (typeof glContext.createVertexArray !== 'function') {
           glContext.createVertexArray = () => null
           glContext.bindVertexArray   = () => {}
@@ -82,7 +74,7 @@ export async function POST (req: NextRequest) {
       createElementNS: () => new Image(),
     }
 
-    const renderer = new WebGL1Renderer({
+    const renderer = new WebGLRenderer({
       antialias: false,
       canvas,
       context: glContext as unknown as WebGLRenderingContext,
