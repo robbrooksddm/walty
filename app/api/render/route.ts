@@ -14,7 +14,7 @@ export async function POST (req: NextRequest) {
     /* ───── 1 · Runtime-load libs ───── */
     const THREE          = await import('three')
     const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader')
-    let WebGL1Renderer: any; try { ({ WebGL1Renderer } = eval('require')('three/examples/jsm/renderers/WebGL1Renderer.js')); } catch { ({ WebGLRenderer: WebGL1Renderer } = await import('three')); }
+    const { default: WebGL1Renderer } = await import('@/lib/WebGL1Renderer')
     const { default: gl } = await import(/* webpackIgnore: true */ 'gl')
 
     const {
@@ -87,6 +87,17 @@ export async function POST (req: NextRequest) {
       canvas,
       context: glContext as unknown as WebGLRenderingContext,
     })
+    // WebGLCapabilities in three 0.178 always marks the context as WebGL2.
+    // This breaks headless-gl which only implements WebGL1. Force the
+    // renderer to treat the context as WebGL1 so shaders are generated with
+    // `#version 100` and avoid unsupported features like `sampler3D`.
+    ;(renderer as any).capabilities.isWebGL2 = false
+    const origGetParams = (renderer as any).programCache.getParameters
+    ;(renderer as any).programCache.getParameters = (...args: any[]) => {
+      const params = origGetParams.apply((renderer as any).programCache, args)
+      params.glslVersion = THREE.GLSL1
+      return params
+    }
     renderer.setSize(width, height)
 
     /* ───── 4 · Scene & model ───── */
