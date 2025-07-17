@@ -14,7 +14,7 @@ export async function POST (req: NextRequest) {
     /* ───── 1 · Runtime-load libs ───── */
     const THREE          = await import('three')
     const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader')
-    let WebGL1Renderer: any; try { ({ WebGL1Renderer } = eval('require')('three/examples/jsm/renderers/WebGL1Renderer.js')); } catch { ({ WebGLRenderer: WebGL1Renderer } = await import('three')); }
+    const { default: WebGL1Renderer } = await import('@/lib/WebGL1Renderer')
     const { default: gl } = await import(/* webpackIgnore: true */ 'gl')
 
     const {
@@ -64,6 +64,43 @@ export async function POST (req: NextRequest) {
           glContext.texImage3D = () => {}
         }
 
+        /* 3-A.5 · Downgrade GLSL3 shaders to GLSL1 so headless-gl can compile */
+        const origShaderSource = glContext.shaderSource.bind(glContext)
+        const downgrade = (src: string) => {
+          const trimmed = src.trimStart()
+          if (!trimmed.startsWith('#version 300 es')) return src
+          return trimmed
+            .replace(/#version 300 es/g, '#version 100')
+            .replace(/layout\(location = \d+\) out highp vec4 pc_fragColor;\n/, '')
+            .replace(/#define gl_FragColor pc_fragColor\n/, '')
+            .replace(/#define gl_FragDepthEXT gl_FragDepth\n/, '')
+            .replace(/#define texture2D texture\n/, '')
+            .replace(/#define textureCube texture\n/, '')
+            .replace(/#define texture2DProj textureProj\n/, '')
+            .replace(/#define texture2DLodEXT textureLod\n/, '')
+            .replace(/#define texture2DProjLodEXT textureProjLod\n/, '')
+            .replace(/#define textureCubeLodEXT textureLod\n/, '')
+            .replace(/#define texture2DGradEXT textureGrad\n/, '')
+            .replace(/#define texture2DProjGradEXT textureProjGrad\n/, '')
+            .replace(/#define textureCubeGradEXT textureGrad\n/, '')
+            .replace(/^in /gm, 'attribute ')
+            .replace(/^out /gm, 'varying ')
+            .replace(/sampler3D/g, 'sampler2D')
+            .replace(/sampler2DArray/g, 'sampler2D')
+            .replace(/sampler2DShadow/g, 'sampler2D')
+            .replace(/samplerCubeShadow/g, 'samplerCube')
+            .replace(/isampler2D/g, 'sampler2D')
+            .replace(/usampler2D/g, 'sampler2D')
+            .replace(/isampler2DArray/g, 'sampler2D')
+            .replace(/usampler2DArray/g, 'sampler2D')
+            .replace(/isampler3D/g, 'sampler2D')
+            .replace(/usampler3D/g, 'sampler2D')
+            .replace(/isamplerCube/g, 'samplerCube')
+            .replace(/usamplerCube/g, 'samplerCube')
+        }
+        glContext.shaderSource = (shader: any, src: string) =>
+          origShaderSource(shader, downgrade(src))
+
     /* 3-B · Browser-DOM poly-fill so ImageLoader works in Node */
     const { Image } = await import('@/lib/canvas')
     ;(globalThis as any).Image = Image
@@ -87,6 +124,15 @@ export async function POST (req: NextRequest) {
       canvas,
       context: glContext as unknown as WebGLRenderingContext,
     })
+    // WebGLCapabilities in three 0.178 always marks the context as WebGL2.
+    // This breaks headless-gl which only implements WebGL1. Force the
+    // renderer to treat the context as WebGL1 so shaders are generated with
+    // `#version 100` and avoid unsupported features like `sampler3D`.
+    ;(renderer as any).capabilities.isWebGL2 = false
+    // three.js 0.178 does not expose the internal program cache anymore, so we
+    // cannot patch `getParameters` to set `glslVersion`. The shader downgrade
+    // hook above ensures the generated GLSL3 shaders are converted to GLSL1
+    // before compilation, so this extra step is unnecessary.
     renderer.setSize(width, height)
 
     /* ───── 4 · Scene & model ───── */
