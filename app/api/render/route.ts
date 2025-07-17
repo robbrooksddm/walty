@@ -1,213 +1,97 @@
 // app/api/render/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { sanity, sanityPreview } from '@/sanity/lib/client'
-import { createCanvas } from '@/lib/canvas'
+import { sanity, sanityPreview }     from '@/sanity/lib/client'
+import puppeteer                     from 'puppeteer'
 
-// ⬇︎ types-only import so we can cast meshes safely
-import type { Mesh as ThreeMesh } from 'three'
-
-export const runtime  = 'nodejs'
-export const dynamic  = 'force-dynamic'
+export const runtime = 'nodejs'          // keep in the Node runtime
+export const dynamic = 'force-dynamic'   // don’t statically optimize
 
 export async function POST (req: NextRequest) {
   try {
-    /* ───── 1 · Runtime-load libs ───── */
-    const THREE          = await import('three')
-    const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader')
-    const { default: WebGL1Renderer } = await import('@/lib/WebGL1Renderer')
-    const { default: gl } = await import(/* webpackIgnore: true */ 'gl')
-
-    const {
-      Scene, AmbientLight, TextureLoader,
-      PerspectiveCamera, Vector3,            // Mesh removed
-    } = THREE
-
-    /* ───── 2 · Validate body ───── */
+    /* ─── 1 · validate body ─── */
     const { variantId, designPNGs } = await req.json()
-    if (!variantId || typeof variantId !== 'string' ||
-        !designPNGs || typeof designPNGs !== 'object') {
+    if (typeof variantId !== 'string' || typeof designPNGs !== 'object')
       return NextResponse.json({ error: 'bad input' }, { status: 400 })
-    }
-    const designEntries = Object.entries(designPNGs)
-      .filter(([, v]) => typeof v === 'string') as [string, string][]
-    if (!designEntries.length) {
-      return NextResponse.json({ error: 'no design data' }, { status: 400 })
-    }
 
-    /* ───── 3 · Canvas + GL context ───── */
-    const width = 1024, height = 1024
-    const canvas    = createCanvas(width, height) as any
-    const glContext = gl(width, height, { preserveDrawingBuffer: true }) as any
-
-        /* 3-A.1 · Pretend we’re WebGL 1 so Three compiles #version 100 shaders */
-        const origGetParameter = glContext.getParameter.bind(glContext)
-        glContext.getParameter = (p: number) => {
-          if (p === glContext.VERSION)                  return 'WebGL 1.0'
-          if (p === glContext.SHADING_LANGUAGE_VERSION) return 'WebGL GLSL ES 1.0'
-          return origGetParameter(p)
-        }
-    
-        /* 3-A.2 · Stub VAO calls that headless-gl 8 doesn’t expose */
-        if (typeof glContext.createVertexArray !== 'function') {
-          glContext.createVertexArray = () => null
-          glContext.bindVertexArray   = () => {}
-          glContext.deleteVertexArray = () => {}
-        }
-    
-        /* 3-A.3 · Fake OES_standard_derivatives so dFdx/dFdy compile */
-        const origGetExtension = glContext.getExtension.bind(glContext)
-        glContext.getExtension = (name: string) =>
-          name === 'OES_standard_derivatives' ? {} : origGetExtension(name)
-
-        /* 3-A.4 · Provide empty texImage3D for WebGL1 contexts */
-        if (typeof glContext.texImage3D !== 'function') {
-          glContext.texImage3D = () => {}
-        }
-
-        /* 3-A.5 · Downgrade GLSL3 shaders to GLSL1 so headless-gl can compile */
-        const origShaderSource = glContext.shaderSource.bind(glContext)
-        const downgrade = (src: string) => {
-          const trimmed = src.trimStart()
-          if (!trimmed.startsWith('#version 300 es')) return src
-          return trimmed
-            .replace(/#version 300 es/g, '#version 100')
-            .replace(/^#define attribute in\n/m, '')
-            .replace(/^#define varying out\n/m, '')
-            .replace(/#define gl_FragColor pc_fragColor\n/, '')
-            .replace(/#define gl_FragDepthEXT gl_FragDepth\n/, '')
-            .replace(/layout\(location = \d+\) out highp vec4 pc_fragColor;\n/, '')
-            .replace(/#define texture2D texture\n/, '')
-            .replace(/#define textureCube texture\n/, '')
-            .replace(/#define texture2DProj textureProj\n/, '')
-            .replace(/#define texture2DLodEXT textureLod\n/, '')
-            .replace(/#define texture2DProjLodEXT textureProjLod\n/, '')
-            .replace(/#define textureCubeLodEXT textureLod\n/, '')
-            .replace(/#define texture2DGradEXT textureGrad\n/, '')
-            .replace(/#define texture2DProjGradEXT textureProjGrad\n/, '')
-            .replace(/#define textureCubeGradEXT textureGrad\n/, '')
-            .replace(/layout\(location\s*=\s*\d+\)\s*/g, '')
-            .replace(/^[ \t]*in\b/gm, 'attribute')
-            .replace(/^[ \t]*out\b/gm, 'varying')
-            .replace(/sampler3D/g, 'sampler2D')
-            .replace(/sampler2DArray/g, 'sampler2D')
-            .replace(/sampler2DShadow/g, 'sampler2D')
-            .replace(/samplerCubeShadow/g, 'samplerCube')
-            .replace(/isampler2D/g, 'sampler2D')
-            .replace(/usampler2D/g, 'sampler2D')
-            .replace(/isampler2DArray/g, 'sampler2D')
-            .replace(/usampler2DArray/g, 'sampler2D')
-            .replace(/isampler3D/g, 'sampler2D')
-            .replace(/usampler3D/g, 'sampler2D')
-            .replace(/isamplerCube/g, 'samplerCube')
-            .replace(/usamplerCube/g, 'samplerCube')
-        }
-        glContext.shaderSource = (shader: any, src: string) =>
-          origShaderSource(shader, downgrade(src))
-
-    /* 3-B · Browser-DOM poly-fill so ImageLoader works in Node */
-    const { Image } = await import('@/lib/canvas')
-    ;(globalThis as any).Image = Image
-
-        // -- add event-listener stubs (cast to any to silence TS)
-        const imgProto = Image.prototype as any
-        if (!imgProto.addEventListener) {
-          imgProto.addEventListener    = () => {}
-          imgProto.removeEventListener = () => {}
-        }
-
-
-
-    ;(globalThis as any).document = {
-      createElement:   () => new Image(),
-      createElementNS: () => new Image(),
-    }
-
-    const renderer = new WebGL1Renderer({
-      antialias: false,
-      canvas,
-      context: glContext as unknown as WebGLRenderingContext,
-    })
-    // WebGLCapabilities in three 0.178 always marks the context as WebGL2.
-    // This breaks headless-gl which only implements WebGL1. Force the
-    // renderer to treat the context as WebGL1 so shaders are generated with
-    // `#version 100` and avoid unsupported features like `sampler3D`.
-    ;(renderer as any).capabilities.isWebGL2 = false
-    // three.js 0.178 does not expose the internal program cache anymore, so we
-    // cannot patch `getParameters` to set `glslVersion`. The shader downgrade
-    // hook above ensures the generated GLSL3 shaders are converted to GLSL1
-    // before compilation, so this extra step is unnecessary.
-    renderer.setSize(width, height)
-
-    /* ───── 4 · Scene & model ───── */
-    const scene = new Scene()
-    scene.add(new AmbientLight(0xffffff))
-
-    const loader = new GLTFLoader()
-
-    const query = `*[_type=="visualVariant"
-      && (variant._ref==$id || variant->slug.current==$id || _id==$id)][0]{
-        "modelUrl": mockupSettings.model.asset->url,
-        "areas":    mockupSettings.printAreas[]{id, mesh},
-        "camera":   mockupSettings.cameras[0]
+    /* ─── 2 · fetch visualVariant from Sanity ─── */
+    const query = `*[_type=="visualVariant" &&
+      (_id==$id || variant->slug.current==$id)][0]{
+        "model":  mockupSettings.model.asset->url,
+        "areas":  mockupSettings.printAreas[]{ id, mesh },
+        "camera": mockupSettings.cameras[0]
       }`
-    const params  = { id: variantId }
     const client  = process.env.SANITY_READ_TOKEN ? sanityPreview : sanity
-    const variant = await client.fetch<{
-      modelUrl?: string
-      areas?: { id: string; mesh?: string }[]
-      camera?: {
-        name?: string; posX?: number; posY?: number; posZ?: number
-        targetX?: number; targetY?: number; targetZ?: number; fov?: number
-      }
-    }>(query, params)
+    const variant = await client.fetch(query, { id: variantId })
 
-    if (!variant?.modelUrl) {
+    if (!variant?.model)
       return NextResponse.json({ error: 'variant-not-found' }, { status: 404 })
-    }
 
-    const modelResp = await fetch(variant.modelUrl)
-    if (!modelResp.ok) {
-      return NextResponse.json({ error: 'model-download' }, { status: 500 })
-    }
-    const modelBuffer = await modelResp.arrayBuffer()
-    const gltf = await new Promise<any>((res, rej) =>
-      loader.parse(modelBuffer as ArrayBuffer, '', res, rej)
-    )
-    scene.add(gltf.scene)
+    /* pick first design PNG & mesh name */
+    const areaId  = Object.keys(designPNGs)[0]
+    const pngData = designPNGs[areaId]
+    const meshName =
+      variant.areas?.find(a => a.id === areaId)?.mesh || `PrintArea-${areaId}`
 
+    /* ─── 3 · launch headless Chrome ─── */
+    const browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox'],               // <-- works on Lambda / Vercel
+    })
+    const page = await browser.newPage()
+    await page.setViewport({ width: 1024, height: 1024 })
 
-    /* apply PNG textures */
-    const texLoader = new TextureLoader()
-    for (const [areaId, dataUrl] of designEntries) {
-      const pngData  = dataUrl.replace(/^data:image\/\w+;base64,/, '')
-      const texture  = texLoader.load(`data:image/png;base64,${pngData}`)
-      const meshName =
-        variant.areas?.find(a => a.id === areaId)?.mesh || `PrintArea-${areaId}`
-      const mesh = gltf.scene.getObjectByName(meshName) as ThreeMesh
-      if (mesh?.material && (mesh.material as any).map) {
-        (mesh.material as any).map = texture
-        ;(mesh.material as any).needsUpdate = true
-      }
-    }
+    /* ─── 4 · inline HTML with Three.js + render script ─── */
+    const html = /* html */ `
+      <script src="https://unpkg.com/three@0.178.0/build/three.min.js"></script>
+      <script src="https://unpkg.com/three@0.178.0/examples/js/loaders/GLTFLoader.js"></script>
+      <script>
+        (async () => {
+          /* scene & camera */
+          const scene = new THREE.Scene()
+          scene.add(new THREE.AmbientLight(0xffffff, 1))
+          const cam = new THREE.PerspectiveCamera(
+            ${variant.camera?.fov ?? 35}, 1, 0.1, 100
+          )
+          cam.position.set(
+            ${variant.camera?.posX ?? 2},
+            ${variant.camera?.posY ?? 2},
+            ${variant.camera?.posZ ?? 2}
+          )
+          cam.lookAt(
+            ${variant.camera?.targetX ?? 0},
+            ${variant.camera?.targetY ?? 0},
+            ${variant.camera?.targetZ ?? 0}
+          )
 
-    /* ───── 5 · Camera & render ───── */
-    const cam = variant.camera
-    const camera = new PerspectiveCamera(
-      cam?.fov ?? 35, width / height, 0.1, 100
-    )
-    camera.position.set(cam?.posX ?? 2, cam?.posY ?? 2, cam?.posZ ?? 2)
-    camera.lookAt(new Vector3(
-      cam?.targetX ?? 0, cam?.targetY ?? 0, cam?.targetZ ?? 0
-    ))
+          /* renderer */
+          const renderer = new THREE.WebGLRenderer({ alpha: true })
+          renderer.setSize(1024, 1024)
+          document.body.appendChild(renderer.domElement)
 
-    renderer.render(scene, camera)
+          /* load GLB */
+          const gltf = await new THREE.GLTFLoader().loadAsync('${variant.model}')
+          scene.add(gltf.scene)
 
-    /* ───── 6 · Encode & return ───── */
-    const buffer = canvas.toBuffer('image/png')
-    const urls   = {
-      [cam?.name ?? 'default']: `data:image/png;base64,${buffer.toString('base64')}`,
-    }
-    return NextResponse.json({ urls })
+          /* swap customer texture */
+          const tex = new THREE.TextureLoader().load('${pngData}')
+          const mesh = gltf.scene.getObjectByName('${meshName}')
+          if (mesh && mesh.material) {
+            mesh.material.map = tex
+            mesh.material.needsUpdate = true
+          }
+
+          renderer.render(scene, cam)
+          window.__png = renderer.domElement.toDataURL('image/png')
+        })()
+      </script>`
+    await page.setContent(html, { waitUntil: 'networkidle0' })
+    const dataUrl = await page.evaluate('window.__png')
+    await browser.close()
+
+    /* ─── 5 · respond ─── */
+    return NextResponse.json({
+      urls: { [variant.camera?.name || 'hero']: dataUrl }
+    })
   } catch (err) {
     console.error('[render]', err)
     return NextResponse.json({ error: 'server-error' }, { status: 500 })
