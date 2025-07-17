@@ -16,6 +16,20 @@ export async function POST (req: NextRequest) {
     const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader')
     const { default: gl } = await import(/* webpackIgnore: true */ 'gl')
 
+        // -- force GLSL1 shaders when using headless-gl
+        const OrigProgram = (THREE as any).WebGLProgram
+        ;(THREE as any).WebGLProgram = function (...args: any[]) {
+          const renderer = args[0]
+          const params   = { ...(args[2] ?? {}) }
+          if (renderer.getContext().getParameter(renderer.getContext().VERSION).startsWith('WebGL 1')) {
+            params.isRawShaderMaterial = true
+            params.glslVersion = (THREE as any).GLSL1
+            args[2] = params
+          }
+          return Reflect.construct(OrigProgram, args)
+        }
+        ;(THREE as any).WebGLProgram.prototype = OrigProgram.prototype
+
     const {
       Scene, AmbientLight, TextureLoader,
       PerspectiveCamera, Vector3, WebGLRenderer,            // Mesh removed
@@ -55,11 +69,25 @@ export async function POST (req: NextRequest) {
     
         /* 3-A.3 · Fake OES_standard_derivatives so dFdx/dFdy compile */
         const origGetExtension = glContext.getExtension.bind(glContext)
-        glContext.getExtension = (name: string) =>
-          name === 'OES_standard_derivatives' ? {} : origGetExtension(name)
+        glContext.getExtension = (name: string) => {
+          const ext = origGetExtension(name)
+          if (ext) return ext
+          if (name === 'OES_standard_derivatives') {
+            const fake = { FRAGMENT_SHADER_DERIVATIVE_HINT_OES: 0x8b8b }
+            ;(glContext as any)._extensions ??= {}
+            ;(glContext as any)._extensions.oes_standard_derivatives = fake
+            return fake
+          }
+          return null
+        }
+
+        /* 3-A.4 · Provide empty texImage3D for WebGL1 contexts */
+        if (typeof glContext.texImage3D !== 'function') {
+          glContext.texImage3D = () => {}
+        }
 
     /* 3-B · Browser-DOM poly-fill so ImageLoader works in Node */
-    const { Image } = await import('canvas')
+    const { Image } = await import('@/lib/canvas')
     ;(globalThis as any).Image = Image
 
         // -- add event-listener stubs (cast to any to silence TS)
