@@ -2,8 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sanity, sanityPreview }     from '@/sanity/lib/client'
 import puppeteer                     from 'puppeteer'
+import fs                            from 'fs/promises'
 import path                          from 'path'
-import { pathToFileURL }             from 'url'
 
 export const runtime = 'nodejs'          // keep in the Node runtime
 export const dynamic = 'force-dynamic'   // don’t statically optimize
@@ -59,19 +59,31 @@ export async function POST (req: NextRequest) {
       'node_modules/three/examples/jsm/loaders/GLTFLoader.js'
     )
 
-    const threeUrl = pathToFileURL(threePath).href
-    const gltfUrl  = pathToFileURL(gltfPath).href
+    const [threeCode, gltfCode] = await Promise.all([
+      fs.readFile(threePath, 'utf8'),
+      fs.readFile(gltfPath, 'utf8')
+    ])
+
+    const threeUrl =
+      'data:text/javascript;base64,' + Buffer.from(threeCode).toString('base64')
+    const gltfUrl =
+      'data:text/javascript;base64,' + Buffer.from(gltfCode).toString('base64')
 
     await page.addScriptTag({
       type: 'importmap',
-      content: JSON.stringify({ imports: { three: threeUrl } })
+      content: JSON.stringify({
+        imports: {
+          three: threeUrl,
+          'three/examples/jsm/loaders/GLTFLoader.js': gltfUrl
+        }
+      })
     })
 
     await page.addScriptTag({
       type: 'module',
       content: `
         import * as THREE from 'three';
-        import { GLTFLoader } from '${gltfUrl}';
+        import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
         (async () => {
           const scene = new THREE.Scene();
           scene.add(new THREE.AmbientLight(0xffffff, 1));
@@ -93,7 +105,7 @@ export async function POST (req: NextRequest) {
           renderer.setSize(1024, 1024);
           document.body.appendChild(renderer.domElement);
 
-          const gltfLoader = new THREE.GLTFLoader();
+          const gltfLoader = new GLTFLoader();
           gltfLoader.setCrossOrigin('anonymous');
           const gltf = await gltfLoader.loadAsync('${variant.model}');
           scene.add(gltf.scene);
