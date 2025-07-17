@@ -3,6 +3,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sanity, sanityPreview } from '@/sanity/lib/client'
 import { createCanvas } from '@/lib/canvas'
 
+function downgradeMaterial (material: any, THREE: any) {
+  material.glslVersion = THREE.GLSL1
+  material.onBeforeCompile = (shader: any) => {
+    const fix = (src: string) => src
+      .replace(/^#version 300 es\n?/m, '')
+      .replace(/^#define attribute in\n?/m, '')
+      .replace(/^#define varying out\n?/m, '')
+      .replace(/^#define varying in\n?/m, '')
+      .replace(/^#define texture2D texture\n?/m, '')
+      .replace(/^precision highp sampler3D;\n?/m, '')
+      .replace(/^precision highp usampler3D;\n?/m, '')
+      .replace(/^precision highp isampler3D;\n?/m, '')
+    shader.vertexShader   = fix(shader.vertexShader)
+    shader.fragmentShader = fix(shader.fragmentShader)
+  }
+}
+
 // ⬇︎ types-only import so we can cast meshes safely
 import type { Mesh as ThreeMesh } from 'three'
 
@@ -140,6 +157,11 @@ export async function POST (req: NextRequest) {
         ;(mesh.material as any).needsUpdate = true
       }
     }
+
+    gltf.scene.traverse(obj => {
+      const mat: any = (obj as any).material
+      if (mat) downgradeMaterial(mat, THREE)
+    })
 
     /* ───── 5 · Camera & render ───── */
     const cam = variant.camera
