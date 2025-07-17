@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sanity, sanityPreview }     from '@/sanity/lib/client'
 import puppeteer                     from 'puppeteer'
+import path                          from 'path'
 
 export const runtime = 'nodejs'          // keep in the Node runtime
 export const dynamic = 'force-dynamic'   // don’t statically optimize
@@ -40,51 +41,54 @@ export async function POST (req: NextRequest) {
     const page = await browser.newPage()
     await page.setViewport({ width: 1024, height: 1024 })
 
-    /* ─── 4 · inline HTML with Three.js + render script ─── */
-    const html = /* html */ `
-      <script src="https://unpkg.com/three@0.178.0/build/three.min.js"></script>
-      <script src="https://unpkg.com/three@0.178.0/examples/js/loaders/GLTFLoader.js"></script>
-      <script>
-        (async () => {
-          /* scene & camera */
-          const scene = new THREE.Scene()
-          scene.add(new THREE.AmbientLight(0xffffff, 1))
-          const cam = new THREE.PerspectiveCamera(
-            ${variant.camera?.fov ?? 35}, 1, 0.1, 100
-          )
-          cam.position.set(
-            ${variant.camera?.posX ?? 2},
-            ${variant.camera?.posY ?? 2},
-            ${variant.camera?.posZ ?? 2}
-          )
-          cam.lookAt(
-            ${variant.camera?.targetX ?? 0},
-            ${variant.camera?.targetY ?? 0},
-            ${variant.camera?.targetZ ?? 0}
-          )
+    /* ─── 4 · load Three.js locally & render ─── */
+    const threeRoot = path.join(path.dirname(require.resolve('three')), '..')
 
-          /* renderer */
-          const renderer = new THREE.WebGLRenderer({ alpha: true })
-          renderer.setSize(1024, 1024)
-          document.body.appendChild(renderer.domElement)
+    page.on('console', msg => console.log('[render page]', msg.text()))
+    page.on('pageerror', err => console.error('[render page]', err))
 
-          /* load GLB */
-          const gltf = await new THREE.GLTFLoader().loadAsync('${variant.model}')
-          scene.add(gltf.scene)
+    await page.setContent('<html><body></body></html>', { waitUntil: 'domcontentloaded' })
+    await page.addScriptTag({ path: path.join(threeRoot, 'build/three.min.js') })
+    await page.addScriptTag({ path: path.join(threeRoot, 'examples/js/loaders/GLTFLoader.js') })
 
-          /* swap customer texture */
-          const tex = new THREE.TextureLoader().load('${pngData}')
-          const mesh = gltf.scene.getObjectByName('${meshName}')
-          if (mesh && mesh.material) {
-            mesh.material.map = tex
-            mesh.material.needsUpdate = true
-          }
+    const script = `(
+      async () => {
+        /* scene & camera */
+        const scene = new THREE.Scene();
+        scene.add(new THREE.AmbientLight(0xffffff, 1));
+        const cam = new THREE.PerspectiveCamera(${variant.camera?.fov ?? 35}, 1, 0.1, 100);
+        cam.position.set(${variant.camera?.posX ?? 2}, ${variant.camera?.posY ?? 2}, ${variant.camera?.posZ ?? 2});
+        cam.lookAt(${variant.camera?.targetX ?? 0}, ${variant.camera?.targetY ?? 0}, ${variant.camera?.targetZ ?? 0});
 
-          renderer.render(scene, cam)
-          window.__png = renderer.domElement.toDataURL('image/png')
-        })()
-      </script>`
-    await page.setContent(html, { waitUntil: 'networkidle0' })
+        /* renderer */
+        const renderer = new THREE.WebGLRenderer({ alpha: true });
+        renderer.setSize(1024, 1024);
+        document.body.appendChild(renderer.domElement);
+
+        /* load GLB */
+        const gltfLoader = new THREE.GLTFLoader();
+        gltfLoader.setCrossOrigin('anonymous');
+        const gltf = await gltfLoader.loadAsync('${variant.model}');
+        scene.add(gltf.scene);
+
+        /* swap customer texture */
+        const texLoader = new THREE.TextureLoader();
+        texLoader.setCrossOrigin('anonymous');
+        const tex = await texLoader.loadAsync('${pngData}');
+        const mesh = gltf.scene.getObjectByName('${meshName}');
+        if (mesh && mesh.material) {
+          mesh.material.map = tex;
+          mesh.material.needsUpdate = true;
+        }
+
+        renderer.render(scene, cam);
+        window.__png = renderer.domElement.toDataURL('image/png');
+      }
+    )();`;
+
+    await page.addScriptTag({ content: script })
+
+    await page.waitForFunction('window.__png', { timeout: 120000 })
     const dataUrl = await page.evaluate('window.__png')
     await browser.close()
 
