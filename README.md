@@ -65,6 +65,10 @@ npm install canvas       # builds from source
 npm install @napi-rs/canvas  # prebuilt binaries
 ```
 
+Headless rendering uses `gl` for a WebGL context. Three.js now defaults to
+WebGL2 shaders which fail on this library, so the API forces GLSL1 mode at
+runtime to avoid `Shader Error 1280` messages.
+
 After pulling updates that modify `package.json`, reinstall dependencies with
 `npm install` (or `pnpm install` if you use pnpm) so the canvas package is
 available to the API.
