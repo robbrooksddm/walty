@@ -12,13 +12,14 @@ export const dynamic  = 'force-dynamic'
 export async function POST (req: NextRequest) {
   try {
     /* ───── 1 · Runtime-load libs ───── */
-    const THREE          = await import('three')
-    const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader')
+    const THREE           = await import('three')
+    const { GLTFLoader }  = await import('three/examples/jsm/loaders/GLTFLoader')
+    const { WebGL1Renderer } = await import('three/examples/jsm/renderers/WebGL1Renderer.js')
     const { default: gl } = await import(/* webpackIgnore: true */ 'gl')
 
     const {
       Scene, AmbientLight, TextureLoader,
-      PerspectiveCamera, Vector3, WebGLRenderer,            // Mesh removed
+      PerspectiveCamera, Vector3,
     } = THREE
 
     /* ───── 2 · Validate body ───── */
@@ -38,28 +39,25 @@ export async function POST (req: NextRequest) {
     const canvas    = createCanvas(width, height) as any
     const glContext = gl(width, height, { preserveDrawingBuffer: true }) as any
 
-        /* 3-A.1 · Pretend we’re WebGL 1 so Three compiles #version 100 shaders */
-        const origGetParameter = glContext.getParameter.bind(glContext)
-        glContext.getParameter = (p: number) => {
-          if (p === glContext.VERSION)                  return 'WebGL 1.0'
-          if (p === glContext.SHADING_LANGUAGE_VERSION) return 'WebGL GLSL ES 1.0'
-          return origGetParameter(p)
-        }
-    
-        /* 3-A.2 · Stub VAO calls that headless-gl 8 doesn’t expose */
+        /* 3-A.1 · Stub VAO calls that headless-gl 8 doesn’t expose */
         if (typeof glContext.createVertexArray !== 'function') {
           glContext.createVertexArray = () => null
           glContext.bindVertexArray   = () => {}
           glContext.deleteVertexArray = () => {}
         }
-    
-        /* 3-A.3 · Fake OES_standard_derivatives so dFdx/dFdy compile */
+
+        /* 3-A.2 · Fake OES_standard_derivatives so dFdx/dFdy compile */
         const origGetExtension = glContext.getExtension.bind(glContext)
         glContext.getExtension = (name: string) =>
           name === 'OES_standard_derivatives' ? {} : origGetExtension(name)
 
+        /* 3-A.3 · Provide empty texImage3D for WebGL1 contexts */
+        if (typeof glContext.texImage3D !== 'function') {
+          glContext.texImage3D = () => {}
+        }
+
     /* 3-B · Browser-DOM poly-fill so ImageLoader works in Node */
-    const { Image } = await import('canvas')
+    const { Image } = await import('@/lib/canvas')
     ;(globalThis as any).Image = Image
 
         // -- add event-listener stubs (cast to any to silence TS)
@@ -76,9 +74,9 @@ export async function POST (req: NextRequest) {
       createElementNS: () => new Image(),
     }
 
-    const renderer = new WebGLRenderer({
-      canvas,
+    const renderer = new WebGL1Renderer({
       context: glContext as unknown as WebGLRenderingContext,
+      antialias: false,
     })
     renderer.setSize(width, height)
 
