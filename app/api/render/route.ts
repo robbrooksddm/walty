@@ -59,6 +59,17 @@ export async function POST (req: NextRequest) {
         glContext.getExtension = (name: string) =>
           name === 'OES_standard_derivatives' ? {} : origGetExtension(name)
 
+        // Include the extension in supported list to enable derivative
+        // functions when running under headless-gl
+        const origGetSupported = glContext.getSupportedExtensions.bind(glContext)
+        glContext.getSupportedExtensions = () => {
+          const exts = origGetSupported() || []
+          if (!exts.includes('OES_standard_derivatives')) {
+            exts.push('OES_standard_derivatives')
+          }
+          return exts
+        }
+
         /* 3-A.4 · Provide empty texImage3D for WebGL1 contexts */
         if (typeof glContext.texImage3D !== 'function') {
           glContext.texImage3D = () => {}
