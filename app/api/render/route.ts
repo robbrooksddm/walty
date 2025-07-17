@@ -38,12 +38,10 @@ export async function POST (req: NextRequest) {
     const canvas    = createCanvas(width, height) as any
     const glContext = gl(width, height, { preserveDrawingBuffer: true }) as any
 
-        /* 3-A.1 · Pretend we’re WebGL 1 so Three compiles #version 100 shaders */
-        const origGetParameter = glContext.getParameter.bind(glContext)
-        glContext.getParameter = (p: number) => {
-          if (p === glContext.VERSION)                  return 'WebGL 1.0'
-          if (p === glContext.SHADING_LANGUAGE_VERSION) return 'WebGL GLSL ES 1.0'
-          return origGetParameter(p)
+        /* 3-A.1 · Abort if only WebGL1 is available */
+        if (glContext.getParameter(glContext.VERSION).includes('WebGL 1')) {
+          console.error('[render] WebGL2 required but headless-gl only provides WebGL1')
+          return NextResponse.json({ error: 'webgl2-required' }, { status: 500 })
         }
     
         /* 3-A.2 · Stub VAO calls that headless-gl 8 doesn’t expose */
@@ -58,8 +56,13 @@ export async function POST (req: NextRequest) {
         glContext.getExtension = (name: string) =>
           name === 'OES_standard_derivatives' ? {} : origGetExtension(name)
 
+        /* 3-A.4 · Provide empty texImage3D for WebGL1 contexts */
+        if (typeof glContext.texImage3D !== 'function') {
+          glContext.texImage3D = () => {}
+        }
+
     /* 3-B · Browser-DOM poly-fill so ImageLoader works in Node */
-    const { Image } = await import('canvas')
+    const { Image } = await import('@/lib/canvas')
     ;(globalThis as any).Image = Image
 
         // -- add event-listener stubs (cast to any to silence TS)
