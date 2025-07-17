@@ -117,12 +117,6 @@ export async function POST (req: NextRequest) {
     // renderer to treat the context as WebGL1 so shaders are generated with
     // `#version 100` and avoid unsupported features like `sampler3D`.
     ;(renderer as any).capabilities.isWebGL2 = false
-    const origGetParams = (renderer as any).programCache.getParameters
-    ;(renderer as any).programCache.getParameters = (...args: any[]) => {
-      const params = origGetParams.apply((renderer as any).programCache, args)
-      params.glslVersion = THREE.GLSL1
-      return params
-    }
     renderer.setSize(width, height)
 
     /* ───── 4 · Scene & model ───── */
