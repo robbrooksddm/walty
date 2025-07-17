@@ -12,13 +12,14 @@ export const dynamic  = 'force-dynamic'
 export async function POST (req: NextRequest) {
   try {
     /* ───── 1 · Runtime-load libs ───── */
-    const THREE          = await import('three')
+    const THREE = await import('three')
     const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader')
+    const { default: WebGL1Renderer } = await import('@/lib/webgl1Renderer')
     const { default: gl } = await import(/* webpackIgnore: true */ 'gl')
 
     const {
       Scene, AmbientLight, TextureLoader,
-      PerspectiveCamera, Vector3, WebGLRenderer,            // Mesh removed
+      PerspectiveCamera, Vector3,
     } = THREE
 
     /* ───── 2 · Validate body ───── */
@@ -58,8 +59,13 @@ export async function POST (req: NextRequest) {
         glContext.getExtension = (name: string) =>
           name === 'OES_standard_derivatives' ? {} : origGetExtension(name)
 
+        /* 3-A.4 · Provide empty texImage3D for WebGL1 contexts */
+        if (typeof glContext.texImage3D !== 'function') {
+          glContext.texImage3D = () => {}
+        }
+
     /* 3-B · Browser-DOM poly-fill so ImageLoader works in Node */
-    const { Image } = await import('canvas')
+    const { Image } = await import('@/lib/canvas')
     ;(globalThis as any).Image = Image
 
         // -- add event-listener stubs (cast to any to silence TS)
@@ -76,9 +82,10 @@ export async function POST (req: NextRequest) {
       createElementNS: () => new Image(),
     }
 
-    const renderer = new WebGLRenderer({
+    const renderer = new WebGL1Renderer({
       canvas,
       context: glContext as unknown as WebGLRenderingContext,
+      antialias: false,
     })
     renderer.setSize(width, height)
 
@@ -118,6 +125,7 @@ export async function POST (req: NextRequest) {
       loader.parse(modelBuffer as ArrayBuffer, '', res, rej)
     )
     scene.add(gltf.scene)
+
 
     /* apply PNG textures */
     const texLoader = new TextureLoader()

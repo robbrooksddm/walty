@@ -54,9 +54,10 @@ Products now store a `previewSpec` and page settings. Templates link to these pr
 
 Server-side mockup rendering depends on a Node canvas implementation. The API
 tries to load the native `canvas` module first and falls back to
-`@napi-rs/canvas`. If neither module is available, `/api/render` will return a
-`canvas-not-installed` error. Make sure one of these packages is installed by
-running either:
+`@napi-rs/canvas`. The fallback is resolved dynamically so the project will
+compile even if only one of the packages is installed. If neither module is
+available, `/api/render` will return a `canvas-not-installed` error. Make sure
+one of these packages is installed by running either:
 
 ```bash
 npm install canvas       # builds from source
