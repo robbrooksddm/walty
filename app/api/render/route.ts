@@ -58,6 +58,16 @@ export async function POST (req: NextRequest) {
         const origGetExtension = glContext.getExtension.bind(glContext)
         glContext.getExtension = (name: string) =>
           name === 'OES_standard_derivatives' ? {} : origGetExtension(name)
+        const origGetSupported = glContext.getSupportedExtensions?.bind(glContext)
+        if (origGetSupported) {
+          glContext.getSupportedExtensions = () => {
+            const list = origGetSupported()
+            if (list && !list.includes('OES_standard_derivatives')) {
+              list.push('OES_standard_derivatives')
+            }
+            return list
+          }
+        }
 
         /* 3-A.4 · Provide empty texImage3D for WebGL1 contexts */
         if (typeof glContext.texImage3D !== 'function') {
@@ -69,7 +79,7 @@ export async function POST (req: NextRequest) {
         const downgrade = (src: string) => {
           const trimmed = src.trimStart()
           if (!trimmed.startsWith('#version 300 es')) return src
-          return trimmed
+          const downgraded = trimmed
             .replace(/#version 300 es/g, '#version 100')
             .replace(/^#define attribute in\n/m, '')
             .replace(/^#define varying out\n/m, '')
@@ -100,6 +110,7 @@ export async function POST (req: NextRequest) {
             .replace(/usampler3D/g, 'sampler2D')
             .replace(/isamplerCube/g, 'samplerCube')
             .replace(/usamplerCube/g, 'samplerCube')
+          return downgraded.replace('#version 100', '#version 100\n#extension GL_OES_standard_derivatives : enable')
         }
         glContext.shaderSource = (shader: any, src: string) =>
           origShaderSource(shader, downgrade(src))
