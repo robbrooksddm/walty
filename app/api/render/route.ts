@@ -86,6 +86,9 @@ export async function POST (req: NextRequest) {
             .replace(/^out /gm, 'varying ')
             .replace(/sampler3D/g, 'sampler2D')
             .replace(/sampler2DArray/g, 'sampler2D')
+            .replace(/sampler2DShadow/g, 'sampler2D')
+            .replace(/samplerCubeShadow/g, 'samplerCube')
+            .replace(/sampler2DArrayShadow/g, 'sampler2D')
         }
         glContext.shaderSource = (shader: any, src: string) =>
           origShaderSource(shader, downgrade(src))
