@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sanity, sanityPreview }     from '@/sanity/lib/client'
 import puppeteer                     from 'puppeteer'
+import { readFile }                  from 'fs/promises'
 
 export const runtime = 'nodejs'          // keep in the Node runtime
 export const dynamic = 'force-dynamic'   // don’t statically optimize
@@ -40,11 +41,38 @@ export async function POST (req: NextRequest) {
     const page = await browser.newPage()
     await page.setViewport({ width: 1024, height: 1024 })
 
+    const resolve = import.meta.resolve
+    const threeSrc = await readFile(
+      new URL(resolve('three')),
+      'utf8'
+    )
+    const loaderSrc = await readFile(
+      new URL(resolve('three/examples/jsm/loaders/GLTFLoader.js')),
+      'utf8'
+    )
+    const utilSrc = await readFile(
+      new URL(resolve('three/examples/jsm/utils/BufferGeometryUtils.js')),
+      'utf8'
+    )
+    const threeUrl  =
+      'data:text/javascript;base64,' + Buffer.from(threeSrc).toString('base64')
+    const loaderUrl =
+      'data:text/javascript;base64,' + Buffer.from(loaderSrc).toString('base64')
+    const utilUrl   =
+      'data:text/javascript;base64,' + Buffer.from(utilSrc).toString('base64')
+
     /* ─── 4 · inline HTML with Three.js + render script ─── */
     const html = /* html */ `
-      <script src="https://unpkg.com/three@0.178.0/build/three.min.js"></script>
-      <script src="https://unpkg.com/three@0.178.0/examples/js/loaders/GLTFLoader.js"></script>
-      <script>
+      <script type="importmap">
+        {"imports":{
+          "three":"${threeUrl}",
+          "three/examples/jsm/loaders/GLTFLoader.js":"${loaderUrl}",
+          "three/examples/jsm/utils/BufferGeometryUtils.js":"${utilUrl}"
+        }}
+      </script>
+      <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
         (async () => {
           /* scene & camera */
           const scene = new THREE.Scene()
@@ -69,11 +97,15 @@ export async function POST (req: NextRequest) {
           document.body.appendChild(renderer.domElement)
 
           /* load GLB */
-          const gltf = await new THREE.GLTFLoader().loadAsync('${variant.model}')
+          const gltfLoader = new GLTFLoader()
+          gltfLoader.setCrossOrigin('anonymous')
+          const gltf = await gltfLoader.loadAsync('${variant.model}')
           scene.add(gltf.scene)
 
           /* swap customer texture */
-          const tex = new THREE.TextureLoader().load('${pngData}')
+          const texLoader = new THREE.TextureLoader()
+          texLoader.setCrossOrigin('anonymous')
+          const tex = await texLoader.loadAsync('${pngData}')
           const mesh = gltf.scene.getObjectByName('${meshName}')
           if (mesh && mesh.material) {
             mesh.material.map = tex
@@ -84,8 +116,12 @@ export async function POST (req: NextRequest) {
           window.__png = renderer.domElement.toDataURL('image/png')
         })()
       </script>`
-    await page.setContent(html, { waitUntil: 'networkidle0' })
-    const dataUrl = await page.evaluate('window.__png')
+  page.on('console', msg => console.log('[render page]', msg.text()))
+  page.on('pageerror', err => console.error('[render page]', err))
+
+  await page.setContent(html, { waitUntil: 'domcontentloaded' })
+  await page.waitForFunction('window.__png', { timeout: 120000 })
+  const dataUrl = await page.evaluate('window.__png')
     await browser.close()
 
     /* ─── 5 · respond ─── */
