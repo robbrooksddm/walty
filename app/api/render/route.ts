@@ -131,6 +131,20 @@ export async function POST (req: NextRequest) {
     )
     scene.add(gltf.scene)
 
+    // built-in materials in Three r178 compile to GLSL3 by default which
+    // produces shaders using WebGL2 features like `sampler3D`. Headless-gl is
+    // WebGL1 only so force all materials in the loaded model to use GLSL1.
+    gltf.scene.traverse((obj: any) => {
+      const mats = obj.material
+        ? (Array.isArray(obj.material) ? obj.material : [obj.material])
+        : []
+      for (const m of mats) {
+        if (m && typeof m === 'object') {
+          m.glslVersion = THREE.GLSL1
+        }
+      }
+    })
+
 
     /* apply PNG textures */
     const texLoader = new TextureLoader()
