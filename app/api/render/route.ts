@@ -70,13 +70,13 @@ export async function POST (req: NextRequest) {
 
           /* load GLB */
           const gltfLoader = new THREE.GLTFLoader()
-          gltfLoader.crossOrigin = 'anonymous'
+          gltfLoader.setCrossOrigin('anonymous')
           const gltf = await gltfLoader.loadAsync('${variant.model}')
           scene.add(gltf.scene)
 
           /* swap customer texture */
           const texLoader = new THREE.TextureLoader()
-          texLoader.crossOrigin = 'anonymous'
+          texLoader.setCrossOrigin('anonymous')
           const tex = await texLoader.loadAsync('${pngData}')
           const mesh = gltf.scene.getObjectByName('${meshName}')
           if (mesh && mesh.material) {
@@ -89,8 +89,8 @@ export async function POST (req: NextRequest) {
         })()
       </script>`
   await page.setContent(html, { waitUntil: 'networkidle0' })
-  await page.waitForFunction('window.__png', { timeout: 60000 })
-  const dataUrl = await page.evaluate('window.__png')
+  await page.waitForFunction(() => window.__png, { timeout: 60000 })
+  const dataUrl = await page.evaluate(() => window.__png)
     await browser.close()
 
     /* ─── 5 · respond ─── */
