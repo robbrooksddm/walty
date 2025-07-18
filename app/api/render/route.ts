@@ -18,7 +18,11 @@ export async function POST (req: NextRequest) {
       (_id==$id || variant->slug.current==$id)][0]{
         "model":  mockupSettings.model.asset->url,
         "areas":  mockupSettings.printAreas[]{ id, mesh },
-        "camera": mockupSettings.cameras[0]
+        "camera": mockupSettings.cameras[0]{
+          posX, posY, posZ,
+          targetX, targetY, targetZ,
+          fov
+        }
       }`
     const client  = process.env.SANITY_READ_TOKEN ? sanityPreview : sanity
     const variant = await client.fetch(query, { id: variantId })
