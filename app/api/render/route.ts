@@ -1,52 +1,57 @@
 // app/api/render/route.ts
-import { NextRequest, NextResponse } from 'next/server'
-import { sanity, sanityPreview }     from '@/sanity/lib/client'
-import puppeteer                     from 'puppeteer'
+import { NextRequest, NextResponse } from "next/server";
+import { sanity, sanityPreview } from "@/sanity/lib/client";
+import puppeteer from "puppeteer";
 
-export const runtime = 'nodejs'          // keep in the Node runtime
-export const dynamic = 'force-dynamic'   // don’t statically optimize
+export const runtime = "nodejs"; // keep in the Node runtime
+export const dynamic = "force-dynamic"; // don’t statically optimize
 
-export async function POST (req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
     /* ─── 1 · validate body ─── */
-    const { variantId, designPNGs } = await req.json()
-    if (typeof variantId !== 'string' || typeof designPNGs !== 'object')
-      return NextResponse.json({ error: 'bad input' }, { status: 400 })
+    const { variantId, designPNGs } = await req.json();
+    if (typeof variantId !== "string" || typeof designPNGs !== "object")
+      return NextResponse.json({ error: "bad input" }, { status: 400 });
 
     /* ─── 2 · fetch visualVariant from Sanity ─── */
     const query = `*[_type=="visualVariant" &&
       (_id==$id || variant->slug.current==$id)][0]{
         "model":  mockupSettings.model.asset->url,
         "areas":  mockupSettings.printAreas[]{ id, mesh },
-        "camera": mockupSettings.cameras[0]
-      }`
-    const client  = process.env.SANITY_READ_TOKEN ? sanityPreview : sanity
-    const variant = await client.fetch(query, { id: variantId })
+        "camera": mockupSettings.cameras[0]{
+          posX, posY, posZ,
+          targetX, targetY, targetZ,
+          rotX, rotY, rotZ,
+          fov
+        }
+      }`;
+    const client = process.env.SANITY_READ_TOKEN ? sanityPreview : sanity;
+    const variant = await client.fetch(query, { id: variantId });
 
     if (!variant?.model)
-      return NextResponse.json({ error: 'variant-not-found' }, { status: 404 })
+      return NextResponse.json({ error: "variant-not-found" }, { status: 404 });
 
     /* pick first design PNG & mesh name */
-    const areaId  = Object.keys(designPNGs)[0]
-    const pngData = designPNGs[areaId]
+    const areaId = Object.keys(designPNGs)[0];
+    const pngData = designPNGs[areaId];
     const meshName =
-      variant.areas?.find(a => a.id === areaId)?.mesh || `PrintArea-${areaId}`
+      variant.areas?.find((a) => a.id === areaId)?.mesh ||
+      `PrintArea-${areaId}`;
 
     /* ─── 3 · fetch GLB so CORS isn't an issue ─── */
-    const glbRes = await fetch(variant.model)
-    if (!glbRes.ok)
-      throw new Error(`failed to fetch model: ${glbRes.status}`)
-    const glbBuf = await glbRes.arrayBuffer()
+    const glbRes = await fetch(variant.model);
+    if (!glbRes.ok) throw new Error(`failed to fetch model: ${glbRes.status}`);
+    const glbBuf = await glbRes.arrayBuffer();
     const glbUrl =
-      'data:model/gltf-binary;base64,' + Buffer.from(glbBuf).toString('base64')
+      "data:model/gltf-binary;base64," + Buffer.from(glbBuf).toString("base64");
 
     /* ─── 4 · launch headless Chrome ─── */
     const browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox'],               // <-- works on Lambda / Vercel
-    })
-    const page = await browser.newPage()
-    await page.setViewport({ width: 1024, height: 1024 })
+      headless: "new",
+      args: ["--no-sandbox"], // <-- works on Lambda / Vercel
+    });
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1024, height: 1024 });
 
     /* ─── 5 · inject import map and render script ─── */
     const html = `<!DOCTYPE html>
@@ -78,6 +83,15 @@ export async function POST (req: NextRequest) {
             ${variant.camera?.targetY ?? 0},
             ${variant.camera?.targetZ ?? 0}
           );
+          ${
+            variant.camera?.rotX !== undefined
+              ? `cam.rotation.set(
+            ${variant.camera.rotX},
+            ${variant.camera.rotY},
+            ${variant.camera.rotZ}
+          );`
+              : ""
+          }
 
           const renderer = new THREE.WebGLRenderer({ alpha: true });
           renderer.setSize(1024, 1024);
@@ -99,23 +113,23 @@ export async function POST (req: NextRequest) {
           window.__png = renderer.domElement.toDataURL('image/png');
         })();
         </script>
-      </html>`
+      </html>`;
 
-    page.on('console', msg => console.log('[render page]', msg.text()))
-    page.on('pageerror', err => console.error('[render page]', err))
+    page.on("console", (msg) => console.log("[render page]", msg.text()));
+    page.on("pageerror", (err) => console.error("[render page]", err));
 
-    await page.setContent(html, { waitUntil: 'networkidle0' })
+    await page.setContent(html, { waitUntil: "networkidle0" });
 
-    await page.waitForFunction('window.__png', { timeout: 120000 })
-    const dataUrl = await page.evaluate('window.__png')
-    await browser.close()
+    await page.waitForFunction("window.__png", { timeout: 120000 });
+    const dataUrl = await page.evaluate("window.__png");
+    await browser.close();
 
     /* ─── 6 · respond ─── */
     return NextResponse.json({
-      urls: { [areaId]: dataUrl }
-    })
+      urls: { [areaId]: dataUrl },
+    });
   } catch (err) {
-    console.error('[render]', err)
-    return NextResponse.json({ error: 'server-error' }, { status: 500 })
+    console.error("[render]", err);
+    return NextResponse.json({ error: "server-error" }, { status: 500 });
   }
 }
