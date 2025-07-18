@@ -17,6 +17,7 @@ export async function POST (req: NextRequest) {
     const query = `*[_type=="visualVariant" &&
       (_id==$id || variant->slug.current==$id)][0]{
         "model":  mockupSettings.model.asset->url,
+        "hdr":    mockupSettings.hdr.asset->url,
         "areas":  mockupSettings.printAreas[]{ id, mesh },
         "camera": mockupSettings.cameras[0]
       }`
@@ -40,6 +41,17 @@ export async function POST (req: NextRequest) {
     const glbUrl =
       'data:model/gltf-binary;base64,' + Buffer.from(glbBuf).toString('base64')
 
+    let hdrUrl = ''
+    if (variant.hdr) {
+      const hdrRes = await fetch(variant.hdr)
+      if (hdrRes.ok) {
+        const hdrBuf = await hdrRes.arrayBuffer()
+        hdrUrl =
+          'data:application/octet-stream;base64,' +
+          Buffer.from(hdrBuf).toString('base64')
+      }
+    }
+
     /* ─── 4 · launch headless Chrome ─── */
     const browser = await puppeteer.launch({
       headless: 'new',
@@ -62,6 +74,7 @@ export async function POST (req: NextRequest) {
         <script type="module">
           import * as THREE from 'three';
           import { GLTFLoader } from 'https://unpkg.com/three@0.178.0/examples/jsm/loaders/GLTFLoader.js';
+          import { RGBELoader } from 'https://unpkg.com/three@0.178.0/examples/jsm/loaders/RGBELoader.js';
           (async () => {
           const scene = new THREE.Scene();
           scene.add(new THREE.AmbientLight(0xffffff, 1));
@@ -80,6 +93,8 @@ export async function POST (req: NextRequest) {
           );
 
           const renderer = new THREE.WebGLRenderer({ alpha: true });
+          renderer.outputColorSpace = THREE.SRGBColorSpace;
+          renderer.toneMapping = THREE.ACESFilmicToneMapping;
           renderer.setSize(1024, 1024);
           document.body.appendChild(renderer.domElement);
 
@@ -87,11 +102,20 @@ export async function POST (req: NextRequest) {
           const gltf = await gltfLoader.loadAsync('${glbUrl}');
           scene.add(gltf.scene);
 
+          if ('${hdrUrl}') {
+            const rgbeLoader = new RGBELoader();
+            const envTex = await rgbeLoader.loadAsync('${hdrUrl}');
+            envTex.mapping = THREE.EquirectangularReflectionMapping;
+            scene.environment = envTex;
+          }
+
           const texLoader = new THREE.TextureLoader();
           const tex = await texLoader.loadAsync('${pngData}');
+          tex.colorSpace = THREE.SRGBColorSpace;
           const mesh = gltf.scene.getObjectByName('${meshName}');
           if (mesh && mesh.material) {
             mesh.material.map = tex;
+            mesh.material.color.set(0xffffff);
             mesh.material.needsUpdate = true;
           }
 
