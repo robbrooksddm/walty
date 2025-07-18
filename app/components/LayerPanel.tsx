@@ -166,7 +166,7 @@ export default function LayerPanel() {
         <input
           type="file"
           accept="image/*"
-          className="hidden"
+          className="sr-only"
           onChange={(e) => {
             const f = e.target.files?.[0];
             if (f) addImage(f);
