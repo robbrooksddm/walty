@@ -12,6 +12,9 @@ export default defineType({
     defineField({ name: 'targetX', type: 'number', title: 'Target X' }),
     defineField({ name: 'targetY', type: 'number', title: 'Target Y' }),
     defineField({ name: 'targetZ', type: 'number', title: 'Target Z' }),
+    defineField({ name: 'rotationX', type: 'number', title: 'Rotation X' }),
+    defineField({ name: 'rotationY', type: 'number', title: 'Rotation Y' }),
+    defineField({ name: 'rotationZ', type: 'number', title: 'Rotation Z' }),
     defineField({ name: 'fov', type: 'number', title: 'FOV' }),
   ],
 })
