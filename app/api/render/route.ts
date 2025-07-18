@@ -18,7 +18,12 @@ export async function POST (req: NextRequest) {
       (_id==$id || variant->slug.current==$id)][0]{
         "model":  mockupSettings.model.asset->url,
         "areas":  mockupSettings.printAreas[]{ id, mesh },
-        "camera": mockupSettings.cameras[0]
+        "camera": mockupSettings.cameras[0]{
+          posX, posY, posZ,
+          targetX, targetY, targetZ,
+          fov,
+          rotX, rotY, rotZ
+        }
       }`
     const client  = process.env.SANITY_READ_TOKEN ? sanityPreview : sanity
     const variant = await client.fetch(query, { id: variantId })
@@ -72,6 +77,11 @@ export async function POST (req: NextRequest) {
             ${variant.camera?.posX ?? 2},
             ${variant.camera?.posY ?? 2},
             ${variant.camera?.posZ ?? 2}
+          );
+          cam.rotation.set(
+            ${variant.camera?.rotX ?? 0},
+            ${variant.camera?.rotY ?? 0},
+            ${variant.camera?.rotZ ?? 0}
           );
           cam.lookAt(
             ${variant.camera?.targetX ?? 0},
