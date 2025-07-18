@@ -17,6 +17,7 @@ export async function POST (req: NextRequest) {
     const query = `*[_type=="visualVariant" &&
       (_id==$id || variant->slug.current==$id)][0]{
         "model":  mockupSettings.model.asset->url,
+        "hdr":    mockupSettings.hdr.asset->url,
         "areas":  mockupSettings.printAreas[]{ id, mesh },
         "camera": mockupSettings.cameras[0]
       }`
@@ -40,6 +41,17 @@ export async function POST (req: NextRequest) {
     const glbUrl =
       'data:model/gltf-binary;base64,' + Buffer.from(glbBuf).toString('base64')
 
+    /* optional HDR environment */
+    let hdrUrl = ''
+    if (variant.hdr) {
+      const hdrRes = await fetch(variant.hdr)
+      if (!hdrRes.ok)
+        throw new Error(`failed to fetch hdr: ${hdrRes.status}`)
+      const hdrBuf = await hdrRes.arrayBuffer()
+      hdrUrl =
+        'data:image/vnd.radiance;base64,' + Buffer.from(hdrBuf).toString('base64')
+    }
+
     /* ─── 4 · launch headless Chrome ─── */
     const browser = await puppeteer.launch({
       headless: 'new',
@@ -62,6 +74,7 @@ export async function POST (req: NextRequest) {
         <script type="module">
           import * as THREE from 'three';
           import { GLTFLoader } from 'https://unpkg.com/three@0.178.0/examples/jsm/loaders/GLTFLoader.js';
+          import { RGBELoader } from 'https://unpkg.com/three@0.178.0/examples/jsm/loaders/RGBELoader.js';
           (async () => {
           const scene = new THREE.Scene();
           scene.add(new THREE.AmbientLight(0xffffff, 1));
@@ -81,7 +94,19 @@ export async function POST (req: NextRequest) {
 
           const renderer = new THREE.WebGLRenderer({ alpha: true });
           renderer.setSize(1024, 1024);
+          renderer.outputColorSpace = THREE.SRGBColorSpace;
+          renderer.toneMapping = THREE.ACESFilmicToneMapping;
           document.body.appendChild(renderer.domElement);
+
+          if ('${hdrUrl}' !== '') {
+            const hdrLoader = new RGBELoader();
+            const hdrTex = await hdrLoader.loadAsync('${hdrUrl}');
+            const pmrem = new THREE.PMREMGenerator(renderer);
+            const env = pmrem.fromEquirectangular(hdrTex).texture;
+            scene.environment = env;
+            hdrTex.dispose();
+            pmrem.dispose();
+          }
 
           const gltfLoader = new GLTFLoader();
           const gltf = await gltfLoader.loadAsync('${glbUrl}');
