@@ -97,6 +97,9 @@ export async function POST (req: NextRequest) {
 
           const renderer = new THREE.WebGLRenderer({ alpha: true });
           renderer.setSize(1024, 1024);
+          renderer.outputColorSpace = THREE.SRGBColorSpace;
+          renderer.toneMapping = THREE.ACESFilmicToneMapping;
+          renderer.toneMappingExposure = 1;
           document.body.appendChild(renderer.domElement);
 
           if ('${hdrUrl}' !== '') {
