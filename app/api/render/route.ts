@@ -117,6 +117,9 @@ export async function POST (req: NextRequest) {
           }
 
           const gltfLoader = new GLTFLoader();
+          gltfLoader.manager.setURLModifier(
+            url => new URL(url, '${variant.model}').href
+          );
           const gltf = await gltfLoader.loadAsync('${glbUrl}');
           scene.add(gltf.scene);
 
