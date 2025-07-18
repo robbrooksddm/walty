@@ -18,7 +18,7 @@ export async function POST (req: NextRequest) {
     const query = `*[_type=="visualVariant" &&
       (_id==$id || variant->slug.current==$id)][0]{
         "model":  mockupSettings.model.asset->url,
-        "hdr":    mockupSettings.hdr.asset->url,
+        "hdr":    coalesce(mockupSettings.hdr.asset->url, ""),
         "areas":  mockupSettings.printAreas[]{ id, mesh },
         "camera": mockupSettings.cameras[0]
       }`
@@ -45,7 +45,7 @@ export async function POST (req: NextRequest) {
     /* optional HDR/EXR environment */
     let hdrUrl = ''
     let hdrExt = ''
-    if (variant.hdr) {
+    if (typeof variant.hdr === 'string' && variant.hdr.length > 0) {
       const hdrRes = await fetch(variant.hdr)
       if (!hdrRes.ok)
         throw new Error(`failed to fetch hdr: ${hdrRes.status}`)
