@@ -129,7 +129,11 @@ export async function POST (req: NextRequest) {
           }
 
           renderer.render(scene, cam);
-          window.__png = renderer.domElement.toDataURL('image/png');
+          const downsample = document.createElement('canvas');
+          downsample.width = 1024;
+          downsample.height = 1024;
+          downsample.getContext('2d')!.drawImage(renderer.domElement, 0, 0, 1024, 1024);
+          window.__png = downsample.toDataURL('image/png');
         })();
         </script>
       </html>`
