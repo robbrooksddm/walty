@@ -20,7 +20,12 @@ export async function POST (req: NextRequest) {
         "model":  mockupSettings.model.asset->url,
         "hdr":    mockupSettings.hdr.asset->url,
         "areas":  mockupSettings.printAreas[]{ id, mesh },
-        "camera": mockupSettings.cameras[0]
+        "camera": mockupSettings.cameras[0]{
+          posX, posY, posZ,
+          targetX, targetY, targetZ,
+          rotationX, rotationY, rotationZ,
+          fov
+        }
       }`
     const client  = process.env.SANITY_READ_TOKEN ? sanityPreview : sanity
     const variant = await client.fetch(query, { id: variantId })
@@ -94,6 +99,11 @@ export async function POST (req: NextRequest) {
             ${variant.camera?.targetX ?? 0},
             ${variant.camera?.targetY ?? 0},
             ${variant.camera?.targetZ ?? 0}
+          );
+          cam.rotation.set(
+            ${variant.camera?.rotationX ?? 0},
+            ${variant.camera?.rotationY ?? 0},
+            ${variant.camera?.rotationZ ?? 0}
           );
 
           const renderer = new THREE.WebGLRenderer({ alpha: true });
