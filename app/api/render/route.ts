@@ -42,7 +42,9 @@ export async function POST (req: NextRequest) {
       'data:model/gltf-binary;base64,' + Buffer.from(glbBuf).toString('base64')
 
     /* optional HDR environment */
-    let hdrUrl = ''
+    let hdrUrl  = ''
+    let hdrType = ''
+    let hdrImport = ''
     if (variant.hdr) {
       const hdrRes = await fetch(variant.hdr)
       if (!hdrRes.ok)
@@ -50,6 +52,11 @@ export async function POST (req: NextRequest) {
       const hdrBuf = await hdrRes.arrayBuffer()
       hdrUrl =
         'data:application/octet-stream;base64,' + Buffer.from(hdrBuf).toString('base64')
+      const ext = variant.hdr.split('.').pop()?.toLowerCase()
+      hdrType = ext === 'exr' ? 'exr' : 'hdr'
+      hdrImport = hdrType === 'exr'
+        ? "import { EXRLoader } from 'https://unpkg.com/three@0.178.0/examples/jsm/loaders/EXRLoader.js';"
+        : "import { RGBELoader } from 'https://unpkg.com/three@0.178.0/examples/jsm/loaders/RGBELoader.js';"
     }
 
     /* ─── 4 · launch headless Chrome ─── */
@@ -74,7 +81,7 @@ export async function POST (req: NextRequest) {
         <script type="module">
           import * as THREE from 'three';
           import { GLTFLoader } from 'https://unpkg.com/three@0.178.0/examples/jsm/loaders/GLTFLoader.js';
-          import { RGBELoader } from 'https://unpkg.com/three@0.178.0/examples/jsm/loaders/RGBELoader.js';
+          ${hdrImport}
           (async () => {
           const scene = new THREE.Scene();
           scene.add(new THREE.AmbientLight(0xffffff, 1));
@@ -93,14 +100,20 @@ export async function POST (req: NextRequest) {
           );
 
           const renderer = new THREE.WebGLRenderer({ alpha: true });
+          renderer.outputColorSpace = THREE.SRGBColorSpace;
+          renderer.toneMapping = THREE.ACESFilmicToneMapping;
           renderer.setSize(1024, 1024);
           document.body.appendChild(renderer.domElement);
 
           if ('${hdrUrl}' !== '') {
-            const hdrLoader = new RGBELoader();
-            const env = await hdrLoader.loadAsync('${hdrUrl}');
-            env.mapping = THREE.EquirectangularReflectionMapping;
-            scene.environment = env;
+            try {
+              const loader = ${hdrType === 'exr' ? 'new EXRLoader()' : 'new RGBELoader()'};
+              const env = await loader.loadAsync('${hdrUrl}');
+              env.mapping = THREE.EquirectangularReflectionMapping;
+              scene.environment = env;
+            } catch (err) {
+              console.error('HDR load failed', err);
+            }
           }
 
           const gltfLoader = new GLTFLoader();
