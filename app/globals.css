@@ -106,7 +106,8 @@ html {
     border:2px solid #2EC4B6; /* SEL_COLOR */
   }
   .sel-overlay.interactive {
-    @apply pointer-events-auto;
+    /* let clicks fall through to underlying UI */
+    @apply pointer-events-none;
   }
   .sel-overlay .handle {
     position:absolute;
