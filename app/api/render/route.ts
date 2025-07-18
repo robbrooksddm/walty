@@ -60,7 +60,7 @@ export async function POST (req: NextRequest) {
       args: ['--no-sandbox'],               // <-- works on Lambda / Vercel
     })
     const page = await browser.newPage()
-    await page.setViewport({ width: 1024, height: 1024 })
+    await page.setViewport({ width: 2048, height: 2048 })
 
     /* ─── 5 · inject import map and render script ─── */
     const html = `<!DOCTYPE html>
@@ -96,7 +96,7 @@ export async function POST (req: NextRequest) {
           );
 
           const renderer = new THREE.WebGLRenderer({ alpha: true });
-          renderer.setSize(1024, 1024);
+          renderer.setSize(2048, 2048);
           document.body.appendChild(renderer.domElement);
 
           if ('${hdrUrl}' !== '') {
@@ -125,7 +125,11 @@ export async function POST (req: NextRequest) {
           }
 
           renderer.render(scene, cam);
-          window.__png = renderer.domElement.toDataURL('image/png');
+          const downsample = document.createElement('canvas');
+          downsample.width = 1024;
+          downsample.height = 1024;
+          downsample.getContext('2d')!.drawImage(renderer.domElement, 0, 0, 1024, 1024);
+          window.__png = downsample.toDataURL('image/png');
         })();
         </script>
       </html>`
