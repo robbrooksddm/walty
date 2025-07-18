@@ -117,6 +117,8 @@ export default function LayerPanel() {
   const addImage  = useEditor((s) => s.addImage);
   const addText   = useEditor((s) => s.addText);
   const [open]    = useState(true);       // toggle left in case you wire it up later
+  /* drag-and-drop – call hooks before any early return */
+  const sensors   = useSensors(useSensor(PointerSensor));
 
   /* bail if no page loaded */
   if (!pages[activePage]) return null;
@@ -126,9 +128,6 @@ export default function LayerPanel() {
     (_, i) => pages[activePage].layers.length - 1 - i,
   );
   const ids = layerOrder.map(i => pages[activePage].layers[i].uid);
-
-  /* drag-and-drop */
-  const sensors   = useSensors(useSensor(PointerSensor));
   const onDragEnd = (e: DragEndEvent) => {
     if (e.over && e.active.id !== e.over.id) {
       const from = pages[activePage].layers.findIndex(l => l.uid === e.active.id);
