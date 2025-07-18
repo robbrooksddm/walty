@@ -111,6 +111,9 @@ export async function POST (req: NextRequest) {
             }
             env.mapping = THREE.EquirectangularReflectionMapping;
             scene.environment = env;
+            scene.background = new THREE.Color(0xffffff);
+            scene.environment.encoding = THREE.RGBEEncoding;
+            scene.environmentIntensity = 0.75;
           }
 
           const gltfLoader = new GLTFLoader();
