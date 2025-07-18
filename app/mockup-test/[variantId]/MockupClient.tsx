@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 interface Props {
   variantId: string
@@ -8,6 +8,9 @@ interface Props {
 
 export default function MockupClient({ variantId, areaId }: Props) {
   const [preview, setPreview] = useState<string>('')
+  const inputRef = useRef<HTMLInputElement | null>(null)
+
+  const openPicker = () => inputRef.current?.click()
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -35,7 +38,20 @@ export default function MockupClient({ variantId, areaId }: Props) {
           <img src={preview} alt="preview" className="max-h-full object-contain" />
         )}
       </div>
-      <input type="file" accept="image/png" onChange={handleChange} />
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png"
+        onChange={handleChange}
+        className="hidden"
+      />
+      <button
+        type="button"
+        onClick={openPicker}
+        className="rounded bg-blue-600 text-white px-3 py-1"
+      >
+        Upload image
+      </button>
     </div>
   )
 }

@@ -4,7 +4,7 @@
  * LayerPanel.tsx – Walty-styled sidebar: upload, add text/image, reorder
  *********************************************************************/
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -116,6 +116,7 @@ export default function LayerPanel() {
   const reorder   = useEditor((s) => s.reorder);
   const addImage  = useEditor((s) => s.addImage);
   const addText   = useEditor((s) => s.addText);
+  const inputRef  = useRef<HTMLInputElement | null>(null)
   const [open]    = useState(true);       // toggle left in case you wire it up later
 
   /* bail if no page loaded */
@@ -158,12 +159,14 @@ export default function LayerPanel() {
       }}
     >
       {/* upload */}
-      <label className="m-4 flex flex-col items-center justify-center gap-2
+      <label onClick={() => inputRef.current?.click()}
+             className="m-4 flex flex-col items-center justify-center gap-2
                          rounded-xl border-2 border-dashed border-walty-teal/50
                          p-4 text-walty-teal hover:bg-walty-orange/5">
         <UploadIcon className="h-8 w-8" />
         <span className="font-medium">Upload</span>
         <input
+          ref={inputRef}
           type="file"
           accept="image/*"
           className="hidden"
