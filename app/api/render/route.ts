@@ -26,6 +26,12 @@ export async function POST (req: NextRequest) {
     if (!variant?.model)
       return NextResponse.json({ error: 'variant-not-found' }, { status: 404 })
 
+    const glbRes = await fetch(variant.model)
+    if (!glbRes.ok)
+      return NextResponse.json({ error: 'fetch-glb-failed' }, { status: 500 })
+    const glbBuffer = Buffer.from(await glbRes.arrayBuffer())
+    const glbDataUrl = `data:model/gltf-binary;base64,${glbBuffer.toString('base64')}`
+
     /* pick first design PNG & mesh name */
     const areaId  = Object.keys(designPNGs)[0]
     const pngData = designPNGs[areaId]
@@ -76,8 +82,7 @@ export async function POST (req: NextRequest) {
           document.body.appendChild(renderer.domElement);
 
           const gltfLoader = new GLTFLoader();
-          gltfLoader.setCrossOrigin('anonymous');
-          const gltf = await gltfLoader.loadAsync('${variant.model}');
+          const gltf = await gltfLoader.loadAsync('${glbDataUrl}');
           scene.add(gltf.scene);
 
           const texLoader = new THREE.TextureLoader();
