@@ -21,8 +21,9 @@ export default function MockupClient({ variantId, areaId }: Props) {
         body: JSON.stringify({ variantId, designPNGs: { [areaId]: base64 } })
       })
       const data = await res.json()
-      if (data?.urls && data.urls[areaId]) {
-        setPreview(data.urls[areaId])
+      if (data?.urls) {
+        const key = Object.keys(data.urls)[0]
+        if (key && data.urls[key]) setPreview(data.urls[key])
       }
     }
     reader.readAsDataURL(file)
