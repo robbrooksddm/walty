@@ -26,6 +26,13 @@ export async function POST (req: NextRequest) {
     if (!variant?.model)
       return NextResponse.json({ error: 'variant-not-found' }, { status: 404 })
 
+    /* fetch model data to avoid browser CORS */
+    const modelRes = await fetch(variant.model)
+    if (!modelRes.ok)
+      return NextResponse.json({ error: 'model-fetch-failed' }, { status: 500 })
+    const modelBuffer = Buffer.from(await modelRes.arrayBuffer())
+    const modelDataUrl = `data:model/gltf-binary;base64,${modelBuffer.toString('base64')}`
+
     /* pick first design PNG & mesh name */
     const areaId  = Object.keys(designPNGs)[0]
     const pngData = designPNGs[areaId]
@@ -40,51 +47,67 @@ export async function POST (req: NextRequest) {
     const page = await browser.newPage()
     await page.setViewport({ width: 1024, height: 1024 })
 
-    /* ─── 4 · inline HTML with Three.js + render script ─── */
-    const html = /* html */ `
-      <script src="https://unpkg.com/three@0.178.0/build/three.min.js"></script>
-      <script src="https://unpkg.com/three@0.178.0/examples/js/loaders/GLTFLoader.js"></script>
-      <script>
-        (async () => {
-          /* scene & camera */
-          const scene = new THREE.Scene()
-          scene.add(new THREE.AmbientLight(0xffffff, 1))
+    /* ─── 4 · inject import map and render script ─── */
+    const html = `<!DOCTYPE html>
+      <html>
+        <body></body>
+        <script type="importmap">
+          {
+            "imports": {
+              "three": "https://unpkg.com/three@0.178.0/build/three.module.js"
+            }
+          }
+        </script>
+        <script type="module">
+          import * as THREE from 'three';
+          import { GLTFLoader } from 'https://unpkg.com/three@0.178.0/examples/jsm/loaders/GLTFLoader.js';
+          (async () => {
+          const scene = new THREE.Scene();
+          scene.add(new THREE.AmbientLight(0xffffff, 1));
           const cam = new THREE.PerspectiveCamera(
             ${variant.camera?.fov ?? 35}, 1, 0.1, 100
-          )
+          );
           cam.position.set(
             ${variant.camera?.posX ?? 2},
             ${variant.camera?.posY ?? 2},
             ${variant.camera?.posZ ?? 2}
-          )
+          );
           cam.lookAt(
             ${variant.camera?.targetX ?? 0},
             ${variant.camera?.targetY ?? 0},
             ${variant.camera?.targetZ ?? 0}
-          )
+          );
 
-          /* renderer */
-          const renderer = new THREE.WebGLRenderer({ alpha: true })
-          renderer.setSize(1024, 1024)
-          document.body.appendChild(renderer.domElement)
+          const renderer = new THREE.WebGLRenderer({ alpha: true });
+          renderer.setSize(1024, 1024);
+          document.body.appendChild(renderer.domElement);
 
-          /* load GLB */
-          const gltf = await new THREE.GLTFLoader().loadAsync('${variant.model}')
-          scene.add(gltf.scene)
+          const gltfLoader = new GLTFLoader();
+          gltfLoader.setCrossOrigin('anonymous');
+          const gltf = await gltfLoader.loadAsync('${modelDataUrl}');
+          scene.add(gltf.scene);
 
-          /* swap customer texture */
-          const tex = new THREE.TextureLoader().load('${pngData}')
-          const mesh = gltf.scene.getObjectByName('${meshName}')
+          const texLoader = new THREE.TextureLoader();
+          texLoader.setCrossOrigin('anonymous');
+          const tex = await texLoader.loadAsync('${pngData}');
+          const mesh = gltf.scene.getObjectByName('${meshName}');
           if (mesh && mesh.material) {
-            mesh.material.map = tex
-            mesh.material.needsUpdate = true
+            mesh.material.map = tex;
+            mesh.material.needsUpdate = true;
           }
 
-          renderer.render(scene, cam)
-          window.__png = renderer.domElement.toDataURL('image/png')
-        })()
-      </script>`
+          renderer.render(scene, cam);
+          window.__png = renderer.domElement.toDataURL('image/png');
+        })();
+        </script>
+      </html>`
+
+    page.on('console', msg => console.log('[render page]', msg.text()))
+    page.on('pageerror', err => console.error('[render page]', err))
+
     await page.setContent(html, { waitUntil: 'networkidle0' })
+
+    await page.waitForFunction('window.__png', { timeout: 120000 })
     const dataUrl = await page.evaluate('window.__png')
     await browser.close()
 
