@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sanity, sanityPreview }     from '@/sanity/lib/client'
 import puppeteer                     from 'puppeteer'
+import sharp                         from 'sharp'
 
 export const runtime = 'nodejs'          // keep in the Node runtime
 export const dynamic = 'force-dynamic'   // don’t statically optimize
@@ -60,7 +61,7 @@ export async function POST (req: NextRequest) {
       args: ['--no-sandbox'],               // <-- works on Lambda / Vercel
     })
     const page = await browser.newPage()
-    await page.setViewport({ width: 1024, height: 1024 })
+    await page.setViewport({ width: 2048, height: 2048 })
 
     /* ─── 5 · inject import map and render script ─── */
     const html = `<!DOCTYPE html>
@@ -96,7 +97,7 @@ export async function POST (req: NextRequest) {
           );
 
           const renderer = new THREE.WebGLRenderer({ alpha: true });
-          renderer.setSize(1024, 1024);
+          renderer.setSize(2048, 2048);
           document.body.appendChild(renderer.domElement);
 
           if ('${hdrUrl}' !== '') {
@@ -139,9 +140,17 @@ export async function POST (req: NextRequest) {
     const dataUrl = await page.evaluate('window.__png')
     await browser.close()
 
+    /* downscale to 1024x1024 */
+    const b64 = dataUrl.split(',')[1]
+    const resizedBuf = await sharp(Buffer.from(b64, 'base64'))
+      .resize(1024, 1024)
+      .png()
+      .toBuffer()
+    const resizedUrl = 'data:image/png;base64,' + resizedBuf.toString('base64')
+
     /* ─── 6 · respond ─── */
     return NextResponse.json({
-      urls: { [areaId]: dataUrl }
+      urls: { [areaId]: resizedUrl }
     })
   } catch (err) {
     console.error('[render]', err)
