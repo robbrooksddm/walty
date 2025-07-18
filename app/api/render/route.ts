@@ -46,13 +46,19 @@ export async function POST (req: NextRequest) {
     let hdrUrl = ''
     let hdrExt = ''
     if (variant.hdr) {
-      const hdrRes = await fetch(variant.hdr)
-      if (!hdrRes.ok)
-        throw new Error(`failed to fetch hdr: ${hdrRes.status}`)
-      const hdrBuf = await hdrRes.arrayBuffer()
-      hdrUrl =
-        'data:application/octet-stream;base64,' + Buffer.from(hdrBuf).toString('base64')
-      hdrExt = variant.hdr.split('.').pop()?.toLowerCase() ?? ''
+      try {
+        const hdrRes = await fetch(variant.hdr)
+        if (hdrRes.ok) {
+          const hdrBuf = await hdrRes.arrayBuffer()
+          hdrUrl =
+            'data:application/octet-stream;base64,' + Buffer.from(hdrBuf).toString('base64')
+          hdrExt = variant.hdr.split('.').pop()?.toLowerCase() ?? ''
+        } else {
+          console.warn(`[render] failed to fetch hdr: ${hdrRes.status}`)
+        }
+      } catch (err) {
+        console.warn('[render] error fetching hdr', err)
+      }
     }
 
     /* ─── 4 · launch headless Chrome ─── */
@@ -82,6 +88,9 @@ export async function POST (req: NextRequest) {
           (async () => {
           const scene = new THREE.Scene();
           scene.add(new THREE.AmbientLight(0xffffff, 1));
+          const light = new THREE.DirectionalLight(0xffffff, 1.5);
+          light.position.set(5, 5, 5);
+          scene.add(light);
           const cam = new THREE.PerspectiveCamera(
             ${variant.camera?.fov ?? 35}, 1, 0.1, 100
           );
