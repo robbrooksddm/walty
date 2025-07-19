@@ -81,7 +81,10 @@ export async function POST (req: NextRequest) {
           import { EXRLoader } from 'https://unpkg.com/three@0.178.0/examples/jsm/loaders/EXRLoader.js';
           (async () => {
           const scene = new THREE.Scene();
-          scene.add(new THREE.AmbientLight(0xffffff, 1));
+          const key = new THREE.RectAreaLight(0xffffff, 20, 0.3, 0.3);
+          key.position.set( 1.5, 2, 1 );
+          key.lookAt(0, 0.5, 0);
+          scene.add(key);
           const cam = new THREE.PerspectiveCamera(
             ${variant.camera?.fov ?? 35}, 1, 0.1, 100
           );
@@ -99,6 +102,10 @@ export async function POST (req: NextRequest) {
           const renderer = new THREE.WebGLRenderer({ alpha: true });
           renderer.setSize(2048, 2048);
           document.body.appendChild(renderer.domElement);
+          renderer.physicallyCorrectLights = true;
+          renderer.useLegacyLights        = false;
+          renderer.shadowMap.enabled = true;
+          key.castShadow = true;
 
           if ('${hdrUrl}' !== '') {
             let env;
