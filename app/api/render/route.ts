@@ -101,6 +101,7 @@ export async function POST (req: NextRequest) {
           document.body.appendChild(renderer.domElement);
 
           if ('${hdrUrl}' !== '') {
+            const pmrem = new THREE.PMREMGenerator(renderer);
             let env;
             if ('${hdrExt}' === 'exr') {
               const exrLoader = new EXRLoader();
@@ -109,11 +110,12 @@ export async function POST (req: NextRequest) {
               const hdrLoader = new RGBELoader();
               env = await hdrLoader.loadAsync('${hdrUrl}');
             }
-            env.mapping = THREE.EquirectangularReflectionMapping;
-            scene.environment = env;
-            scene.background = new THREE.Color(0xffffff);
-            scene.environment.encoding = THREE.RGBEEncoding;
+            const envMap = pmrem.fromEquirectangular(env).texture;
+            scene.environment = envMap;
+            scene.background = null;
             scene.environmentIntensity = 0.75;
+            env.dispose();
+            pmrem.dispose();
           }
 
           const gltfLoader = new GLTFLoader();
