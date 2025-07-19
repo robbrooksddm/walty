@@ -101,18 +101,21 @@ export async function POST (req: NextRequest) {
           document.body.appendChild(renderer.domElement);
 
           if ('${hdrUrl}' !== '') {
-            let env;
+            let hdr;
             if ('${hdrExt}' === 'exr') {
               const exrLoader = new EXRLoader();
-              env = await exrLoader.loadAsync('${hdrUrl}');
+              hdr = await exrLoader.loadAsync('${hdrUrl}');
             } else {
               const hdrLoader = new RGBELoader();
-              env = await hdrLoader.loadAsync('${hdrUrl}');
+              hdr = await hdrLoader.loadAsync('${hdrUrl}');
             }
-            env.mapping = THREE.EquirectangularReflectionMapping;
-            scene.environment = env;
-            scene.background = new THREE.Color(0xffffff);
-            scene.environment.encoding = THREE.RGBEEncoding;
+            hdr.mapping = THREE.EquirectangularReflectionMapping;
+            const pmrem = new THREE.PMREMGenerator(renderer);
+            const envMap = pmrem.fromEquirectangular(hdr).texture;
+            hdr.dispose?.();
+            pmrem.dispose();
+            scene.environment = envMap;
+            scene.background = null;
             scene.environmentIntensity = 0.75;
           }
 
