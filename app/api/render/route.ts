@@ -79,7 +79,7 @@ export async function POST (req: NextRequest) {
           import { GLTFLoader } from 'https://unpkg.com/three@0.178.0/examples/jsm/loaders/GLTFLoader.js';
           import { RGBELoader } from 'https://unpkg.com/three@0.178.0/examples/jsm/loaders/RGBELoader.js';
           import { EXRLoader } from 'https://unpkg.com/three@0.178.0/examples/jsm/loaders/EXRLoader.js';
-          import { RectAreaLight, RectAreaLightUniformsLib } from 'https://unpkg.com/three@0.178.0/examples/jsm/lights/RectAreaLightUniformsLib.js';
+          import { RectAreaLightUniformsLib } from 'https://unpkg.com/three@0.178.0/examples/jsm/lights/RectAreaLightUniformsLib.js';
           (async () => {
           RectAreaLightUniformsLib.init();
           const scene = new THREE.Scene();
@@ -109,17 +109,17 @@ export async function POST (req: NextRequest) {
           renderer.toneMappingExposure = 1.25;
 
           // three-point rectangular lighting setup
-          const key = new RectAreaLight(0xffffff, 55, 1.0, 1.0);
+          const key = new THREE.RectAreaLight(0xffffff, 55, 1.0, 1.0);
           key.position.set(1.5, 2.5, 1.5);
           key.lookAt(0, 1, 0);
           scene.add(key);
 
-          const fill = new RectAreaLight(0xffffff, 15, 1.2, 1.2);
+          const fill = new THREE.RectAreaLight(0xffffff, 15, 1.2, 1.2);
           fill.position.set(-2.0, 1.8, 2.5);
           fill.lookAt(0, 1, 0);
           scene.add(fill);
 
-          const rim = new RectAreaLight(0xffffff, 25, 0.6, 0.6);
+          const rim = new THREE.RectAreaLight(0xffffff, 25, 0.6, 0.6);
           rim.position.set(0.0, -0.2, -2.0);
           rim.lookAt(0, 0, 0);
           scene.add(rim);
