@@ -109,11 +109,15 @@ export async function POST (req: NextRequest) {
               const hdrLoader = new RGBELoader();
               env = await hdrLoader.loadAsync('${hdrUrl}');
             }
-            env.mapping = THREE.EquirectangularReflectionMapping;
-            scene.environment = env;
-            scene.background = new THREE.Color(0xffffff);
-            scene.environment.encoding = THREE.RGBEEncoding;
+
+            const pmrem = new THREE.PMREMGenerator(renderer);
+            const envMap = pmrem.fromEquirectangular(env).texture;
+            scene.environment = envMap;
+            scene.background = null;
             scene.environmentIntensity = 0.75;
+
+            env.dispose();
+            pmrem.dispose();
           }
 
           const gltfLoader = new GLTFLoader();
