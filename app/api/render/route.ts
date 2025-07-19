@@ -98,6 +98,9 @@ export async function POST (req: NextRequest) {
 
           const renderer = new THREE.WebGLRenderer({ alpha: true });
           renderer.setSize(2048, 2048);
+          renderer.outputEncoding = THREE.sRGBEncoding;
+          renderer.toneMapping = THREE.ACESFilmicToneMapping;
+          renderer.toneMappingExposure = 1.1;
           document.body.appendChild(renderer.domElement);
 
           if ('${hdrUrl}' !== '') {
@@ -122,6 +125,7 @@ export async function POST (req: NextRequest) {
 
           const texLoader = new THREE.TextureLoader();
           const tex = await texLoader.loadAsync('${pngData}');
+          tex.colorSpace = THREE.SRGBColorSpace;
           const mesh = gltf.scene.getObjectByName('${meshName}');
           if (mesh && mesh.material) {
             mesh.material.map = tex;
