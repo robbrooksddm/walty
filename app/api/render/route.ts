@@ -2,7 +2,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sanity, sanityPreview }     from '@/sanity/lib/client'
 import puppeteer                     from 'puppeteer'
-import sharp                         from 'sharp'
 
 export const runtime = 'nodejs'          // keep in the Node runtime
 export const dynamic = 'force-dynamic'   // don’t statically optimize
@@ -96,8 +95,9 @@ export async function POST (req: NextRequest) {
             ${variant.camera?.targetZ ?? 0}
           );
 
+          const SIZE = 2048;
           const renderer = new THREE.WebGLRenderer({ alpha: true });
-          renderer.setSize(2048, 2048);
+          renderer.setSize(SIZE, SIZE);
           document.body.appendChild(renderer.domElement);
 
           if ('${hdrUrl}' !== '') {
@@ -129,7 +129,12 @@ export async function POST (req: NextRequest) {
           }
 
           renderer.render(scene, cam);
-          window.__png = renderer.domElement.toDataURL('image/png');
+          const big = renderer.domElement;
+          const small = document.createElement('canvas');
+          small.width = SIZE / 2;
+          small.height = SIZE / 2;
+          small.getContext('2d')!.drawImage(big, 0, 0, small.width, small.height);
+          window.__png = small.toDataURL('image/png');
         })();
         </script>
       </html>`
@@ -143,13 +148,7 @@ export async function POST (req: NextRequest) {
     const bigDataUrl = await page.evaluate('window.__png')
     await browser.close()
 
-    /* downscale to 1024x1024 for crisper edges */
-    const pngBuf = Buffer.from(bigDataUrl.split(',')[1], 'base64')
-    const resizedBuf = await sharp(pngBuf)
-      .resize(1024, 1024)
-      .png()
-      .toBuffer()
-    const dataUrl = 'data:image/png;base64,' + resizedBuf.toString('base64')
+    const dataUrl = bigDataUrl
 
     /* ─── 6 · respond ─── */
     return NextResponse.json({
