@@ -107,7 +107,7 @@ export async function POST (req: NextRequest) {
           renderer.useLegacyLights = false;
           renderer.physicallyCorrectLights = true;
           renderer.toneMapping = THREE.ACESFilmicToneMapping;
-          renderer.toneMappingExposure = 1.25;
+          renderer.toneMappingExposure = 1.5;
 
           // three-point rectangular lighting setup
           const key = new RectAreaLight(0xffffff, 55, 1.0, 1.0);
@@ -150,6 +150,7 @@ export async function POST (req: NextRequest) {
           const mesh = gltf.scene.getObjectByName('${meshName}');
           if (mesh && mesh.material) {
             mesh.material.map = tex;
+            mesh.material.roughness = 0.15;
             mesh.material.needsUpdate = true;
           }
 
