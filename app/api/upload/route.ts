@@ -3,6 +3,20 @@
  *********************************************************************/
 import { NextRequest, NextResponse } from 'next/server'
 import { sanityWriteClient as sanity } from '@/sanity/lib/client'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+/* allow uploads from the storefront */
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { headers: corsHeaders })
+}
 export async function POST (req: NextRequest) {
   const data = await req.formData()
   const file = data.get('file') as File | null
@@ -21,5 +35,8 @@ export async function POST (req: NextRequest) {
   })
 
   /* 3. respond with the CDN URL + asset ID */
-  return NextResponse.json({ url: asset.url, assetId: asset._id })
+  return NextResponse.json(
+    { url: asset.url, assetId: asset._id },
+    { headers: corsHeaders },
+  )
 }
