@@ -3,6 +3,8 @@
  *********************************************************************/
 import { NextRequest, NextResponse } from 'next/server'
 import { sanityWriteClient as sanity } from '@/sanity/lib/client'
+
+export const runtime = 'nodejs'
 export async function POST (req: NextRequest) {
   const data = await req.formData()
   const file = data.get('file') as File | null
